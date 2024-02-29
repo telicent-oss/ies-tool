@@ -1,0 +1,138 @@
+# baseURI: http://ies.data.gov.uk/ontology/ies4
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ies: <http://ies.data.gov.uk/ontology/ies4#> .
+@prefix tel: <http://telicent.io/ontology/> .
+
+ies:Approach	 	rdf:type 		rdfs:Class .
+ies:Approach 	 	rdfs:subClassOf 	ies:Event .
+ies:Approached	 	rdf:type 		rdfs:Class .
+ies:Approached 	 	rdfs:subClassOf 	ies:EventParticipant .
+ies:Approacher	 	rdf:type 		rdfs:Class .
+ies:Approacher 	 	rdfs:subClassOf 	ies:EventParticipant .
+ies:ActiveApproacher  	rdf:type 		rdfs:Class .
+ies:ActiveApproacher 	rdfs:subClassOf 	ies:Approacher .
+ies:ActiveApproacher 	rdfs:subClassOf 	ies:ActiveEventParticipant .
+
+ies:Assess	 			            rdf:type 		    rdfs:Class .
+ies:Assess	 			            rdfs:subClassOf 	ies:Event .
+ies:AssessProbability	 	        rdf:type 		    rdfs:Class .
+ies:AssessProbability 	 	        rdfs:subClassOf 	ies:Assess .
+ies:ProbabilityRepresentation       rdf:type 		    rdfs:Class .
+ies:ProbabilityRepresentation       rdfs:subClassOf     rdfs:NumericRepresentation .
+ies:NumericRepresentation           rdf:type 		    rdfs:Class .
+ies:NumericRepresentation           rdfs:subClassOf     rdfs:Representation .
+ies:AssessToBeTrue			        rdfs:subClassOf 	ies:Assess .
+ies:PhiaAssessmentYardstick 		rdf:type 		    rdfs:Class .
+ies:PhiaAssessmentYardstick 		rdfs:subClassOf 	ies:ClassOfEventEvent .
+ies:AssessToBeRemoteChance		    rdf:type 		    rdfs:Class .
+ies:AssessToBeRemoteChance  		rdf:type 		    ies:PhiaAssessmentYardstick .
+ies:AssessToBeRemoteChance 		    rdfs:subClassOf 	ies:Assess .
+ies:AssessToBeHighlyUnlikely		rdf:type 		    rdfs:Class .
+ies:AssessToBeHighlyUnlikely  		rdf:type 		    ies:PhiaAssessmentYardstick .
+ies:AssessToBeHighlyUnlikely 		rdfs:subClassOf 	ies:Assess .
+ies:AssessToBeUnlikely			    rdf:type 		    rdfs:Class .
+ies:AssessToBeUnlikely  		    rdf:type 		    ies:PhiaAssessmentYardstick .
+ies:AssessToBeUnlikely 			    rdfs:subClassOf 	ies:Assess .
+ies:AssessToBeRealisticPossibility	rdf:type 		    rdfs:Class .
+ies:AssessToBeRealisticPossibility  rdf:type 		    ies:PhiaAssessmentYardstick .
+ies:AssessToBeRealisticPossibility 	rdfs:subClassOf 	ies:Assess .
+ies:AssessToBeLikelyOrProbably		rdf:type 		    rdfs:Class .
+ies:AssessToBeLikelyOrProbably  	rdf:type 		    ies:PhiaAssessmentYardstick .
+ies:AssessToBeLikelyOrProbably 		rdfs:subClassOf 	ies:Assess .
+ies:AssessToBeHighlyLikely		    rdf:type 		    rdfs:Class .
+ies:AssessToBeHighlyLikely  		rdf:type 		    ies:PhiaAssessmentYardstick .
+ies:AssessToBeHighlyLikely  		rdfs:subClassOf 	ies:Assess .
+ies:AssessToBeAlmostCertain	    	rdf:type 		    rdfs:Class .
+ies:AssessToBeAlmostCertain  		rdf:type 		    ies:PhiaAssessmentYardstick .
+ies:AssessToBeAlmostCertain 		rdfs:subClassOf 	ies:Assess .
+
+ies:LocationTransponder 	rdf:type 		rdfs:Class .
+ies:LocationTransponder 	rdfs:subClassOf 	ies:CommunicationsDevice .
+
+ies:epsgCode rdf:type owl:DatatypeProperty .
+
+
+ies:ClassOfCharacteristic       rdf:type                rdfs:Class .
+ies:ClassOfCharacteristic       rdfs:subClassOf         ies:ClassOfClassOfElement .
+ies:ClassOfCharacteristic       ies:powertype           ies:Characteristic .
+ies:ClassOfMeasure              rdf:type                rdfs:Class .
+ies:ClassOfMeasure              rdfs:subClassOf         ies:ClassOfCharacteristic .
+ies:ClassOfMeasure              ies:powertype          ies:Measure .
+
+ies:characteristicClass	 		rdf:type 	    	    owl:ObjectProperty .
+ies:characteristicClass         rdfs:subPropertyOf      rdf:type .
+ies:characteristicClass         rdfs:subPropertyOf      ies:relationship .
+ies:characteristicClass         rdfs:domain             ies:Characteristic . 
+ies:characteristicClass         rdfs:range              ies:ClassOfCharacteristic . 
+
+ies:measureClass	 			rdf:type 	    	    owl:ObjectProperty .
+ies:measureClass                rdfs:subPropertyOf      ies:characteristicClass .
+ies:measureClass                rdfs:domain             ies:Measure . 
+ies:measureClass                rdfs:range              ies:ClassOfMeasure . 
+
+ies:CooperAtSea	 	    rdf:type 		    rdfs:Class .
+ies:CooperAtSea 	 	rdfs:subClassOf 	ies:Event .
+ies:CooperingAtSea	 	rdf:type 		    rdfs:Class .
+ies:CooperingAtSea 	 	rdfs:subClassOf 	ies:ActiveEventParticipant .
+
+ies:Follow	 	        rdf:type 		    rdfs:Class .
+ies:Follow	 	        rdfs:subClassOf 	ies:Event .
+ies:Followed	 	    rdf:type 		    rdfs:Class .
+ies:Followed	 	    rdfs:subClassOf 	ies:EventParticipant .
+ies:Follower	 	    rdf:type 		    rdfs:Class .
+ies:Follower	 	    rdfs:subClassOf 	ies:EventParticipant .
+ies:ActiveFollower	 	rdf:type 		    rdfs:Class .
+ies:ActiveFollower 	 	rdfs:subClassOf 	ies:Follower .
+ies:ActiveFollower 	 	rdfs:subClassOf 	ies:ActiveEventParticipant .
+
+ies:LocationObservation 	rdf:type 		    rdfs:Class .
+ies:LocationObservation 	rdfs:subClassOf 	ies:Observation .
+ies:ObservedLocation 	    rdf:type 		    rdfs:Class .
+ies:ObservedLocation 	    rdfs:subClassOf 	ies:Observed .
+ies:ObservedTarget	 	    rdf:type 		    rdfs:Class .
+ies:ObservedTarget 		    rdfs:subClassOf 	ies:Observed .
+
+ies:EpsgParameter1 rdf:type rdfs:Class .
+ies:EpsgParameter2 rdf:type rdfs:Class .
+ies:EpsgParameter3 rdf:type rdfs:Class .
+ies:EpsgParameter4 rdf:type rdfs:Class .
+ies:EpsgGeoPointRepresentation rdf:type rdfs:Class .
+ies:Measurement rdf:type rdfs:Class .
+ies:PrimaryGivenName rdf:type rdfs:Class .
+
+
+ies:Vessel           	    rdf:type 		    rdfs:Class .
+ies:Vessel 	                rdfs:subClassOf 	ies:Vehicle .
+ies:Vessel 	                rdfs:subClassOf 	ies:VesselState .
+ies:VesselState        	    rdf:type 		    rdfs:Class .
+ies:VesselState 	        rdfs:subClassOf 	ies:VehicleState .
+ies:Ship 	                rdfs:subClassOf 	ies:Vessel .
+ies:UnderFlagOfConvenience  rdf:type 		    rdfs:Class .
+ies:UnderFlagOfConvenience 	rdfs:subClassOf 	ies:VesselState .
+
+ies:FloodArea               rdf:type            rdfs:Class .
+ies:FloodArea 	            rdfs:subClassOf 	ies:Location .
+ies:FloodWatchArea        rdf:type            rdfs:Class .
+ies:FloodWatchArea 	    rdfs:subClassOf 	ies:Location .
+
+ies:Flooded            rdf:type             rdfs:Class .
+ies:Flooded 	       rdfs:subClassOf 	    ies:LocationState .
+
+ies:PredictedSevereFlooding         rdf:type            rdfs:Class .
+ies:PredictedSevereFlooding 	    rdfs:subClassOf 	ies:LocationState .
+ies:PredictedFlooding               rdf:type            rdfs:Class .
+ies:PredictedFlooding 	            rdfs:subClassOf 	ies:LocationState .
+ies:PossibleFlooding            rdf:type            rdfs:Class .
+ies:PossibleFlooding 	        rdfs:subClassOf 	ies:LocationState .
+
+ies:Warning                 rdf:type            rdfs:Class .
+ies:Warning 	            rdfs:subClassOf 	ies:Event .
+ies:FloodWarning            rdf:type            rdfs:Class .
+ies:FloodWarning 	        rdfs:subClassOf 	ies:Warning .
+
+ies:refersTo	 			rdf:type 	    	    owl:ObjectProperty .
+ies:refersTo                rdfs:subPropertyOf      ies:relationship .
+ies:refersTo                rdfs:domain             ies:Event . 
+ies:refersTo                rdfs:range              ies:ExchangedItem . 
