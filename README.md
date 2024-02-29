@@ -16,7 +16,7 @@ Python >= 3.8
 ## Install
 
 ```shell
-pip install https://github.com/telicent-oss/ies-tool.git
+pip install git+https://github.com/telicent-oss/ies-tool.git
 ```
 
 
