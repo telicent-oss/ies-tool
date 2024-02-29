@@ -1,0 +1,20 @@
+name: Python Test Build
+
+on:
+  pull_request:
+    branches:
+      - "release-please*"
+  push:
+    branches-ignore:
+      - "main"
+  workflow_dispatch:
+
+jobs:
+  test_and_build:
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+    uses: telicent-oss/shared-workflows/.github/workflows/python-test-library.yml@main
+    with:
+      PYTHON_VERSION: ${{ matrix.python-version }}
