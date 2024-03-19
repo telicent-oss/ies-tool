@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "telicent-ies-tool"
-version = "1.0.2"
+version = "1.0.1"
 authors = [{name = "Telicent Ltd", email = "opensource@telicent.io"}]
 description = "A library for working with the IES data standard"
 requires-python = ">=3.8"
