@@ -752,7 +752,7 @@ class IESTool:
 
     def create_person(self, uri: str | None = None, classes: list | None = None,
                       given_name: str | None = None, family_name: str | None = None, dob: str | None = None,
-                      pob: Location | None = None) -> Person:
+                      pob: Location | None = None, dod: str | None = None, pod: Location | None = None) -> Person:
         """
         Instantiate an IES Person
 
@@ -763,6 +763,8 @@ class IESTool:
             pob (Location): place of birth of the person a Python Location object
             classes (list): the IES types to instantiate  - default is Person - shouldn't need to change this
             uri (str): the URI of the Person instance - if unset, one will be created.
+            dod (str): date of death of the person (ISO8601 string, no spaces, use T)
+            pod (Location): place of death of the person a Python Location object
 
         Returns:
             Person: a Python Person object that wraps the IES Person data
@@ -771,9 +773,10 @@ class IESTool:
             classes = ["http://ies.data.gov.uk/ontology/ies4#Person"]
 
         person = Person(
-            tool=self, family_name=family_name, given_name=given_name, start=dob, pob=pob, uri=uri,
+            tool=self, family_name=family_name, given_name=given_name, start=dob, pob=pob, uri=uri, end=dod, pod=pod,
             classes=classes
         )
+
         return person
 
     def create_measure(self, uri: str | None = None, classes: list | None = None,
@@ -1073,7 +1076,7 @@ class Element(ExchangedItem):
         if start:
             self.starts_in(start)
         if end:
-            self.starts_in(end)
+            self.ends_in(end)
 
     def add_part(self, part: Element, part_rel_type=None):
         """
@@ -1400,8 +1403,8 @@ class Person(ResponsibleActor):
     """
     def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None, family_name: str | None = None,
-                 given_name: str | None = None,
-                 pob: Location | None = None):
+                 given_name: str | None = None, pob: Location | None = None,
+                 pod: Location | None = None):
         """
             Instantiate the IES Person
 
@@ -1414,17 +1417,14 @@ class Person(ResponsibleActor):
                 family_name (str): surname of the person
                 given_name (str): the first name of the Person
                 pob (Location): the place of birth of the Person
+                pod (Location): the place of death of the Person
             Returns:
                 Person:
         """
         if classes is None:
             classes = [PERSON]
 
-        birth = start
-        if pob:
-            start = None
-
-        super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
+        super().__init__(tool=tool, uri=uri, classes=classes, start=None, end=None)
 
         self._default_state_type = "http://ies.data.gov.uk/ontology/ies4#PersonState"
 
@@ -1438,8 +1438,11 @@ class Person(ResponsibleActor):
             self.add_name(family_name, uri=name_uri_surname,
                           name_class="http://ies.data.gov.uk/ontology/ies4#Surname")
 
-        if birth is not None:
-            self.add_birth(birth, pob)
+        if start is not None:
+            self.add_birth(start, pob)
+
+        if end is not None:
+            self.add_death(end, pod)
 
     def add_birth(self, dob: str, pob: Location | None = None) -> BoundingState:
         """
