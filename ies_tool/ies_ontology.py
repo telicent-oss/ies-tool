@@ -115,6 +115,8 @@ class Ontology:
         self.__communication = self.ies_class("Communication")
         self.__pic = self.ies_class("PartyInCommunication")
 
+        
+
         logger.info("IES ontology ready")
 
     # runs a query on the ontology and returns the results

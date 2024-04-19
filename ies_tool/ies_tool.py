@@ -38,6 +38,7 @@ iso3166_ns = Namespace("http://iso.org/iso3166#")
 iso8601_ns = Namespace("http://iso.org/iso8601#")
 
 RdfsClassType = TypeVar('RdfsClassType', bound='RdfsClass')
+RDFS = "http://www.w3.org/2000/01/rdf-schema#"
 RDFS_RESOURCE = "http://www.w3.org/2000/01/rdf-schema#Resource"
 RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 RDFS_CLASS = "http://www.w3.org/2000/01/rdf-schema#Class"
@@ -230,6 +231,45 @@ class IESTool:
         self.rdfs_label = f"{self.prefixes['rdfs']}label"
 
         self.__validate = False
+
+        #Create a layered dictionary of base classes, along with their corresponding IES subclasses. 
+        #This enables look up of most appropriate base class when call instantiate
+        #This may be better if it was in the ies_ontology library, but they don't have access to 
+        # the class definitions and didn't want to create a circular dependency...again
+        self.base_classes = self.__all_python_subclasses({},RdfsResource,0)
+
+    #Creates a tiered dictionary (with integer keys for each tier).
+    #Each tier has a dictionary of base classes, keyed by their equivalent IES Class URI
+    #Each leaf object also holds a reference to the Python class and all the IES subclasses
+    def __all_python_subclasses(self,hierarchy,cls,level):
+        if not level in hierarchy:
+            hierarchy[level] = {}
+        uri = ''
+        if "Rdfs" in cls.__name__:
+            uri = cls.__name__.replace("Rdfs",RDFS)
+        else:
+            uri = IES_BASE+cls.__name__
+        ies_subs = self.ontology.make_results_set_from_query(
+            "SELECT ?p WHERE {?p <http://www.w3.org/2000/01/rdf-schema#subClassOf>* <" + uri + ">}", "p")
+        hierarchy[level][uri] = {'python_class':cls,'ies_subclasses':list(ies_subs)}
+        subclasses = cls.__subclasses__()
+        if len(subclasses) > 0:
+            for sub in subclasses:
+                self.__all_python_subclasses(hierarchy,sub,level+1)
+        return hierarchy
+    
+    #Given an IES or RDFS class, this function will attempt to return the most appropriate base class (and its level identifier)
+    def __determine_base_class(self,classes):
+        keys = reversed(self.base_classes.keys())
+        for l in keys:
+            level = self.base_classes[l]
+            for bc in level:
+                base_class = level[bc]
+                for cls in classes:
+                    if cls in base_class['ies_subclasses']:
+                        return(base_class["python_class"],l)
+        return self.base_classes[0]["python_class"],0
+
 
     def __get_instance(self, uri: str) -> RdfsResource | None:
         """
@@ -674,6 +714,8 @@ class IESTool:
         """
         return self.add_to_graph(subject, predicate, obj, is_literal=True, literal_type=literal_type)
 
+
+
     def instantiate(self, classes: list | None = None, uri: str = None, instance_uri_context: str = "",
                     base_class: RdfsResource | None = None):
         """
@@ -687,29 +729,16 @@ class IESTool:
             base_class (RdfsResource): The base Python class to use (default is RdfsResource)
         """
 
-        if classes is None:
-            classes = []
-
-        if base_class is None:
-            base_class = RdfsResource
+        if classes is None or classes == []:
+            classes = [RDFS_RESOURCE]
 
         if not isinstance(classes, list):
             raise RuntimeError(
                 "instaniate() expects a list of classes - if you want to instantiate just one class,"
                 " make a singleton list"
             )
-
-        if classes == [] or classes is None:
-            classes = [self.rdfs_resource]
-        else:
-            if len(classes) == 1:
-                cls = classes[0]
-                if cls == f"{self.ies_uri_stub}Person":
-                    base_class = Person
-                elif cls == f"{self.ies_uri_stub}Organisation":
-                    base_class = Organisation
-                elif cls == f"{self.ies_uri_stub}ResponsibleActor":
-                    base_class = ResponsibleActor
+        if base_class == None:
+            base_class,level = self.__determine_base_class(classes)
 
         if uri is None:
             # Make an uri based on the data stub...
@@ -932,6 +961,8 @@ class RdfsResource(metaclass=Unique):
             self._tool.add_to_graph(subject=self._uri, predicate=RDF_TYPE, obj=cls)
         self._classes = classes
 
+        self._tool.instances[self._uri] = self
+
     @property
     def tool(self):
         return self._tool
@@ -963,6 +994,19 @@ class RdfsResource(metaclass=Unique):
     def add_comment(self, comment):
         self.add_literal(predicate=self._tool.rdfs_comment, obj=comment)
 
+    def _validate_referenced_object(self,reference,base_type=None,context=""):
+        if isinstance(reference,str):
+            if reference in self._tool.instances:
+                return self._tool.instances[reference]
+            else:
+                logger.warning(f"String identifier passed instead of object in {context} - will assume this is a valid URI: {reference}")
+                if base_type == None:
+                    base_type = RdfsResource
+                return base_type(tool=self._tool,uri=reference,classes=[])
+        elif isinstance(reference,RdfsResource):
+            return reference
+        else:
+            raise Exception(f"Unknown type {str(type(reference))} in {context}")
 
 class RdfsClass(RdfsResource):
     """
@@ -1078,13 +1122,15 @@ class Element(ExchangedItem):
         if end:
             self.ends_in(end)
 
-    def add_part(self, part: Element, part_rel_type=None):
+    def add_part(self, part, part_rel_type=None):
         """
             takes an Element instance and adds it as part of the current Element
         """
+        part_object = self._validate_referenced_object(part,Element,"add_part")
         if part_rel_type is None:
             part_rel_type = "http://ies.data.gov.uk/ontology/ies4#isPartOf"
-        self._tool.add_to_graph(part.uri, part_rel_type, self._uri)
+        self._tool.add_to_graph(part_object.uri, part_rel_type, self._uri)
+        return part_object
 
     def add_state(
             self, state_type: str | None = None, uri: str | None = None,
@@ -1108,13 +1154,15 @@ class Element(ExchangedItem):
             state.in_location(in_location)
         return state
 
-    def in_location(self, location: Location):
+    def in_location(self, location):
         """
             places the Element in a Location
         """
+        location_object = self._validate_referenced_object(location,Location,"in_location")
         self._tool.add_to_graph(
             subject=self.uri, predicate="http://ies.data.gov.uk/ontology/ies4#inLocation",
-            obj=location.uri)
+            obj=location_object.uri)
+        return location_object
 
     def put_in_period(self, time_string: str):
         """
@@ -1357,15 +1405,18 @@ class ResponsibleActor(Entity):
         self._default_state_type = "http://ies.data.gov.uk/ontology/ies4#ResponsibleActorState"
 
     # Asserts the responsible actor works for another responsible actor
-    def works_for(self, employer: Entity, start: str | None = None, end: str | None = None):
+    def works_for(self, employer, start: str | None = None, end: str | None = None):
+        employer_object = self._validate_referenced_object(employer,ResponsibleActor,"works_for")
         state = self.add_state(start=start, end=end)
         self._tool.add_to_graph(subject=state._uri, predicate="http://ies.data.gov.uk/ontology/ies4#worksFor",
-                                obj=employer._uri)
+                                obj=employer_object._uri)
         return state
 
-    def in_post(self, post: Entity, start: str | None = None, end: str | None = None):
+    def in_post(self, post, start: str | None = None, end: str | None = None):
+        post_object = self._validate_referenced_object(post,Post,"in_post")
         in_post = self.add_state(state_type="http://ies.data.gov.uk/ontology/ies4#InPost", start=start, end=end)
-        post.add_part(in_post)
+        post_object.add_part(in_post)
+        return post_object
 
 
 class Post(ResponsibleActor):
@@ -1444,28 +1495,26 @@ class Person(ResponsibleActor):
         if end is not None:
             self.add_death(end, pod)
 
-    def add_birth(self, dob: str, pob: Location | None = None) -> BoundingState:
+    def add_birth(self, dob: str, pob = None) -> BoundingState:
         """
 
         :param dob: Date of birth represented as string
-        :param pob:  Location Object
+        :param pob:  Location of birth
         :return: BirthState object
         """
+
+        
 
         birth_uri = f'{self._uri}_BIRTH'
         birth = self.starts_in(time_string=dob, bounding_state_class="http://ies.data.gov.uk/ontology/ies4#BirthState",
                                uri=birth_uri)
         if pob:
-            if not isinstance(pob, Location):
-                logger.warning(
-                    f"Place of birth must be of type <Location>, but we got {type(pob)}, POB not added ! "
-                    f"Your data will be incomplete !!!"
-                )
-                return birth
-            self._tool.add_to_graph(birth._uri, "http://ies.data.gov.uk/ontology/ies4#inLocation", pob._uri)
+            pob_object = self._validate_referenced_object(pob,Location,"add_birth")
+            
+            self._tool.add_to_graph(birth._uri, "http://ies.data.gov.uk/ontology/ies4#inLocation", pob_object._uri)
         return birth
 
-    def add_death(self, dod: str, pod: Location | None = None, uri: str | None = None) -> BoundingState:
+    def add_death(self, dod: str, pod = None, uri: str | None = None) -> BoundingState:
         """
         # Adds a death state and (optionally) a location of death to a being (usually a person)
         :param dod: Date of death represented as string
@@ -1479,12 +1528,8 @@ class Person(ResponsibleActor):
             dod, bounding_state_class="http://ies.data.gov.uk/ontology/ies4#DeathState", uri=uri
         )
         if pod:
-            if not isinstance(pod, Location):
-                logger.warning(
-                   f"Place of death must be of type <Location>, but we got {type(pod)}, "
-                   f"POD not added ! Your data will be incomplete !!!"
-                )
-            self._tool.add_to_graph(death._uri, "http://ies.data.gov.uk/ontology/ies4#inLocation", pod._uri)
+            pod_object = self._validate_referenced_object(pod,Location,"add_death")
+            self._tool.add_to_graph(death._uri, "http://ies.data.gov.uk/ontology/ies4#inLocation", pod_object._uri)
 
         return death
 
@@ -1916,7 +1961,7 @@ class Event(Element):
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
     def add_participant(self,
-                        participating_entity: Element,
+                        participating_entity,
                         uri: str | None = None,
                         participation_type: str | None = None,
                         start: str | None = None,
@@ -1932,18 +1977,20 @@ class Event(Element):
         :return:
         """
 
+        pe_object = self._validate_referenced_object(participating_entity,Entity,"add_participant")
+
         if uri is None:
             uri = self.tool.generate_data_uri()
 
         if participation_type is None:
             participation_type = "http://ies.data.gov.uk/ontology/ies4#EventParticipant"
 
-        part = EventParticipant(tool=self._tool, uri=uri, start=start, end=end, classes=[participation_type])
+        participant = EventParticipant(tool=self._tool, uri=uri, start=start, end=end, classes=[participation_type])
 
-        self._tool.add_to_graph(part._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipantIn", self._uri)
-        self._tool.add_to_graph(part._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipationOf",
-                                participating_entity._uri)
-        return part
+        self._tool.add_to_graph(participant._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipantIn", self._uri)
+        self._tool.add_to_graph(participant._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipationOf",
+                                pe_object._uri)
+        return participant
 
 
 class EventParticipant(State):
@@ -2040,21 +2087,25 @@ class PartyInCommunication(Event):
         if communication is not None:
             communication.add_part(self)
 
-    def add_account(self, account: Event, uri: str | None = None):
+    def add_account(self, account, uri: str | None = None):
+
         uri = uri or self._uri + "-account"
+        account_object = self._validate_referenced_object(account,Event,"add_account")
         try:
             aic = EventParticipant(
                 tool=self._tool, uri=uri,
                 classes=["http://ies.data.gov.uk/ontology/ies4#AccountInCommunication"]
             )
             self._tool.add_to_graph(aic._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipantIn", self._uri)
-            self._tool.add_to_graph(aic._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipationOf", account._uri)
+            self._tool.add_to_graph(aic._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipationOf", account_object._uri)
         except AttributeError as e:
             logger.warning(
                 f"Exception occurred while trying to add account, no account will be added."
                 f" {repr(e)}")
+        return account_object
 
-    def add_device(self, device: Event, uri: str | None = None):
+    def add_device(self, device, uri: str | None = None):
+        device_object = self._validate_referenced_object(device,Device,"add_device")
         uri = uri or self._uri + "-account"
         try:
             dic = EventParticipant(
@@ -2062,14 +2113,16 @@ class PartyInCommunication(Event):
                 classes=["http://ies.data.gov.uk/ontology/ies4#DeviceInCommunication"]
             )
             self._tool.add_to_graph(dic._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipantIn", self._uri)
-            self._tool.add_to_graph(dic._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipationOf", device._uri)
+            self._tool.add_to_graph(dic._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipationOf", device_object._uri)
         except AttributeError as e:
             logger.warning(
                 f"Exception occurred while trying to add device, no device will be added."
                 f" {repr(e)}"
             )
+        return device_object
 
-    def add_person(self, person: Event, uri: str | None = None):
+    def add_person(self, person, uri: str | None = None):
+        person_object = self._validate_referenced_object(person,Person,"add_person")
         uri = uri or self._uri + "-account"
         try:
             pic = EventParticipant(
@@ -2077,9 +2130,10 @@ class PartyInCommunication(Event):
                 classes=["http://ies.data.gov.uk/ontology/ies4#PersonInCommunication"]
             )
             self._tool.add_to_graph(pic._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipantIn", self._uri)
-            self._tool.add_to_graph(pic._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipationOf", person._uri)
+            self._tool.add_to_graph(pic._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipationOf", person_object._uri)
         except AttributeError as e:
             logger.warning(
                 f"Exception occurred while trying to add person, no person will be added."
                 f" {repr(e)}"
             )
+        return person_object
