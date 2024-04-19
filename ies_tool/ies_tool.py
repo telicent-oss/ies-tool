@@ -366,6 +366,7 @@ class IESTool:
         self.session_uuid = uuid.uuid4()
         self.session_uuid_str = str(self.session_uuid)
         self.session_instance_count = 0
+        self.instances = {}
         return self.session_uuid
 
     def set_uri_stub(self, uri_stub: str):
