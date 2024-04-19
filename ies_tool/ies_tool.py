@@ -2098,12 +2098,12 @@ class PartyInCommunication(Event):
                 classes=["http://ies.data.gov.uk/ontology/ies4#AccountInCommunication"]
             )
             self._tool.add_to_graph(
-                aic._uri, 
-                "http://ies.data.gov.uk/ontology/ies4#isParticipantIn", 
+                aic._uri,
+                "http://ies.data.gov.uk/ontology/ies4#isParticipantIn",
                 self._uri)
             self._tool.add_to_graph(
-                aic._uri, 
-                "http://ies.data.gov.uk/ontology/ies4#isParticipationOf", 
+                aic._uri,
+                "http://ies.data.gov.uk/ontology/ies4#isParticipationOf",
                 account_object._uri)
         except AttributeError as e:
             logger.warning(
@@ -2120,12 +2120,12 @@ class PartyInCommunication(Event):
                 classes=["http://ies.data.gov.uk/ontology/ies4#DeviceInCommunication"]
             )
             self._tool.add_to_graph(
-                dic._uri, 
-                "http://ies.data.gov.uk/ontology/ies4#isParticipantIn", 
+                dic._uri,
+                "http://ies.data.gov.uk/ontology/ies4#isParticipantIn",
                 self._uri)
             self._tool.add_to_graph(
-                dic._uri, 
-                "http://ies.data.gov.uk/ontology/ies4#isParticipationOf", 
+                dic._uri,
+                "http://ies.data.gov.uk/ontology/ies4#isParticipationOf",
                 device_object._uri)
         except AttributeError as e:
             logger.warning(
@@ -2142,8 +2142,14 @@ class PartyInCommunication(Event):
                 tool=self._tool, uri=uri,
                 classes=["http://ies.data.gov.uk/ontology/ies4#PersonInCommunication"]
             )
-            self._tool.add_to_graph(pic._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipantIn", self._uri)
-            self._tool.add_to_graph(pic._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipationOf", person_object._uri)
+            self._tool.add_to_graph(
+                pic._uri,
+                "http://ies.data.gov.uk/ontology/ies4#isParticipantIn",
+                self._uri)
+            self._tool.add_to_graph(
+                pic._uri,
+                "http://ies.data.gov.uk/ontology/ies4#isParticipationOf",
+                person_object._uri)
         except AttributeError as e:
             logger.warning(
                 f"Exception occurred while trying to add person, no person will be added."
