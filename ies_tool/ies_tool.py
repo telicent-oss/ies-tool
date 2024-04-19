@@ -232,9 +232,9 @@ class IESTool:
 
         self.__validate = False
 
-        #Create a layered dictionary of base classes, along with their corresponding IES subclasses. 
+        #Create a layered dictionary of base classes, along with their corresponding IES subclasses.
         #This enables look up of most appropriate base class when call instantiate
-        #This may be better if it was in the ies_ontology library, but they don't have access to 
+        #This may be better if it was in the ies_ontology library, but they don't have access to
         # the class definitions and didn't want to create a circular dependency...again
         self.base_classes = self.__all_python_subclasses({},RdfsResource,0)
 
@@ -242,7 +242,7 @@ class IESTool:
     #Each tier has a dictionary of base classes, keyed by their equivalent IES Class URI
     #Each leaf object also holds a reference to the Python class and all the IES subclasses
     def __all_python_subclasses(self,hierarchy,cls,level):
-        if not level in hierarchy:
+        if level not in hierarchy:
             hierarchy[level] = {}
         uri = ''
         if "Rdfs" in cls.__name__:
@@ -257,17 +257,18 @@ class IESTool:
             for sub in subclasses:
                 self.__all_python_subclasses(hierarchy,sub,level+1)
         return hierarchy
-    
-    #Given an IES or RDFS class, this function will attempt to return the most appropriate base class (and its level identifier)
+
+    #Given an IES or RDFS class, this function will attempt to return the most appropriate base class
+    # (and its level identifier)
     def __determine_base_class(self,classes):
         keys = reversed(self.base_classes.keys())
-        for l in keys:
-            level = self.base_classes[l]
+        for level_number in keys:
+            level = self.base_classes[level_number]
             for bc in level:
                 base_class = level[bc]
                 for cls in classes:
                     if cls in base_class['ies_subclasses']:
-                        return(base_class["python_class"],l)
+                        return(base_class["python_class"],level_number)
         return self.base_classes[0]["python_class"],0
 
 
@@ -738,7 +739,7 @@ class IESTool:
                 "instaniate() expects a list of classes - if you want to instantiate just one class,"
                 " make a singleton list"
             )
-        if base_class == None:
+        if base_class is None:
             base_class,level = self.__determine_base_class(classes)
 
         if uri is None:
@@ -1000,7 +1001,9 @@ class RdfsResource(metaclass=Unique):
             if reference in self._tool.instances:
                 return self._tool.instances[reference]
             else:
-                logger.warning(f"String identifier passed instead of object in {context} - will assume this is a valid URI: {reference}")
+                logger.warning(
+                    f"String identifier passed instead of object in {context} - will assume this is a valid URI: {reference}"
+                )
                 if base_type == None:
                     base_type = RdfsResource
                 return base_type(tool=self._tool,uri=reference,classes=[])
