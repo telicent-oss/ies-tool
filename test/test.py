@@ -45,7 +45,7 @@ def test_anne_person():
     anne.add_label("Anne Label")
     anne.add_representation("blah rep")
 
-    x = tool.instantiate(
+    tool.instantiate(
         ["http://ies.data.gov.uk/ontology/ies4#Device", "http://ies.data.gov.uk/ontology/ies4#Person"]
     )
 
@@ -55,7 +55,7 @@ def test_anne_person():
 
     acme = tool.create_organisation(name="ACME inc")
     acme_director = acme.add_post(name="Witchfinder General", start="1612-01-01")
-    acme.add_part("http://test#part1") #A test to see if dumb URIs can be passed 
+    acme.add_part("http://test#part1") #A test to see if dumb URIs can be passed
 
     anne.add_birth("1984-01-01", gp)
     anne.add_death("2017-08-11", gp)

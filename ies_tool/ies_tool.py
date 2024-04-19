@@ -1002,9 +1002,9 @@ class RdfsResource(metaclass=Unique):
                 return self._tool.instances[reference]
             else:
                 logger.warning(
-                    f"String identifier passed instead of object in {context} - will assume this is a valid URI: {reference}"
+                    f"String passed instead of object in {context} - will assume this is a valid URI: {reference}"
                 )
-                if base_type == None:
+                if base_type is None:
                     base_type = RdfsResource
                 return base_type(tool=self._tool,uri=reference,classes=[])
         elif isinstance(reference,RdfsResource):
@@ -1507,14 +1507,11 @@ class Person(ResponsibleActor):
         :return: BirthState object
         """
 
-        
-
         birth_uri = f'{self._uri}_BIRTH'
         birth = self.starts_in(time_string=dob, bounding_state_class="http://ies.data.gov.uk/ontology/ies4#BirthState",
                                uri=birth_uri)
         if pob:
             pob_object = self._validate_referenced_object(pob,Location,"add_birth")
-            
             self._tool.add_to_graph(birth._uri, "http://ies.data.gov.uk/ontology/ies4#inLocation", pob_object._uri)
         return birth
 
@@ -2100,8 +2097,14 @@ class PartyInCommunication(Event):
                 tool=self._tool, uri=uri,
                 classes=["http://ies.data.gov.uk/ontology/ies4#AccountInCommunication"]
             )
-            self._tool.add_to_graph(aic._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipantIn", self._uri)
-            self._tool.add_to_graph(aic._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipationOf", account_object._uri)
+            self._tool.add_to_graph(
+                aic._uri, 
+                "http://ies.data.gov.uk/ontology/ies4#isParticipantIn", 
+                self._uri)
+            self._tool.add_to_graph(
+                aic._uri, 
+                "http://ies.data.gov.uk/ontology/ies4#isParticipationOf", 
+                account_object._uri)
         except AttributeError as e:
             logger.warning(
                 f"Exception occurred while trying to add account, no account will be added."
@@ -2116,8 +2119,14 @@ class PartyInCommunication(Event):
                 tool=self._tool, uri=uri,
                 classes=["http://ies.data.gov.uk/ontology/ies4#DeviceInCommunication"]
             )
-            self._tool.add_to_graph(dic._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipantIn", self._uri)
-            self._tool.add_to_graph(dic._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipationOf", device_object._uri)
+            self._tool.add_to_graph(
+                dic._uri, 
+                "http://ies.data.gov.uk/ontology/ies4#isParticipantIn", 
+                self._uri)
+            self._tool.add_to_graph(
+                dic._uri, 
+                "http://ies.data.gov.uk/ontology/ies4#isParticipationOf", 
+                device_object._uri)
         except AttributeError as e:
             logger.warning(
                 f"Exception occurred while trying to add device, no device will be added."
