@@ -170,7 +170,7 @@ class IESTool:
         ]
 
         # Property initialisations
-        self.uri_stub = None
+
         self.session_instance_count = None
         self.session_uuid_str = None
         self.session_uuid = None
@@ -213,22 +213,23 @@ class IESTool:
 
         if self.__mode != "sparql_server":
             self.clear_graph()
-
-        # Establish a set of useful prefixes
+            
         self.prefixes = {}
-        self.add_prefix("xsd", "http://www.w3.org/2001/XMLSchema#")
-        self.add_prefix("dc", "http://purl.org/dc/elements/1.1/")
-        self.add_prefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-        self.add_prefix("rdfs", "http://www.w3.org/2000/01/rdf-schema#")
-        self.add_prefix("owl", "http://www.w3.org/2002/07/owl#")
+        self.uri_stub = uri_stub
+        # Establish a set of useful prefixes
+        self.add_prefix("xsd:", "http://www.w3.org/2001/XMLSchema#")
+        self.add_prefix("dc:", "http://purl.org/dc/elements/1.1/")
+        self.add_prefix("rdf:", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+        self.add_prefix("rdfs:", "http://www.w3.org/2000/01/rdf-schema#")
+        self.add_prefix("owl:", "http://www.w3.org/2002/07/owl#")
+        self.add_prefix("ies:", IES_BASE)
 
         self.ies_uri_stub = IES_BASE
-        self.set_uri_stub(uri_stub=uri_stub)
         self.iso8601_uri_stub = "http://iso.org/iso8601#"
-        self.rdf_type = f"{self.prefixes['rdf']}type"
-        self.rdfs_resource = f"{self.prefixes['rdfs']}Resource"
-        self.rdfs_comment = f"{self.prefixes['rdfs']}comment"
-        self.rdfs_label = f"{self.prefixes['rdfs']}label"
+        self.rdf_type = f"{self.prefixes['rdf:']}type"
+        self.rdfs_resource = f"{self.prefixes['rdfs:']}Resource"
+        self.rdfs_comment = f"{self.prefixes['rdfs:']}comment"
+        self.rdfs_label = f"{self.prefixes['rdfs:']}label"
 
         self.__validate = False
 
@@ -237,6 +238,45 @@ class IESTool:
         #This may be better if it was in the ies_ontology library, but they don't have access to
         # the class definitions and didn't want to create a circular dependency...again
         self.base_classes = self.__all_python_subclasses({},RdfsResource,0)
+
+    @property
+    def uri_stub(self):
+        return self.prefixes[":"]
+    
+    @uri_stub.setter
+    def uri_stub(self,value):
+        self.add_prefix(":",value)
+
+    def add_prefix(self, prefix: str, uri: str):
+        """
+        Adds an RDF prefix to the internal list of namespace prefixes. If using rdflib for the in-memory graph,
+        it will also register the namespace there
+
+        Args:
+            prefix (str): The prefix to add
+            uri (str): The corresponding namespace URI
+        """
+
+        if ":" not in prefix:
+            prefix = prefix + ":"
+
+        self.prefixes[prefix] = uri
+        if self.__mode == "rdflib":
+            ns = Namespace(uri)
+            self.graph.bind(prefix.replace(":",""), ns)
+
+    def format_prefixes(self) -> str:
+        """
+        Returns the prefixes held in IESTool, formatted for use in SPARQL queries
+
+        Returns:
+            str: The formatted prefixes
+        """
+
+        prefix_str = ''
+        for prefix in self.prefixes:
+            prefix_str = f"{prefix_str}PREFIX {prefix} <{self.prefixes[prefix]}> "
+        return prefix_str
 
     #Creates a tiered dictionary (with integer keys for each tier).
     #Each tier has a dictionary of base classes, keyed by their equivalent IES Class URI
@@ -317,33 +357,7 @@ class IESTool:
         self.shacl.parse(shacl_filename)
         logger.info("SHACL ready")
 
-    def add_prefix(self, prefix: str, uri: str):
-        """
-        Adds an RDF prefix to the internal list of namespace prefixes. If using rdflib for the in-memory graph,
-        it will also register the namespace there
 
-        Args:
-            prefix (str): The prefix to add
-            uri (str): The corresponding namespace URI
-        """
-
-        self.prefixes[prefix] = uri
-        if self.__mode == "rdflib":
-            ns = Namespace(uri)
-            self.graph.bind(prefix, ns)
-
-    def format_prefixes(self) -> str:
-        """
-        Returns the prefixes held in IESTool, formatted for use in SPARQL queries
-
-        Returns:
-            str: The formatted prefixes
-        """
-
-        prefix_str = ''
-        for prefix in self.prefixes:
-            prefix_str = f"{prefix_str}PREFIX {prefix}: <{self.prefixes[prefix]}> "
-        return prefix_str
 
     def clear_graph(self) -> uuid.UUID:
         """
