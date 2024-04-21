@@ -11,13 +11,14 @@ common objects that can be assembled following well-defined patterns. This intro
 not found in traditional data models, which is great for real-world situations where information requirements
 change faster than the data models can be re-engineered. The disadvantage to this approach is that if users
 and developers are not steeped in the principles that underpin the ontology (4D, extensional, constructional)
-then it is easy to generate structures that do not follow the patterns. We can mitigate this somewhat with
+then it is possible to generate structures that do not follow the patterns. We can mitigate this somewhat with
 the use of SHACL, but overuse of SHACL would result in the loss of desired flexibility.
 
 To counter some of these issues, Telicent have collected together a number of convenience functions that we
 have used on projects into one Python library to help data engineers get started and hopefully ensure 
-appropriate use of the ontology. 
-
+appropriate use of the ontology. This is work in progress, and we want to hear from users about what is 
+missing / not working, and of course requests for new features. We will continue to add functionality as we
+identify the requirement in customer projects. 
 
 
 ## Dependencies
@@ -35,7 +36,7 @@ pip install telicent-ies-tool
 ## Overview & Approach
 
 The IES Tool has a main factory class - `IESTool` - that takes care of storage, caching, and Python object instantiation.
-It is necessary to initiate a tool object for every dataset you wish to work with.
+It is necessary to initiate a tool object for every dataset you wish to work with. 
 
 ```python
 tool = IESTool()
@@ -43,17 +44,47 @@ tool = IESTool()
 
 As well as the main factory class, there are base Python classes for all the significant IES classes:
 
-```
-RdfsResource
-    RdfsClass
-    ExchangedItem
-    Element
-        Entity
-        State
-            EventParticipant
-        Event
 
-```
+* <a href="https://www.w3.org/TR/rdf-schema/#ch_resource">RdfsResource</a>
+    * <a href="https://www.w3.org/TR/rdf-schema/#ch_class">RdfsClass</a>
+        * <a href="https://github.com/dstl/IES4/blob/master/ies.md#types">ClassOfElement</a>
+            * <a href="https://github.com/dstl/IES4/blob/master/ies.md#representation-and-content">Representation</a>
+                * <a href="https://github.com/dstl/IES4/blob/master/ies.md#identifiers">Identifier</a>
+                * <a href="https://github.com/dstl/IES4/blob/master/ies.md#identifiers">Name</a>
+                * <a href="https://github.com/dstl/IES4/blob/master/ies.md#characteristics-and-measures">MeasureValue</a>
+            * <a href="https://github.com/dstl/IES4/blob/master/ies.md#characteristics-and-measures">Measure</a>
+        * <a href="https://github.com/dstl/IES4/blob/master/ies.md#types">ClassOfClassOfElement</a>
+            * <a href="https://github.com/dstl/IES4/blob/master/ies.md#characteristics-and-measures">UnitOfMeasure</a>
+            * <a href="https://github.com/dstl/IES4/blob/master/ies.md#identifiers">NamingScheme</a>
+    * <a href="https://github.com/dstl/IES4/blob/master/ies.md#ies-overview">ExchangedItem</a>
+        * <a href="https://github.com/dstl/IES4/blob/master/ies.md#types">ClassOfElement</a>
+            * <a href="https://github.com/dstl/IES4/blob/master/ies.md#representation-and-content">Representation</a>
+                * <a href="https://github.com/dstl/IES4/blob/master/ies.md#identifiers">Identifier</a>
+                * <a href="https://github.com/dstl/IES4/blob/master/ies.md#identifiers">Name</a>
+                * <a href="https://github.com/dstl/IES4/blob/master/ies.md#characteristics-and-measures">MeasureValue</a>
+            * <a href="https://github.com/dstl/IES4/blob/master/ies.md#characteristics-and-measures">Measure</a>
+        * <a href="https://github.com/dstl/IES4/blob/master/ies.md#types">ClassOfClassOfElement</a>
+            * <a href="https://github.com/dstl/IES4/blob/master/ies.md#characteristics-and-measures">UnitOfMeasure</a>
+            * <a href="https://github.com/dstl/IES4/blob/master/ies.md#identifiers">NamingScheme</a>
+    * <a href="https://github.com/dstl/IES4/blob/master/ies.md#ies-overview">Element</a>
+        * <a href="https://github.com/dstl/IES4/blob/master/ies.md#ies-overview">Entity</a>
+            * <a href="https://github.com/dstl/IES4/blob/master/ies.md#communications-device">Device</a>
+            * <a href="https://github.com/dstl/IES4/blob/master/ies.md#Location">Location</a>
+                * <a href="https://github.com/dstl/IES4/blob/master/ies.md#Location">GeoPoint</a>
+            * <a href="https://github.com/dstl/IES4/blob/master/ies.md#posts-and-roles">ResponsibleActor</a>
+                * <a href="https://github.com/dstl/IES4/blob/master/ies.md#posts-and-roles">Post</a>
+                * <a href="https://github.com/dstl/IES4/blob/master/ies.md#person">Person</a>
+                * <a href="https://github.com/dstl/IES4/blob/master/ies.md#organisation">Organisation</a>
+        * <a href="https://github.com/dstl/IES4/blob/master/ies.md#ies-overview">State</a>
+            * <a href="https://github.com/dstl/IES4/blob/master/ies.md#communications-device">DeviceState</a>
+            * <a href="https://github.com/dstl/IES4/blob/master/ies.md#start-and-end">BoundingState</a>
+            * <a href="https://github.com/dstl/IES4/blob/master/ies.md#start-and-end">BirthState</a>
+            * <a href="https://github.com/dstl/IES4/blob/master/ies.md#start-and-end">DeathState</a>
+            * <a href="https://github.com/dstl/IES4/blob/master/ies.md#events-dear-boy-events">EventParticipant</a>
+        * <a href="https://github.com/dstl/IES4/blob/master/ies.md#events-dear-boy-events">Event</a>
+            * <a href="https://github.com/dstl/IES4/blob/master/ies.md#communication">Communication</a>
+            * <a href="https://github.com/dstl/IES4/blob/master/ies.md#communication">PartyInCommunication</a>
+        * <a href="https://github.com/dstl/IES4/blob/master/ies.md#period-of-time">ParticularPeriod</a>
 
 Each of these classes can be instantiated using typical Pythonic approach - e.g. 
 ```python
@@ -146,27 +177,6 @@ tool.add_to_graph(
 )
 ```
 
-
-### Labelling nodes in Telicent Graph
-
-Primary names appear as node labels in Telicent Graph. 
-To add a primary name to the person we have created earlier we can use the `"http://telicent.io/ontology/primaryName"` uri as a predicate and primary name as an object.
-
-```python
-tool.add_literal(
-    subject=my_person.uri,
-    predicate="http://telicent.io/ontology/primaryName",
-    obj="my primary name string"
-)
-```
-
-#### To clear the graph:
-
-```python
-tool.clear_graph()
-```
-
-
 ### Saving/creating RDF
 
 #### As a text string
@@ -180,4 +190,10 @@ As the IES tool uses RDFLib by default. If another storage plug-in has been used
 
 ```python
 tool.save_rdf("path/to/my/file.ttl",format="ttl")  
+```
+
+### To clear the graph:
+
+```python
+tool.clear_graph()
 ```
