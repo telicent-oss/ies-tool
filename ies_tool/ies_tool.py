@@ -585,6 +585,7 @@ class IESTool:
             if clear:
                 self.clear_graph()
         return ret_dict
+    
 
     def save_rdf(self, filename, format: str = "nt", clear: bool = False):
         """
@@ -719,7 +720,7 @@ class IESTool:
                 obj = URIRef(obj)
             self.graph.add((URIRef(subject), URIRef(predicate), obj))
 
-    def add_literal(self, subject: str, predicate: str, obj: str, literal_type: str = "string"):
+    def add_literal_property(self, subject: str, predicate: str, obj: str, literal_type: str = "string"):
         """
         Adds a triple where the object is a literal
 
@@ -958,7 +959,7 @@ class RdfsResource(metaclass=Unique):
             Args:
                 tool (IESTool): The IES Tool which holds the data you're working with
                 uri (str): the URI of the RDFS Resource
-                classes (list): the IES types to instantiate
+                classes (list): the RDFS classes to instantiate
 
             Returns:
                 RdfsResource:
@@ -1002,15 +1003,24 @@ class RdfsResource(metaclass=Unique):
         self._tool.add_to_graph(self.uri, predicate=RDF_TYPE, obj=uri)
 
     # Adds a triple where the object is a literal
-    def add_literal(self, predicate: str, obj: str, literal_type: str = "string"):
-        return self._tool.add_to_graph(self._uri, predicate, obj, is_literal=True, literal_type=literal_type)
+    def add_literal(self, predicate: str, literal: str, literal_type: str = "string"):
+        return self._tool.add_to_graph(self._uri, predicate, literal, is_literal=True, literal_type=literal_type)
 
+    # Adds an rdfs label to this node
     def add_label(self, label):
         self.add_literal(predicate=self._tool.rdfs_label, obj=label)
 
+    # Adds an rdfs comment to this node
     def add_comment(self, comment):
         self.add_literal(predicate=self._tool.rdfs_comment, obj=comment)
 
+    # Adds a predicate to relate this node to another via a specified predicate
+    def add_related_object(self,predicate,related_object):
+        related_object = self._validate_referenced_object(related_object,context="add_relation")
+        return self._tool.add_to_graph(self._uri,predicate=predicate,obj=related_object,is_literal=False)
+
+    # An internal method for ascertaining the best base class of a given URI. 
+    # If you pass it an object, it just returns the object you gave it
     def _validate_referenced_object(self,reference,base_type=None,context=""):
         if isinstance(reference,str):
             if reference in self._tool.instances:
