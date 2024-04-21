@@ -211,9 +211,6 @@ class IESTool:
         # Note that both plugin and rdflib datasets are initialised to enable quick changeover
         self.graph = Graph()
 
-        if self.__mode != "sparql_server":
-            self.clear_graph()
-            
         self.prefixes = {}
         self.uri_stub = uri_stub
         # Establish a set of useful prefixes
@@ -222,7 +219,12 @@ class IESTool:
         self.add_prefix("rdf:", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
         self.add_prefix("rdfs:", "http://www.w3.org/2000/01/rdf-schema#")
         self.add_prefix("owl:", "http://www.w3.org/2002/07/owl#")
+        self.add_prefix("iso8601:", "http://iso.org/iso8601#")
+        self.add_prefix("iso3166:", "http://iso.org/iso3166#")
         self.add_prefix("ies:", IES_BASE)
+
+        if self.__mode != "sparql_server":
+            self.clear_graph()
 
         self.ies_uri_stub = IES_BASE
         self.iso8601_uri_stub = "http://iso.org/iso8601#"
@@ -242,7 +244,7 @@ class IESTool:
     @property
     def uri_stub(self):
         return self.prefixes[":"]
-    
+
     @uri_stub.setter
     def uri_stub(self,value):
         self.add_prefix(":",value)
@@ -375,9 +377,8 @@ class IESTool:
             if self.graph is not None:
                 del self.graph
             self.graph = Graph()
-            self.graph.bind("ies", ies_ns)
-            self.graph.bind("iso3166", iso3166_ns)
-            self.graph.bind("iso8601", iso8601_ns)
+            for prefix in self.prefixes:
+                self.graph.bind(prefix.replace(":",""),self.prefixes[prefix])
         self.session_uuid = uuid.uuid4()
         self.session_uuid_str = str(self.session_uuid)
         self.session_instance_count = 0

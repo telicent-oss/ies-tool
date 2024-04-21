@@ -37,6 +37,7 @@ def run_test(tool):
 
 def test_anne_person():
     tool = IESTool(validate=True)
+    tool.clear_graph()
     anne = Person(tool=tool, given_name="Anne", family_name="Smith")
     anne.add_measure(measure_class=tool.ontology.ies_class("Mass"), value=104)
 
