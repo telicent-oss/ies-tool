@@ -1489,7 +1489,7 @@ class Person(ResponsibleActor):
     """
     def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None, family_name: str | None = None,
-                 given_name: str | None = None, date_of_birth: str | None = None, date_of_death: str | None = None, 
+                 given_name: str | None = None, date_of_birth: str | None = None, date_of_death: str | None = None,
                  place_of_birth: Location | None = None, place_of_death: Location | None = None):
         """
             Instantiate an IES Person Class
