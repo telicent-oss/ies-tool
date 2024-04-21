@@ -117,6 +117,76 @@ tool = IESTool()
 ```
 
 
+
+
+### Creating Data
+
+#### Person
+To create a person we need to instantiate a `Person` object first. We can pass in several parameters, but the only mandatory one is the `tool` parameter which refers to the IESTool factory object being used. The instantiated person graph will be stored in tool dataset.
+
+```python
+my_person = Person(
+    tool=tool,
+    given_name='Fred',
+    family_name='Smith',
+    date_of_birth="1985-08-21"
+)
+```
+Note that `start` is used for the date of birth as this is inherited from Element. 
+
+We can then add additional information associated with the person using one of the available methods such as 
+`add_identifier()`, `add_state()`, `in_location()`, `works_for()` etc.
+
+The data produced from the example above will be:
+
+```turtle
+@prefix : <http://example.com/rdf/testdata#> .
+@prefix ies: <http://ies.data.gov.uk/ontology/ies4#> .
+@prefix iso8601: <http://iso.org/iso8601#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+:d8751056-e1c2-40b7-86f6-670e50e450f1-1_BIRTH a ies:BirthState ;
+    ies:inPeriod iso8601:1985-08-21 ;
+    ies:isStartOf :d8751056-e1c2-40b7-86f6-670e50e450f1-1 .
+
+:d8751056-e1c2-40b7-86f6-670e50e450f1-1 a ies:Person ;
+    ies:hasName :d8751056-e1c2-40b7-86f6-670e50e450f1-1_FIRSTNAME,
+        :d8751056-e1c2-40b7-86f6-670e50e450f1-1_SURNAME .
+
+:d8751056-e1c2-40b7-86f6-670e50e450f1-1_FIRSTNAME a ies:GivenName ;
+    ies:representationValue "Fred"^^xsd:string .
+
+:d8751056-e1c2-40b7-86f6-670e50e450f1-1_SURNAME a ies:Surname ;
+    ies:representationValue "Smith"^^xsd:string .
+
+iso8601:1985-08-21 a ies:ParticularPeriod ;
+    ies:iso8601PeriodRepresentation "1985-08-21"^^xsd:string .
+```
+
+Note that the URIs are generated automatically (UUIDs plus a URI stub) unless the uri parameter is used to manually set them.
+
+
+### Low-level operations (RDF / RDFS)
+The base classes provide some simple methods for creating predicates:
+
+```python
+my_person.add_literal(predicate="http://xmlns.com/foaf/0.1/name",literal="Fred Smith")
+my_person.add_label("Freddy")
+my_person.add_comment("The one and only Fred Smith")
+my_person.add_telicent_primary_name("SMITH, Fred")
+my_person.add_related_object(predicate="http://ies.data.gov.uk/ontology/ies4#ancestorOf",related_object=my_other_person)
+```
+
+The IES tool itself also provides a set of low-level methods for working with the graph, such as `add_to_graph` which adds an RDF statement:
+
+```python
+tool.add_to_graph(
+    subject=my_person.uri,
+    predicate='http://ies.data.gov.uk/ontology/ies4#hasCharacteristic',
+    obj=characteristic_uri
+)
+```
+
 ### Namespaces
 
 To bind an RDF namespace prefix, we need to 'register' that prefix. The library pre-configures prefixes: 
@@ -140,42 +210,6 @@ tool.uri_stub = 'http://domain/rdf/stub#'
 ```
 Note this will also set the blank prefix `:` to `http://domain/rdf/stub#`
 
-
-### Creating a Person
-To create a person we need to instantiate a person object/class first. We can pass in several parameters, as shown below, as well as specify a unique uri or class, if needed.
-
-```python
-my_person = Person(
-    tool=tool,
-    given_name='Fred',
-    family_name='Smith',
-    start="1985-08-21"
-)
-```
-We can then add additional information associated with the person using one of the available methods such as 
-`add_identifier()`, `add_state()`, `in_location()`, `works_for()` etc.
-
-
-### Low-level operations (RDF / RDFS)
-The base classes provide some simple methods for creating predicates:
-
-```python
-my_person.add_literal(predicate="http://xmlns.com/foaf/0.1/name",literal="Fred Smith")
-my_person.add_label("Freddy")
-my_person.add_comment("The one and only Fred Smith")
-my_person.add_telicent_primary_name("SMITH, Fred")
-my_person.add_related_object(predicate="http://ies.data.gov.uk/ontology/ies4#ancestorOf",related_object=my_other_person)
-```
-
-The IES tool itself also provides a set of low-level methods for working with the graph, such as `add_to_graph` which adds an RDF statement:
-
-```python
-tool.add_to_graph(
-    subject=my_person.uri,
-    predicate='http://ies.data.gov.uk/ontology/ies4#hasCharacteristic',
-    obj=characteristic_uri
-)
-```
 
 ### Saving/creating RDF
 

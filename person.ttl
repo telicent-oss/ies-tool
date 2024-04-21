@@ -1,0 +1,22 @@
+@prefix : <http://example.com/rdf/testdata#> .
+@prefix ies: <http://ies.data.gov.uk/ontology/ies4#> .
+@prefix iso8601: <http://iso.org/iso8601#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+:89d8fecc-77de-4dd8-b486-717da16e95db-1_BIRTH a ies:BirthState ;
+    ies:inPeriod iso8601:1985-08-21 ;
+    ies:isStartOf :89d8fecc-77de-4dd8-b486-717da16e95db-1 .
+
+:89d8fecc-77de-4dd8-b486-717da16e95db-1 a ies:Person ;
+    ies:hasName :89d8fecc-77de-4dd8-b486-717da16e95db-1_FIRSTNAME,
+        :89d8fecc-77de-4dd8-b486-717da16e95db-1_SURNAME .
+
+:89d8fecc-77de-4dd8-b486-717da16e95db-1_FIRSTNAME a ies:GivenName ;
+    ies:representationValue "Fred"^^xsd:string .
+
+:89d8fecc-77de-4dd8-b486-717da16e95db-1_SURNAME a ies:Surname ;
+    ies:representationValue "Smith"^^xsd:string .
+
+iso8601:1985-08-21 a ies:ParticularPeriod ;
+    ies:iso8601PeriodRepresentation "1985-08-21"^^xsd:string .
+

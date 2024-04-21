@@ -1489,10 +1489,10 @@ class Person(ResponsibleActor):
     """
     def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None, family_name: str | None = None,
-                 given_name: str | None = None, pob: Location | None = None,
-                 pod: Location | None = None):
+                 given_name: str | None = None, date_of_birth: str | None = None, date_of_death: str | None = None, place_of_birth: Location | None = None,
+                 place_of_death: Location | None = None):
         """
-            Instantiate the IES Person
+            Instantiate an IES Person Class
 
             Args:
                 tool (IESTool): The IES Tool which holds the data you're working with
@@ -1502,8 +1502,10 @@ class Person(ResponsibleActor):
                 end (str): an ISO8601 datetime string that marks the death of the Person
                 family_name (str): surname of the person
                 given_name (str): the first name of the Person
-                pob (Location): the place of birth of the Person
-                pod (Location): the place of death of the Person
+                date_of_birth (str): an ISO8601 datetime string that marks the birth of the Person - use in preference to start
+                date_of_death (str): an ISO8601 datetime string that marks the death of the Person - use in preference to end
+                place_of_birth (Location): the place of birth of the Person
+                place_of_dearh (Location): the place of death of the Person
             Returns:
                 Person:
         """
@@ -1511,6 +1513,17 @@ class Person(ResponsibleActor):
             classes = [PERSON]
 
         super().__init__(tool=tool, uri=uri, classes=classes, start=None, end=None)
+
+        if date_of_birth is not None:
+            if start is not None:
+                raise Exception("start and date_of_birth cannot both be set for Person")
+            start = date_of_birth
+
+        if date_of_death is not None:
+            if end is not None:
+                raise Exception("end and date_of_death cannot both be set for Person")
+            end = date_of_death
+
 
         self._default_state_type = "http://ies.data.gov.uk/ontology/ies4#PersonState"
 
@@ -1525,12 +1538,12 @@ class Person(ResponsibleActor):
                           name_class="http://ies.data.gov.uk/ontology/ies4#Surname")
 
         if start is not None:
-            self.add_birth(start, pob)
+            self.add_birth(start, place_of_birth)
 
         if end is not None:
-            self.add_death(end, pod)
+            self.add_death(end, place_of_death)
 
-    def add_birth(self, dob: str, pob = None) -> BoundingState:
+    def add_birth(self, date_of_birth: str, place_of_birth = None) -> BoundingState:
         """
 
         :param dob: Date of birth represented as string
@@ -1539,28 +1552,28 @@ class Person(ResponsibleActor):
         """
 
         birth_uri = f'{self._uri}_BIRTH'
-        birth = self.starts_in(time_string=dob, bounding_state_class="http://ies.data.gov.uk/ontology/ies4#BirthState",
+        birth = self.starts_in(time_string=date_of_birth, bounding_state_class="http://ies.data.gov.uk/ontology/ies4#BirthState",
                                uri=birth_uri)
-        if pob:
-            pob_object = self._validate_referenced_object(pob,Location,"add_birth")
+        if place_of_birth:
+            pob_object = self._validate_referenced_object(place_of_birth,Location,"add_birth")
             self._tool.add_to_graph(birth._uri, "http://ies.data.gov.uk/ontology/ies4#inLocation", pob_object._uri)
         return birth
 
-    def add_death(self, dod: str, pod = None, uri: str | None = None) -> BoundingState:
+    def add_death(self, date_of_death: str, place_of_death = None, uri: str | None = None) -> BoundingState:
         """
         # Adds a death state and (optionally) a location of death to a being (usually a person)
-        :param dod: Date of death represented as string
-        :param pod: Location - to optionally specify place of death
+        :param date_of_death: Date of death represented as string
+        :param place_of_death: Location - to optionally specify place of death
         :param uri:
         :return: DeathState object
         """
 
         uri = uri or self._uri + "_DEATH"
         death = self.ends_in(
-            dod, bounding_state_class="http://ies.data.gov.uk/ontology/ies4#DeathState", uri=uri
+            date_of_death, bounding_state_class="http://ies.data.gov.uk/ontology/ies4#DeathState", uri=uri
         )
-        if pod:
-            pod_object = self._validate_referenced_object(pod,Location,"add_death")
+        if place_of_death:
+            pod_object = self._validate_referenced_object(place_of_death,Location,"add_death")
             self._tool.add_to_graph(death._uri, "http://ies.data.gov.uk/ontology/ies4#inLocation", pod_object._uri)
 
         return death
