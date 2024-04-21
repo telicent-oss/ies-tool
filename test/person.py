@@ -1,8 +1,4 @@
-import time
-from unittest import TestCase
-from unittest.mock import mock_open, patch
-
-from ies_tool.ies_tool import Element, Entity, IESTool, Person
+from ies_tool.ies_tool import IESTool, Person
 
 tool = IESTool(validate=True)
 

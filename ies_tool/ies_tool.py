@@ -1489,8 +1489,8 @@ class Person(ResponsibleActor):
     """
     def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None, family_name: str | None = None,
-                 given_name: str | None = None, date_of_birth: str | None = None, date_of_death: str | None = None, place_of_birth: Location | None = None,
-                 place_of_death: Location | None = None):
+                 given_name: str | None = None, date_of_birth: str | None = None, date_of_death: str | None = None, 
+                 place_of_birth: Location | None = None, place_of_death: Location | None = None):
         """
             Instantiate an IES Person Class
 
@@ -1502,8 +1502,8 @@ class Person(ResponsibleActor):
                 end (str): an ISO8601 datetime string that marks the death of the Person
                 family_name (str): surname of the person
                 given_name (str): the first name of the Person
-                date_of_birth (str): an ISO8601 datetime string that marks the birth of the Person - use in preference to start
-                date_of_death (str): an ISO8601 datetime string that marks the death of the Person - use in preference to end
+                date_of_birth (str): an ISO8601 datetime string that marks the birth - use in preference to start
+                date_of_death (str): an ISO8601 datetime string that marks the death - use in preference to end
                 place_of_birth (Location): the place of birth of the Person
                 place_of_dearh (Location): the place of death of the Person
             Returns:
