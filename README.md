@@ -130,8 +130,9 @@ The base classes provide some simple methods for creating predicates:
 
 ```python
 my_person.add_literal(predicate="http://xmlns.com/foaf/0.1/name",literal="Fred Smith")
-my_person.add_label("SMITH, Fred")
+my_person.add_label("Freddy")
 my_person.add_comment("The one and only Fred Smith")
+my_person.add_telicent_primary_name("SMITH, Fred")
 my_person.add_related_object(predicate="http://ies.data.gov.uk/ontology/ies4#ancestorOf",related_object=my_other_person)
 ```
 

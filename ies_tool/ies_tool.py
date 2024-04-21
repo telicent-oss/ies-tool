@@ -1010,11 +1010,11 @@ class RdfsResource(metaclass=Unique):
 
     # Adds an rdfs label to this node
     def add_label(self, label):
-        self.add_literal(predicate=self._tool.rdfs_label, obj=label)
+        self.add_literal(predicate=self._tool.rdfs_label, literal=label)
 
     # Adds an rdfs comment to this node
     def add_comment(self, comment):
-        self.add_literal(predicate=self._tool.rdfs_comment, obj=comment)
+        self.add_literal(predicate=self._tool.rdfs_comment, literal=comment)
 
     # Adds a telicent primary name to the node - for use in the Telicent CORE platform
     def add_telicent_primary_name(self,name):
@@ -1679,7 +1679,7 @@ class ParticularPeriod(Element):
         super().__init__(tool=tool, uri=uri, classes=classes)
 
         self.add_literal(predicate="http://ies.data.gov.uk/ontology/ies4#iso8601PeriodRepresentation",
-                         obj=str(iso8601_time_string))
+                         literal=str(iso8601_time_string))
 
 
 class BoundingState(State):
