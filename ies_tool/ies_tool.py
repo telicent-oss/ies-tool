@@ -74,6 +74,8 @@ EVENT_PARTICIPANT = f"{IES_BASE}EventParticipant"
 COMMUNICATION = f"{IES_BASE}Communication"
 PARTY_IN_COMMUNICATION = f"{IES_BASE}PartyInCommunication"
 
+TELICENT_PRIMARY_NAME = "http://telicent.io/ontology/primaryName"
+
 logger = logging.getLogger(__name__)
 
 
@@ -221,6 +223,7 @@ class IESTool:
         self.add_prefix("owl:", "http://www.w3.org/2002/07/owl#")
         self.add_prefix("iso8601:", "http://iso.org/iso8601#")
         self.add_prefix("iso3166:", "http://iso.org/iso3166#")
+        self.add_prefix("tont:","http://telicent.io/ontology/")
         self.add_prefix("ies:", IES_BASE)
 
         if self.__mode != "sparql_server":
@@ -585,7 +588,6 @@ class IESTool:
             if clear:
                 self.clear_graph()
         return ret_dict
-    
 
     def save_rdf(self, filename, format: str = "nt", clear: bool = False):
         """
@@ -1014,12 +1016,16 @@ class RdfsResource(metaclass=Unique):
     def add_comment(self, comment):
         self.add_literal(predicate=self._tool.rdfs_comment, obj=comment)
 
+    # Adds a telicent primary name to the node - for use in the Telicent CORE platform
+    def add_telicent_primary_name(self,name):
+        self.add_literal(predicte=TELICENT_PRIMARY_NAME,literal=name)
+
     # Adds a predicate to relate this node to another via a specified predicate
     def add_related_object(self,predicate,related_object):
         related_object = self._validate_referenced_object(related_object,context="add_relation")
         return self._tool.add_to_graph(self._uri,predicate=predicate,obj=related_object,is_literal=False)
 
-    # An internal method for ascertaining the best base class of a given URI. 
+    # An internal method for ascertaining the best base class of a given URI.
     # If you pass it an object, it just returns the object you gave it
     def _validate_referenced_object(self,reference,base_type=None,context=""):
         if isinstance(reference,str):

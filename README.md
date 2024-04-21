@@ -140,7 +140,7 @@ The IES tool itself also provides a set of low-level methods for working with th
 ```python
 tool.add_to_graph(
     subject=my_person.uri,
-    predicate=f'{tool.ies_uri_stub}hasCharacteristic',
+    predicate='http://ies.data.gov.uk/ontology/ies4#hasCharacteristic',
     obj=characteristic_uri
 )
 ```
