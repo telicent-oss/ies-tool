@@ -27,10 +27,10 @@ def run_test(tool):
         inst = tool.instantiate([c])
         if isinstance(inst, Element):
             # obviously, this will be wrong for most classes, but we're just testing performance
-            inst.add_state(start="2004-01-01", end="2006-01-01")
+            inst.create_state(start="2004-01-01", end="2006-01-01")
         for _ in range(50):
             dev = Entity(tool=tool, classes=["http://ies.data.gov.uk/ontology/ies4#Device"])
-            dev.add_state(state_type=tool.ontology.ies_class("DeviceState"), start="2014-03-11", end="2022-08-30")
+            dev.create_state(state_type=tool.ontology.ies_class("DeviceState"), start="2014-03-11", end="2022-08-30")
         tool.get_rdf()
         tool.clear_graph()
 
@@ -38,7 +38,7 @@ def run_test(tool):
 def test_anne_person():
     tool = IESTool(validate=True)
     tool.clear_graph()
-    anne = Person(tool=tool, given_name="Anne", family_name="Smith")
+    anne = Person(tool=tool, given_name="Anne", surname="Smith", date_of_birth="1492-01-13")
     anne.add_measure(measure_class=tool.ontology.ies_class("Mass"), value=104)
 
     anne.add_identifier("blah")
@@ -51,7 +51,7 @@ def test_anne_person():
     )
 
     gp = tool.create_geopoint(lat=52.41419458448101, lon=16.899256413657202, precision=9)
-    e = tool.create_event()
+    e = tool.create_event(event_end="1999-09-09")
     e.add_participant(anne)
 
     acme = tool.create_organisation(name="ACME inc")
@@ -60,7 +60,7 @@ def test_anne_person():
 
     anne.add_birth("1984-01-01", gp)
     anne.add_death("2017-08-11", gp)
-    anne.add_state()
+    anne.create_state()
     anne.works_for(acme, "2011-03-11", "2017-06-20")
 
     anne.in_post(acme_director, start="2015-12-05", end="2017-06-20")
@@ -83,11 +83,11 @@ class MainTestCase(TestCase):
             mock_file.assert_called_with('./test-anne.ttl', 'w')
 
     def test_no_dob_on_person_when_none(self):
-        Person(tool=self.tool, given_name="Anne", family_name="Smith")
+        Person(tool=self.tool, given_name="Anne", surname="Smith")
         self.assertTrue('BIRTH' not in str(self.tool.get_rdf()))
 
     def test_dob_on_person_when_given(self):
-        Person(tool=self.tool, given_name="Anne", family_name="Smith", start='1970-01-01')
+        Person(tool=self.tool, given_name="Anne", surname="Smith", start='1970-01-01')
         self.assertTrue('BIRTH' in str(self.tool.get_rdf()))
 
 

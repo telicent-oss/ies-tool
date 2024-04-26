@@ -1,21 +1,19 @@
 from __future__ import annotations
-
+from datetime import datetime
+from geohash_tools import encode
+from ies_tool.ies_ontology import IES_BASE, Ontology
+from ies_tool.ies_plugin import IESPlugin
 import io
 import json
 import logging
 import os
 import pathlib
-import uuid
-import warnings
-from typing import TypeVar
-
-import requests
-from geohash_tools import encode
 from pyshacl import validate as pyshacl_validate
 from rdflib import XSD, Graph, Literal, Namespace, URIRef
-
-from ies_tool.ies_ontology import IES_BASE, Ontology
-from ies_tool.ies_plugin import IESPlugin
+import requests
+from typing import TypeVar
+import uuid
+import warnings
 
 __license__ = """
 Copyright TELICENT LTD
@@ -63,6 +61,7 @@ DEVICE_STATE = f"{IES_BASE}DeviceState"
 DEVICE = f"{IES_BASE}Device"
 LOCATION = f"{IES_BASE}Location"
 LOCATION_STATE = f"{IES_BASE}#LocationState"
+COUNTRY = f"{IES_BASE}#Country"
 GEOPOINT = f"{IES_BASE}GeoPoint"
 RESPONSIBLE_ACTOR = f"{IES_BASE}ResponsibleActor"
 POST = f"{IES_BASE}Post"
@@ -270,6 +269,14 @@ class IESTool:
             ns = Namespace(uri)
             self.graph.bind(prefix.replace(":",""), ns)
 
+    def _validate_datetime_string(self, dt_string: str):
+        try:
+            datetime.fromisoformat(dt_string.replace('Z', '+00:00'))
+        except RuntimeError as exc:
+            logger.error(f'invalid ISO8601 datetime string: {dt_string}')
+            raise RuntimeError(f'invalid ISO8601 datetime string: {dt_string}') from exc
+        return True
+
     def format_prefixes(self) -> str:
         """
         Returns the prefixes held in IESTool, formatted for use in SPARQL queries
@@ -383,7 +390,7 @@ class IESTool:
             for prefix in self.prefixes:
                 self.graph.bind(prefix.replace(":",""),self.prefixes[prefix])
         self.session_uuid = uuid.uuid4()
-        self.session_uuid_str = str(self.session_uuid)
+        self.session_uuid_str =self.session_uuid.hex
         self.session_instance_count = 0
         self.instances = {}
         return self.session_uuid
@@ -639,7 +646,7 @@ class IESTool:
             context (str): an additional string to insert into the URI to provide human-readable context
         """
 
-        uri = f'{self.uri_stub}{self.session_uuid_str}{context}-{str(self.session_instance_count)}'
+        uri = f'{self.uri_stub}{self.session_uuid_str}{context}_{self.session_instance_count:06d}'
         self.session_instance_count = self.session_instance_count + 1
         return uri
 
@@ -668,6 +675,12 @@ class IESTool:
         return True
 
     def add_to_graph(self, subject: str, predicate: str, obj: str, is_literal: bool = False,
+                     literal_type: str = "string", security_label: str = "") -> bool:
+        logger.warn("add_to_graph() is deprecated - please use add_triple()")
+        return self.add_triple(subject=subject, predicate=predicate, obj=obj, is_literal=is_literal,
+                     literal_type=literal_type, security_label=security_label)
+
+    def add_triple(self, subject: str, predicate: str, obj: str, is_literal: bool = False,
                      literal_type: str = "string", security_label: str = "") -> bool:
         """
         Adds a triple to a graph when provided with subject, predicate and object as strings
@@ -732,7 +745,7 @@ class IESTool:
             obj (str): The object of the triple to add
             literal_type: the XML datatype to use (default is "string")
         """
-        return self.add_to_graph(subject, predicate, obj, is_literal=True, literal_type=literal_type)
+        return self.add_triple(subject, predicate, obj, is_literal=True, literal_type=literal_type)
 
 
 
@@ -790,7 +803,7 @@ class IESTool:
         Returns:
             Event: The created Event wrapped as an IES Event class
         """
-
+        logger.warning("IESTool.create_event is deprecated - please initiate Event Python class directly")
         if classes is None:
             classes = ["http://ies.data.gov.uk/ontology/ies4#Event"]
 
@@ -800,14 +813,14 @@ class IESTool:
         return event
 
     def create_person(self, uri: str | None = None, classes: list | None = None,
-                      given_name: str | None = None, family_name: str | None = None, dob: str | None = None,
+                      given_name: str | None = None, surname: str | None = None, dob: str | None = None,
                       pob: Location | None = None, dod: str | None = None, pod: Location | None = None) -> Person:
         """
         Instantiate an IES Person
 
         Args:
             given_name (str): first name of the person
-            family_name (str): surname of the person
+            surname (str): surname of the person
             dob (str): date of birth of the person (ISO8601 string, no spaces, use T)
             pob (Location): place of birth of the person a Python Location object
             classes (list): the IES types to instantiate  - default is Person - shouldn't need to change this
@@ -818,11 +831,13 @@ class IESTool:
         Returns:
             Person: a Python Person object that wraps the IES Person data
         """
+        logger.warning("IESTool.create_person is deprecated - please initiate Person Python class directly")
+
         if classes is None:
             classes = ["http://ies.data.gov.uk/ontology/ies4#Person"]
 
         person = Person(
-            tool=self, family_name=family_name, given_name=given_name, start=dob, pob=pob, uri=uri, end=dod, pod=pod,
+            tool=self, surname=surname, given_name=given_name, start=dob, pob=pob, uri=uri, end=dod, pod=pod,
             classes=classes
         )
 
@@ -842,6 +857,8 @@ class IESTool:
         Returns:
             Measure - the instance created wrapped as a Python object
         """
+        logger.warning("IESTool.create_measure is deprecated - please initiate Measure Python class directly")
+
         if classes is None:
             classes = ["http://ies.data.gov.uk/ontology/ies4#Measure"]
 
@@ -868,6 +885,7 @@ class IESTool:
         Returns:
             Communication - instance wrapped as a Python Communication object
         """
+        logger.warning("IESTool.create_communication deprecated - please initiate Communication Python class directly")
 
         if classes is None:
             classes = ["http://ies.data.gov.uk/ontology/ies4#Communication"]
@@ -895,6 +913,7 @@ class IESTool:
         Returns:
             GeoPoint - instance wrapped as a Python GeoPoint object
         """
+        logger.warning("IESTool.create_geopoint is deprecated - please initiate GeoPoint Python class directly")
 
         if classes is None:
             classes = ["http://ies.data.gov.uk/ontology/ies4#GeoPoint"]
@@ -919,6 +938,8 @@ class IESTool:
         Returns:
             Organisation:
         """
+        logger.warning("IESTool.create_organisation is deprecated - please initiate Organisation Python class directly")
+
         if classes is None:
             classes = ["http://ies.data.gov.uk/ontology/ies4#Organisation"]
         return Organisation(
@@ -928,10 +949,13 @@ class IESTool:
 
 class Unique(type):
     def __call__(cls, *args, **kwargs):
+        if "tool" not in kwargs:
+            raise Exception("Please use keyword arguments when initialising classes, starting with tool=")
         tool = kwargs["tool"]
         # Annoyingly, classes doesn't seem to reach this, despite being set as default parameters.
         # classes = kwargs["classes"]
         cache = tool.instances
+
         if "uri" not in kwargs:
             uri = tool.generate_data_uri()
         else:
@@ -978,7 +1002,7 @@ class RdfsResource(metaclass=Unique):
             self._uri = uri
 
         for cls in classes:
-            self._tool.add_to_graph(subject=self._uri, predicate=RDF_TYPE, obj=cls)
+            self._tool.add_triple(subject=self._uri, predicate=RDF_TYPE, obj=cls)
         self._classes = classes
 
         self._tool.instances[self._uri] = self
@@ -1002,11 +1026,11 @@ class RdfsResource(metaclass=Unique):
             "SELECT ?c WHERE {<" + self._uri + "> <http://www.w3.org/2000/01/rdf-schema#comment> ?c }", "c")
 
     def add_type(self, uri):
-        self._tool.add_to_graph(self.uri, predicate=RDF_TYPE, obj=uri)
+        self._tool.add_triple(self.uri, predicate=RDF_TYPE, obj=uri)
 
     # Adds a triple where the object is a literal
     def add_literal(self, predicate: str, literal: str, literal_type: str = "string"):
-        return self._tool.add_to_graph(self._uri, predicate, literal, is_literal=True, literal_type=literal_type)
+        return self._tool.add_triple(self._uri, predicate, literal, is_literal=True, literal_type=literal_type)
 
     # Adds an rdfs label to this node
     def add_label(self, label):
@@ -1023,7 +1047,7 @@ class RdfsResource(metaclass=Unique):
     # Adds a predicate to relate this node to another via a specified predicate
     def add_related_object(self,predicate,related_object):
         related_object = self._validate_referenced_object(related_object,context="add_relation")
-        return self._tool.add_to_graph(self._uri,predicate=predicate,obj=related_object,is_literal=False)
+        return self._tool.add_triple(self._uri,predicate=predicate,obj=related_object,is_literal=False)
 
     # An internal method for ascertaining the best base class of a given URI.
     # If you pass it an object, it just returns the object you gave it
@@ -1033,7 +1057,8 @@ class RdfsResource(metaclass=Unique):
                 return self._tool.instances[reference]
             else:
                 logger.warning(
-                    f"String passed instead of object in {context} - will assume this is a valid URI: {reference}"
+                    f'''String passed instead of object in {context}
+                    - assumed valid URI: {reference} and base class {base_type.__name__}'''
                 )
                 if base_type is None:
                     base_type = RdfsResource
@@ -1102,7 +1127,7 @@ class ExchangedItem(RdfsResource):
             tool=self._tool, representation_text=representation_text, uri=uri,
             classes=[representation_class], naming_scheme=naming_scheme
         )
-        self._tool.add_to_graph(subject=self._uri, predicate=rep_rel_type, obj=representation._uri)
+        self._tool.add_triple(subject=self._uri, predicate=rep_rel_type, obj=representation._uri)
         return representation
 
     def add_name(
@@ -1115,7 +1140,7 @@ class ExchangedItem(RdfsResource):
             tool=self._tool, name_text=name, uri=uri,
             classes=[name_class], naming_scheme=naming_scheme
         )
-        self._tool.add_to_graph(subject=self._uri, predicate=name_rel_type, obj=representation._uri)
+        self._tool.add_triple(subject=self._uri, predicate=name_rel_type, obj=representation._uri)
 
     def add_identifier(
             self, identifier, id_class: str | None = f"{IES_BASE}Identifier", uri=None, id_rel_type=None,
@@ -1125,7 +1150,7 @@ class ExchangedItem(RdfsResource):
         representation = Identifier(
             tool=self._tool, id_text=identifier, uri=uri, classes=[id_class], naming_scheme=naming_scheme
         )
-        self._tool.add_to_graph(subject=self._uri, predicate=id_rel_type, obj=representation._uri)
+        self._tool.add_triple(subject=self._uri, predicate=id_rel_type, obj=representation._uri)
 
 
 class Element(ExchangedItem):
@@ -1164,10 +1189,10 @@ class Element(ExchangedItem):
         part_object = self._validate_referenced_object(part,Element,"add_part")
         if part_rel_type is None:
             part_rel_type = "http://ies.data.gov.uk/ontology/ies4#isPartOf"
-        self._tool.add_to_graph(part_object.uri, part_rel_type, self._uri)
+        self._tool.add_triple(part_object.uri, part_rel_type, self._uri)
         return part_object
 
-    def add_state(
+    def create_state(
             self, state_type: str | None = None, uri: str | None = None,
             state_rel: str | None = None, start: str | None = None, end: str | None = None,
             in_location: Location | None = None
@@ -1183,7 +1208,7 @@ class Element(ExchangedItem):
         if not state_rel:
             state_rel = "http://ies.data.gov.uk/ontology/ies4#isStateOf"
 
-        self._tool.add_to_graph(subject=state._uri, predicate=state_rel, obj=self._uri)
+        self._tool.add_triple(subject=state._uri, predicate=state_rel, obj=self._uri)
 
         if in_location is not None:
             state.in_location(in_location)
@@ -1194,7 +1219,7 @@ class Element(ExchangedItem):
             places the Element in a Location
         """
         location_object = self._validate_referenced_object(location,Location,"in_location")
-        self._tool.add_to_graph(
+        self._tool.add_triple(
             subject=self.uri, predicate="http://ies.data.gov.uk/ontology/ies4#inLocation",
             obj=location_object.uri)
         return location_object
@@ -1203,8 +1228,9 @@ class Element(ExchangedItem):
         """
         Puts an item in a particular period
         """
+        self._tool._validate_datetime_string(time_string)
         pp_instance = ParticularPeriod(tool=self._tool, time_string=time_string)
-        self._tool.add_to_graph(self._uri, "http://ies.data.gov.uk/ontology/ies4#inPeriod", pp_instance._uri)
+        self._tool.add_triple(self._uri, "http://ies.data.gov.uk/ontology/ies4#inPeriod", pp_instance._uri)
         return pp_instance
 
     def starts_in(self, time_string: str, bounding_state_class: str | None = None,
@@ -1212,11 +1238,12 @@ class Element(ExchangedItem):
         """
         Asserts an item started in a particular period
         """
+        self._tool._validate_datetime_string(time_string)
         if bounding_state_class is None:
             bounding_state_class = "http://ies.data.gov.uk/ontology/ies4#BoundingState"
 
         bs = BoundingState(tool=self._tool, classes=[bounding_state_class], uri=uri)
-        self._tool.add_to_graph(subject=bs._uri, predicate="http://ies.data.gov.uk/ontology/ies4#isStartOf",
+        self._tool.add_triple(subject=bs._uri, predicate="http://ies.data.gov.uk/ontology/ies4#isStartOf",
                                 obj=self._uri)
         if time_string:
             bs.put_in_period(time_string=time_string)
@@ -1227,11 +1254,12 @@ class Element(ExchangedItem):
         """
         Asserts an item ended in a particular period.
         """
+        self._tool._validate_datetime_string(time_string)
         if bounding_state_class is None:
             bounding_state_class = "http://ies.data.gov.uk/ontology/ies4#BoundingState"
 
         bs = BoundingState(tool=self._tool, classes=[bounding_state_class], uri=uri)
-        self._tool.add_to_graph(subject=bs._uri, predicate="http://ies.data.gov.uk/ontology/ies4#isEndOf",
+        self._tool.add_triple(subject=bs._uri, predicate="http://ies.data.gov.uk/ontology/ies4#isEndOf",
                                 obj=self._uri)
         if time_string:
             bs.put_in_period(time_string=time_string)
@@ -1241,7 +1269,7 @@ class Element(ExchangedItem):
         measure = Measure(
             tool=self._tool, uri=uri, classes=[measure_class], value=value, uom=uom
         )
-        self._tool.add_to_graph(
+        self._tool.add_triple(
             subject=self._uri, predicate="http://ies.data.gov.uk/ontology/ies4#hasCharacteristic", obj=measure._uri
         )
 
@@ -1373,15 +1401,36 @@ class Location(Entity):
 
         self._default_state_type = LOCATION_STATE
 
+class Country(Location):
+    """
+    Python wrapper class for IES Country, where ISO country code forms the URI
+    """
+
+    def __init__(self, tool: IESTool, country_alpha_3_code: str, country_name:str=None,
+                 classes: list[str] | None = None, uri:str=None):
+        """
+            Instantiate the IES Country
+
+            Args:
+                tool (IESTool): The IES Tool which holds the data you're working with
+                country_alpha_3_code: ISO3166 alpha3 code
+            Returns:
+                Country:
+        """
+        uri = iso3166_ns+country_alpha_3_code
+        classes = [COUNTRY]
+        super().__init__(tool=tool, uri=uri, classes=classes)
+        self.add_identifier(country_alpha_3_code,id_class=IES_BASE+"ISO3166_1Alpha_3",uri=uri+"_ISO3166_1Alpha_3")
+        if country_name:
+            self.add_name(country_name,name_class=IES_BASE+"PlaceName",uri=uri+"_NAME")
 
 class GeoPoint(Location):
     """
     Python wrapper class for IES GeoPoint, with geo-hashes used to make the URI
     """
 
-    def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
-                 lat: float = None, lon: float = None, precision: int = None,
-                 start: str | None = None, end: str | None = None):
+    def __init__(self, tool: IESTool, classes: list[str] | None = None,
+                 lat: float = None, lon: float = None, precision: int = None, uri:str=None):
         """
             Instantiate the IES GeoPoint
 
@@ -1399,18 +1448,17 @@ class GeoPoint(Location):
         """
         if classes is None:
             classes = [GEOPOINT]
-        super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
-        self.my_hash = str(encode(float(lat), float(lon), precision=precision))
+        uri = "http://geohash.org/"+str(encode(float(lat), float(lon), precision=precision))
+        super().__init__(tool=tool, uri=uri, classes=classes)
 
-        self.id_uri_base = "http://geohash.org/"
-        self.lat_uri = f"{self.id_uri_base}{self.my_hash}_LAT"
-        self.lon_uri = f"{self.id_uri_base}{self.my_hash}_LON"
+        lat_uri = f"{uri}_LAT"
+        lon_uri = f"{uri}_LON"
 
-        self.add_identifier(identifier=str(lat), uri=self.lat_uri,
+        self.add_identifier(identifier=str(lat), uri=lat_uri,
                             id_class="http://ies.data.gov.uk/ontology/ies4#Latitude")
 
-        self.add_identifier(identifier=str(lon), uri=self.lon_uri,
+        self.add_identifier(identifier=str(lon), uri=lon_uri,
                             id_class="http://ies.data.gov.uk/ontology/ies4#Longitude")
 
 
@@ -1442,14 +1490,14 @@ class ResponsibleActor(Entity):
     # Asserts the responsible actor works for another responsible actor
     def works_for(self, employer, start: str | None = None, end: str | None = None):
         employer_object = self._validate_referenced_object(employer,ResponsibleActor,"works_for")
-        state = self.add_state(start=start, end=end)
-        self._tool.add_to_graph(subject=state._uri, predicate="http://ies.data.gov.uk/ontology/ies4#worksFor",
+        state = self.create_state(start=start, end=end)
+        self._tool.add_triple(subject=state._uri, predicate="http://ies.data.gov.uk/ontology/ies4#worksFor",
                                 obj=employer_object._uri)
         return state
 
     def in_post(self, post, start: str | None = None, end: str | None = None):
         post_object = self._validate_referenced_object(post,Post,"in_post")
-        in_post = self.add_state(state_type="http://ies.data.gov.uk/ontology/ies4#InPost", start=start, end=end)
+        in_post = self.create_state(state_type="http://ies.data.gov.uk/ontology/ies4#InPost", start=start, end=end)
         post_object.add_part(in_post)
         return post_object
 
@@ -1488,7 +1536,7 @@ class Person(ResponsibleActor):
     Python wrapper class for IES Person
     """
     def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
-                 start: str | None = None, end: str | None = None, family_name: str | None = None,
+                 start: str | None = None, end: str | None = None, surname: str | None = None,
                  given_name: str | None = None, date_of_birth: str | None = None, date_of_death: str | None = None,
                  place_of_birth: Location | None = None, place_of_death: Location | None = None):
         """
@@ -1500,7 +1548,7 @@ class Person(ResponsibleActor):
                 classes (list): the IES types to instantiate (default is ies:Person)
                 start (str): an ISO8601 datetime string that marks the birth of the Person
                 end (str): an ISO8601 datetime string that marks the death of the Person
-                family_name (str): surname of the person
+                surname (str): surname of the person
                 given_name (str): the first name of the Person
                 date_of_birth (str): an ISO8601 datetime string that marks the birth - use in preference to start
                 date_of_death (str): an ISO8601 datetime string that marks the death - use in preference to end
@@ -1532,9 +1580,9 @@ class Person(ResponsibleActor):
             self.add_name(given_name, uri=name_uri_firstname,
                           name_class="http://ies.data.gov.uk/ontology/ies4#GivenName")
 
-        if family_name:
+        if surname:
             name_uri_surname = f"{self._uri}_SURNAME"
-            self.add_name(family_name, uri=name_uri_surname,
+            self.add_name(surname, uri=name_uri_surname,
                           name_class="http://ies.data.gov.uk/ontology/ies4#Surname")
 
         if start is not None:
@@ -1556,7 +1604,7 @@ class Person(ResponsibleActor):
                                uri=birth_uri)
         if place_of_birth:
             pob_object = self._validate_referenced_object(place_of_birth,Location,"add_birth")
-            self._tool.add_to_graph(birth._uri, "http://ies.data.gov.uk/ontology/ies4#inLocation", pob_object._uri)
+            self._tool.add_triple(birth._uri, "http://ies.data.gov.uk/ontology/ies4#inLocation", pob_object._uri)
         return birth
 
     def add_death(self, date_of_death: str, place_of_death = None, uri: str | None = None) -> BoundingState:
@@ -1574,7 +1622,7 @@ class Person(ResponsibleActor):
         )
         if place_of_death:
             pod_object = self._validate_referenced_object(place_of_death,Location,"add_death")
-            self._tool.add_to_graph(death._uri, "http://ies.data.gov.uk/ontology/ies4#inLocation", pod_object._uri)
+            self._tool.add_triple(death._uri, "http://ies.data.gov.uk/ontology/ies4#inLocation", pod_object._uri)
 
         return death
 
@@ -1640,7 +1688,7 @@ class ClassOfElement(RdfsClass, ExchangedItem):
         measure = Measure(
             tool=self._tool, value=value, uom=uom, uri=uri, classes=[measure_class]
         )
-        self._tool.add_to_graph(subject=self._uri,
+        self._tool.add_triple(subject=self._uri,
                                 predicate="http://ies.data.gov.uk/ontology/ies4#allHaveCharacteristic",
                                 obj=measure._uri)
 
@@ -1808,10 +1856,10 @@ class Representation(ClassOfElement):
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
-        self._tool.add_to_graph(subject=self._uri, predicate="http://ies.data.gov.uk/ontology/ies4#representationValue",
+        self._tool.add_triple(subject=self._uri, predicate="http://ies.data.gov.uk/ontology/ies4#representationValue",
                                 obj=representation_text, is_literal=True, literal_type="string")
         if naming_scheme:
-            self._tool.add_to_graph(subject=self._uri, predicate="http://ies.data.gov.uk/ontology/ies4#inScheme",
+            self._tool.add_triple(subject=self._uri, predicate="http://ies.data.gov.uk/ontology/ies4#inScheme",
                                     obj=naming_scheme.uri)
 
 
@@ -1841,11 +1889,11 @@ class MeasureValue(Representation):
             raise Exception("MeasureValue must have a valid value")
         super().__init__(tool=tool, representation_text=value, uri=uri, classes=classes, naming_scheme=None)
         if uom is not None:
-            self._tool.add_to_graph(self._uri, "http://ies.data.gov.uk/ontology/ies4#measureUnit", obj=uom._uri)
+            self._tool.add_triple(self._uri, "http://ies.data.gov.uk/ontology/ies4#measureUnit", obj=uom._uri)
         if measure is None:
             logger.warning("MeasureValue created without a corresponding measure")
         else:
-            self._tool.add_to_graph(subject=measure._uri, predicate="http://ies.data.gov.uk/ontology/ies4#hasValue",
+            self._tool.add_triple(subject=measure._uri, predicate="http://ies.data.gov.uk/ontology/ies4#hasValue",
                                     obj=self._uri)
 
 
@@ -1969,13 +2017,13 @@ class NamingScheme(ClassOfClassOfElement):
             classes = [NAMING_SCHEME]
         super().__init__(tool=tool, uri=uri, classes=classes)
         if owner is not None:
-            self._tool.add_to_graph(
+            self._tool.add_triple(
                 subject=self._uri, predicate="http://ies.data.gov.uk/ontology/ies4#schemeOwner", obj=owner._uri
             )
 
     def add_mastering_system(self, system: Entity):
         if system is not None:
-            self._tool.add_to_graph(
+            self._tool.add_triple(
                 subject=self._uri, predicate="http://ies.data.gov.uk/ontology/ies4#schemeMasteredIn", obj=system._uri
             )
 
@@ -2032,8 +2080,8 @@ class Event(Element):
 
         participant = EventParticipant(tool=self._tool, uri=uri, start=start, end=end, classes=[participation_type])
 
-        self._tool.add_to_graph(participant._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipantIn", self._uri)
-        self._tool.add_to_graph(participant._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipationOf",
+        self._tool.add_triple(participant._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipantIn", self._uri)
+        self._tool.add_triple(participant._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipationOf",
                                 pe_object._uri)
         return participant
 
@@ -2141,11 +2189,11 @@ class PartyInCommunication(Event):
                 tool=self._tool, uri=uri,
                 classes=["http://ies.data.gov.uk/ontology/ies4#AccountInCommunication"]
             )
-            self._tool.add_to_graph(
+            self._tool.add_triple(
                 aic._uri,
                 "http://ies.data.gov.uk/ontology/ies4#isParticipantIn",
                 self._uri)
-            self._tool.add_to_graph(
+            self._tool.add_triple(
                 aic._uri,
                 "http://ies.data.gov.uk/ontology/ies4#isParticipationOf",
                 account_object._uri)
@@ -2163,11 +2211,11 @@ class PartyInCommunication(Event):
                 tool=self._tool, uri=uri,
                 classes=["http://ies.data.gov.uk/ontology/ies4#DeviceInCommunication"]
             )
-            self._tool.add_to_graph(
+            self._tool.add_triple(
                 dic._uri,
                 "http://ies.data.gov.uk/ontology/ies4#isParticipantIn",
                 self._uri)
-            self._tool.add_to_graph(
+            self._tool.add_triple(
                 dic._uri,
                 "http://ies.data.gov.uk/ontology/ies4#isParticipationOf",
                 device_object._uri)
@@ -2186,11 +2234,11 @@ class PartyInCommunication(Event):
                 tool=self._tool, uri=uri,
                 classes=["http://ies.data.gov.uk/ontology/ies4#PersonInCommunication"]
             )
-            self._tool.add_to_graph(
+            self._tool.add_triple(
                 pic._uri,
                 "http://ies.data.gov.uk/ontology/ies4#isParticipantIn",
                 self._uri)
-            self._tool.add_to_graph(
+            self._tool.add_triple(
                 pic._uri,
                 "http://ies.data.gov.uk/ontology/ies4#isParticipationOf",
                 person_object._uri)

@@ -1,22 +1,40 @@
 @prefix : <http://example.com/rdf/testdata#> .
 @prefix ies: <http://ies.data.gov.uk/ontology/ies4#> .
+@prefix iso3166: <http://iso.org/iso3166#> .
 @prefix iso8601: <http://iso.org/iso8601#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-:89d8fecc-77de-4dd8-b486-717da16e95db-1_BIRTH a ies:BirthState ;
+:5524c58e15fb4c70bd7391579b2964b5_000001_BIRTH a ies:BirthState ;
     ies:inPeriod iso8601:1985-08-21 ;
-    ies:isStartOf :89d8fecc-77de-4dd8-b486-717da16e95db-1 .
+    ies:isStartOf :5524c58e15fb4c70bd7391579b2964b5_000001 .
 
-:89d8fecc-77de-4dd8-b486-717da16e95db-1 a ies:Person ;
-    ies:hasName :89d8fecc-77de-4dd8-b486-717da16e95db-1_FIRSTNAME,
-        :89d8fecc-77de-4dd8-b486-717da16e95db-1_SURNAME .
+:5524c58e15fb4c70bd7391579b2964b5_000001_DEATH a ies:DeathState ;
+    ies:inPeriod iso8601:2024-01-01 ;
+    ies:isEndOf :5524c58e15fb4c70bd7391579b2964b5_000001 .
 
-:89d8fecc-77de-4dd8-b486-717da16e95db-1_FIRSTNAME a ies:GivenName ;
+iso3166:GBR a <http://ies.data.gov.uk/ontology/ies4##Country> ;
+    ies:hasName iso3166:GBR_NAME ;
+    ies:isIdentifiedBy iso3166:GBR_ISO3166_1Alpha_3 .
+
+:5524c58e15fb4c70bd7391579b2964b5_000001_FIRSTNAME a ies:GivenName ;
     ies:representationValue "Fred"^^xsd:string .
 
-:89d8fecc-77de-4dd8-b486-717da16e95db-1_SURNAME a ies:Surname ;
+:5524c58e15fb4c70bd7391579b2964b5_000001_SURNAME a ies:Surname ;
     ies:representationValue "Smith"^^xsd:string .
+
+iso3166:GBR_ISO3166_1Alpha_3 a ies:ISO3166_1Alpha_3 ;
+    ies:representationValue "GBR"^^xsd:string .
+
+iso3166:GBR_NAME a ies:PlaceName ;
+    ies:representationValue "Blighty"^^xsd:string .
 
 iso8601:1985-08-21 a ies:ParticularPeriod ;
     ies:iso8601PeriodRepresentation "1985-08-21"^^xsd:string .
+
+iso8601:2024-01-01 a ies:ParticularPeriod ;
+    ies:iso8601PeriodRepresentation "2024-01-01"^^xsd:string .
+
+:5524c58e15fb4c70bd7391579b2964b5_000001 a ies:Person ;
+    ies:hasName :5524c58e15fb4c70bd7391579b2964b5_000001_FIRSTNAME,
+        :5524c58e15fb4c70bd7391579b2964b5_000001_SURNAME .
 

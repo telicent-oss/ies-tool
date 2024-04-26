@@ -88,7 +88,7 @@ As well as the main factory class, there are base Python classes for all the sig
 
 Each of these classes can be instantiated using typical Pythonic approach - e.g. 
 ```python
-anne = Person(tool=tool, given_name="Anne", family_name="Smith")
+anne = Person(tool=tool, given_name="Anne", surname="Smith")
 ```
 Note that the initiation parameters must specify the IESTool instance you're using so it knows where to create the RDF
 data. It is recommended that this approach is used in most cases. However, data can also be created using the `instantiate()` 
@@ -128,7 +128,7 @@ To create a person we need to instantiate a `Person` object first. We can pass i
 my_person = Person(
     tool=tool,
     given_name='Fred',
-    family_name='Smith',
+    surname='Smith',
     date_of_birth="1985-08-21"
 )
 ```
@@ -196,7 +196,7 @@ Registering these prefixes just enables shorter, more readable RDF to be produce
 require fully expanded URIs. 
 
 ```python
-from ies_tool.ies_tool import IESTool, NamingScheme
+from ies_tool.ies_tool import IESTool
 
 tool = IESTool(mode="rdflib")
 
