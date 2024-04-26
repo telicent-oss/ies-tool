@@ -1,19 +1,22 @@
 from __future__ import annotations
-from datetime import datetime
-from geohash_tools import encode
-from ies_tool.ies_ontology import IES_BASE, Ontology
-from ies_tool.ies_plugin import IESPlugin
+
+import datetime as dt
 import io
 import json
 import logging
 import os
 import pathlib
-from pyshacl import validate as pyshacl_validate
-from rdflib import XSD, Graph, Literal, Namespace, URIRef
-import requests
-from typing import TypeVar
 import uuid
 import warnings
+from typing import TypeVar
+
+import requests
+from geohash_tools import encode
+from pyshacl import validate as pyshacl_validate
+from rdflib import XSD, Graph, Literal, Namespace, URIRef
+
+from ies_tool.ies_ontology import IES_BASE, Ontology
+from ies_tool.ies_plugin import IESPlugin
 
 __license__ = """
 Copyright TELICENT LTD
@@ -271,7 +274,7 @@ class IESTool:
 
     def _validate_datetime_string(self, dt_string: str):
         try:
-            datetime.fromisoformat(dt_string.replace('Z', '+00:00'))
+            dt.datetime.fromisoformat(dt_string.replace('Z', '+00:00'))
         except RuntimeError as exc:
             logger.error(f'invalid ISO8601 datetime string: {dt_string}')
             raise RuntimeError(f'invalid ISO8601 datetime string: {dt_string}') from exc
