@@ -1217,6 +1217,15 @@ class Element(ExchangedItem):
             state.in_location(in_location)
         return state
 
+    def add_state(
+            self, state_type: str | None = None, uri: str | None = None,
+            state_rel: str | None = None, start: str | None = None, end: str | None = None,
+            in_location: Location | None = None
+    ) -> State:
+        logger.warning("add_state() is deprecated - use create_state()")
+        return self.create_state(state_type=state_type,uri=uri,state_rel=state_rel,
+                                 start=start,end=end,in_location=in_location)
+
     def in_location(self, location):
         """
             places the Element in a Location
@@ -1541,7 +1550,8 @@ class Person(ResponsibleActor):
     def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None, surname: str | None = None,
                  given_name: str | None = None, date_of_birth: str | None = None, date_of_death: str | None = None,
-                 place_of_birth: Location | None = None, place_of_death: Location | None = None):
+                 place_of_birth: Location | None = None, place_of_death: Location | None = None, 
+                 family_name: str | None = None):
         """
             Instantiate an IES Person Class
 
@@ -1587,6 +1597,14 @@ class Person(ResponsibleActor):
             name_uri_surname = f"{self._uri}_SURNAME"
             self.add_name(surname, uri=name_uri_surname,
                           name_class="http://ies.data.gov.uk/ontology/ies4#Surname")
+            if family_name:
+                logger.error("family_name parameter is deprecated equivalent of surname - do not set both")
+        else:
+            if family_name:
+                name_uri_surname = f"{self._uri}_SURNAME"
+                self.add_name(family_name, uri=name_uri_surname,
+                          name_class="http://ies.data.gov.uk/ontology/ies4#Surname")
+                logger.warning("family_name parameter is deprecated - please use surname")
 
         if start is not None:
             self.add_birth(start, place_of_birth)
