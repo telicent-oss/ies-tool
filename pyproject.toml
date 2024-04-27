@@ -15,7 +15,10 @@ dependencies = [
     "python-geohash==0.8.5",
     "pyshacl==0.22.2",
     "requests==2.31.0",
-    "rdflib==6.3.2"
+    "rdflib==6.3.2",
+    "phonenumbers=8.13.35",
+    "pycountry=23.12.11",
+    "validators=0.28.1"
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
