@@ -26,4 +26,6 @@ my_person.owns(my_device)
 
 my_amount = AmountOfMoney(tool=tool,iso_4217_currency_code_alpha3="CHF",amount=32.56)
 
+my_person.owns(my_amount)
+
 tool.save_rdf('./person.ttl', format="ttl")
