@@ -39,14 +39,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-ies_ns = Namespace(IES_BASE)
-iso3166_ns = Namespace("http://iso.org/iso3166#")
-iso4217_ns = Namespace("http://iso.org/iso4217#")
-iso8601_ns = Namespace("http://iso.org/iso8601#")
-e164 = Namespace("https://www.itu.int/e164#")
-rfc5322 = Namespace("https://ietf.org/rfc5322#")
-
 RdfsClassType = TypeVar('RdfsClassType', bound='RdfsClass')
+
 RDFS = "http://www.w3.org/2000/01/rdf-schema#"
 RDFS_RESOURCE = "http://www.w3.org/2000/01/rdf-schema#Resource"
 RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
@@ -246,8 +240,9 @@ class IESTool:
         self.add_prefix("iso4217:","http://iso.org/iso4217#")
         self.add_prefix("tont:","http://telicent.io/ontology/")
         self.add_prefix("e164:","https://www.itu.int/e164#")
+        self.add_prefix("IMSI:","https://www.itu.int/e212#")
         self.add_prefix("rfc5322:","https://ietf.org/rfc5322#")
-
+        self.add_prefix("ieee802:","https://www.ieee802.org#")
         self.add_prefix("ies:", IES_BASE)
 
         if self.__mode != "sparql_server":
@@ -1394,6 +1389,31 @@ class DeviceState(State):
             tool=tool, uri=uri, classes=classes, start=start, end=end
         )
 
+    def add_imsi(self, imsi:str):
+        if not len(imsi.replace("IMSI","")) not in (14, 15):
+            logger.warning(f"IMSI: {imsi} does not appear to be valid")
+        uri = f"{self.tool.prefixes['IMSI:']}{imsi.replace(' ','').replace('IMSI:','')}"
+        self.add_identifier(imsi,id_class=f'{IES_BASE}IMSI',uri=uri)
+
+    def add_mac_address(self, mac_address:str):
+        if not validators.mac_address(mac_address):
+            logger.warning(f"MAC address {mac_address} does not appear to be valid")
+        uri = self.tool.prefixes["ieee802:"]+mac_address.replace(" ","").replace(":","")
+        self.add_identifier(mac_address,id_class=f'{IES_BASE}MACAddress',uri=uri)
+
+    def add_ip_address(self, ip_address:str):
+        if validators.ipv4(ip_address):
+            cls = f"{IES_BASE}IPv4Address"
+        elif validators.ipv6(ip_address):
+            cls = f"{IES_BASE}IPv6Address"
+        else:
+            cls = f"{IES_BASE}IPAddress"
+        self.add_identifier(ip_address,id_class=cls)
+
+    def add_callsign(self, callsign:str):
+        self.add_identifier(callsign,id_class=f'{IES_BASE}Callsign')
+
+
 class Asset(Entity):
     """
         A Python wrapper class for IES Asset
@@ -1459,7 +1479,7 @@ class AmountOfMoney(Asset):
 
         self._default_state_type = ASSET_STATE
 
-class Device(Asset):
+class Device(Asset, DeviceState):
     """
         A Python wrapper class for IES Device
     """
@@ -1634,7 +1654,7 @@ class Country(Location):
             Returns:
                 Country:
         """
-        uri = iso3166_ns+country_alpha_3_code
+        uri = tool.prefixes["iso3166:"]+country_alpha_3_code
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
