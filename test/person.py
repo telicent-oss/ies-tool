@@ -1,4 +1,4 @@
-from ies_tool.ies_tool import Country, IESTool, Person, Account
+from ies_tool.ies_tool import Account, Country, IESTool, Person
 
 tool = IESTool(validate=True)
 
