@@ -18,7 +18,8 @@ dependencies = [
     "rdflib==6.3.2",
     "phonenumbers==8.13.35",
     "pycountry==23.12.11",
-    "validators==0.28.1"
+    "validators==0.28.1",
+    "iso4217parse==0.5.1"
 ]
 classifiers = [
     "Development Status :: 4 - Beta",

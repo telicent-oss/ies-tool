@@ -10,6 +10,7 @@ import uuid
 import warnings
 from typing import TypeVar
 
+import iso4217parse
 import phonenumbers
 import pycountry
 import requests
@@ -40,6 +41,7 @@ limitations under the License.
 
 ies_ns = Namespace(IES_BASE)
 iso3166_ns = Namespace("http://iso.org/iso3166#")
+iso4217_ns = Namespace("http://iso.org/iso4217#")
 iso8601_ns = Namespace("http://iso.org/iso8601#")
 e164 = Namespace("https://www.itu.int/e164#")
 rfc5322 = Namespace("https://ietf.org/rfc5322#")
@@ -57,6 +59,9 @@ PARTICULAR_PERIOD = f"{IES_BASE}ParticularPeriod"
 ACCOUNT = f"{IES_BASE}Account"
 ACCOUNT_HOLDER = f"{IES_BASE}AccountHolder"
 ACCOUNT_STATE = f"{IES_BASE}AccountState"
+AMOUNT_OF_MONEY = f"{IES_BASE}AmountOfMoney"
+ASSET = f"{IES_BASE}Asset"
+ASSET_STATE = f"{IES_BASE}AssetState"
 COMMUNICATIONS_ACCOUNT =f"{IES_BASE}CommunicationsAccount"
 COMMUNICATIONS_ACCOUNT_STATE = f"{IES_BASE}CommunicationsAccountState"
 HOLDS_ACCOUNT = f"{IES_BASE}holdsAccount"
@@ -238,6 +243,7 @@ class IESTool:
         self.add_prefix("owl:", "http://www.w3.org/2002/07/owl#")
         self.add_prefix("iso8601:", "http://iso.org/iso8601#")
         self.add_prefix("iso3166:", "http://iso.org/iso3166#")
+        self.add_prefix("iso4217:","http://iso.org/iso4217#")
         self.add_prefix("tont:","http://telicent.io/ontology/")
         self.add_prefix("e164:","https://www.itu.int/e164#")
         self.add_prefix("rfc5322:","https://ietf.org/rfc5322#")
@@ -1388,8 +1394,72 @@ class DeviceState(State):
             tool=tool, uri=uri, classes=classes, start=start, end=end
         )
 
+class Asset(Entity):
+    """
+        A Python wrapper class for IES Asset
+    """
+    def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
+                 start: str | None = None, end: str | None = None):
+        """
+            Instantiate the IES Device
 
-class Device(Entity):
+            Args:
+                tool (IESTool): The IES Tool which holds the data you're working with
+                uri (str): the URI of the IES Asset
+                classes (list): the IES types to instantiate
+                start (str): an ISO8601 datetime string that marks the start of the Asset
+                end (str): an ISO8601 datetime string that marks the end of the Asset
+
+            Returns:
+                Device:
+        """
+        if classes is None:
+            classes = [ASSET]
+        super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
+
+        self._default_state_type = ASSET_STATE
+
+class AmountOfMoney(Asset):
+    """
+        A Python wrapper class for IES AmountOfMoney
+    """
+    def __init__(self, tool: IESTool, amount:float, iso_4217_currency_code_alpha3:str,
+                 uri: str | None = None, classes: list[str] | None = None):
+        """
+            Instantiate the IES AmountOfMoney
+
+            Args:
+                tool (IESTool): The IES Tool which holds the data you're working with
+                uri (str): the URI of the IES Device
+                classes (list): the IES types to instantiate
+
+            Returns:
+                AmountOfMoney:
+        """
+        if classes is None:
+            classes = [AMOUNT_OF_MONEY]
+
+
+        super().__init__(tool=tool, uri=uri, classes=classes)
+
+        currency = iso4217parse.by_alpha3(iso_4217_currency_code_alpha3)
+        if currency is None:
+            logger.error(f"Unrecognised ISO4217 alpha3 currency code {iso_4217_currency_code_alpha3}")
+
+        currency_uri = self.tool.prefixes["iso4217:"]+iso_4217_currency_code_alpha3
+
+        if currency_uri not in self.tool.instances:
+            currency_object = ClassOfElement(tool=self.tool,uri=currency_uri,classes=[IES_BASE+"Currency"])
+            currency_object.add_identifier(iso_4217_currency_code_alpha3)
+            if currency:
+                currency_object.add_name(currency.name)
+
+        self.tool.add_triple(self.uri,f"{IES_BASE}currencyDenomination",currency_uri)
+        self.tool.add_triple(self.uri,f"{IES_BASE}currencyAmount",str(amount),is_literal=True,literal_type="decimal")
+
+        self._default_state_type = ASSET_STATE
+
+class Device(Asset):
     """
         A Python wrapper class for IES Device
     """
@@ -1668,6 +1738,30 @@ class ResponsibleActor(Entity):
         in_post = self.create_state(state_type="http://ies.data.gov.uk/ontology/ies4#InPost", start=start, end=end)
         post_object.add_part(in_post)
         return post_object
+
+    def has_access_to(self,accessed_item,start: str | None = None, end: str | None = None):
+        accessed_object = self._validate_referenced_object(accessed_item,Entity,"has_access_to")
+        access = self.create_state(start=start, end=end)
+        self.tool.add_triple(access.uri,f"{IES_BASE}hasAccessTo",accessed_object.uri)
+        return access
+
+    def in_possession_of(self,accessed_item,start: str | None = None, end: str | None = None):
+        accessed_object = self._validate_referenced_object(accessed_item,Entity,"in_possession_of")
+        access = self.create_state(start=start, end=end)
+        self.tool.add_triple(access.uri,f"{IES_BASE}inPossessionOf",accessed_object.uri)
+        return access
+
+    def user_of(self,accessed_item,start: str | None = None, end: str | None = None):
+        accessed_object = self._validate_referenced_object(accessed_item,Entity,"user_of")
+        access = self.create_state(start=start, end=end)
+        self.tool.add_triple(access.uri,f"{IES_BASE}userOf",accessed_object.uri)
+        return access
+
+    def owns(self,owned_item,start: str | None = None, end: str | None = None):
+        owned_object = self._validate_referenced_object(owned_item,Asset,"owns")
+        owned = self.create_state(start=start, end=end)
+        self.tool.add_triple(owned.uri,f"{IES_BASE}owns",owned_object.uri)
+        return owned
 
 
 class Post(ResponsibleActor):

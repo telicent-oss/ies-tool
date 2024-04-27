@@ -2,45 +2,62 @@
 @prefix e164: <https://www.itu.int/e164#> .
 @prefix ies: <http://ies.data.gov.uk/ontology/ies4#> .
 @prefix iso3166: <http://iso.org/iso3166#> .
+@prefix iso4217: <http://iso.org/iso4217#> .
 @prefix iso8601: <http://iso.org/iso8601#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-:67dc08564bda4fd3b42f0547dc75249a_000001_BIRTH_001 a ies:BirthState ;
+:d1cad107396448c88a59233538771bbe_000001_BIRTH_001 a ies:BirthState ;
     ies:inPeriod iso8601:1985-08-21 ;
-    ies:isStartOf :67dc08564bda4fd3b42f0547dc75249a_000001 .
+    ies:isStartOf :d1cad107396448c88a59233538771bbe_000001 .
 
-:67dc08564bda4fd3b42f0547dc75249a_000001_DEATH a ies:DeathState ;
+:d1cad107396448c88a59233538771bbe_000001_DEATH a ies:DeathState ;
     ies:inPeriod iso8601:2024-01-01 ;
-    ies:isEndOf :67dc08564bda4fd3b42f0547dc75249a_000001 .
+    ies:isEndOf :d1cad107396448c88a59233538771bbe_000001 .
 
-:67dc08564bda4fd3b42f0547dc75249a_000006_REG_EMAIL_001 a ies:AccountState ;
+:d1cad107396448c88a59233538771bbe_000006_REG_EMAIL_001 a ies:AccountState ;
     ies:isIdentifiedBy <https://ietf.org/rfc5322#fred.smith@fakedomain.int> ;
-    ies:isStateOf :67dc08564bda4fd3b42f0547dc75249a_000006 .
+    ies:isStateOf :d1cad107396448c88a59233538771bbe_000006 .
 
-:67dc08564bda4fd3b42f0547dc75249a_000006_REG_PHONE_001 a ies:AccountState ;
+:d1cad107396448c88a59233538771bbe_000006_REG_PHONE_001 a ies:AccountState ;
     ies:isIdentifiedBy e164:447768899399 ;
-    ies:isStateOf :67dc08564bda4fd3b42f0547dc75249a_000006 .
+    ies:isStateOf :d1cad107396448c88a59233538771bbe_000006 .
 
-:67dc08564bda4fd3b42f0547dc75249a_000008 a ies:AccountHolder ;
-    ies:holdsAccount :67dc08564bda4fd3b42f0547dc75249a_000006 ;
-    ies:isStateOf :67dc08564bda4fd3b42f0547dc75249a_000001 .
+:d1cad107396448c88a59233538771bbe_000008 a ies:AccountHolder ;
+    ies:holdsAccount :d1cad107396448c88a59233538771bbe_000006 ;
+    ies:isStateOf :d1cad107396448c88a59233538771bbe_000001 .
+
+:d1cad107396448c88a59233538771bbe_000012 a ies:PersonState ;
+    ies:isStateOf :d1cad107396448c88a59233538771bbe_000001 ;
+    ies:owns :d1cad107396448c88a59233538771bbe_000010 .
+
+:d1cad107396448c88a59233538771bbe_000014 a ies:AmountOfMoney ;
+    ies:currencyAmount 32.56 ;
+    ies:currencyDenomination iso4217:CHF .
 
 iso3166:GBR a ies:Location ;
     ies:hasName iso3166:GBR_NAME_001,
         iso3166:GBR_NAME_002 ;
     ies:isIdentifiedBy iso3166:GBR_ISO3166_1Alpha_3 .
 
-:67dc08564bda4fd3b42f0547dc75249a_000001_GIVENNAME_001 a ies:GivenName ;
+:d1cad107396448c88a59233538771bbe_000001_GIVENNAME_001 a ies:GivenName ;
     ies:representationValue "Fred"^^xsd:string .
 
-:67dc08564bda4fd3b42f0547dc75249a_000001_GIVENNAME_002 a ies:GivenName ;
+:d1cad107396448c88a59233538771bbe_000001_GIVENNAME_002 a ies:GivenName ;
     ies:representationValue "Bernard"^^xsd:string .
 
-:67dc08564bda4fd3b42f0547dc75249a_000001_GIVENNAME_003 a ies:GivenName ;
+:d1cad107396448c88a59233538771bbe_000001_GIVENNAME_003 a ies:GivenName ;
     ies:representationValue "Lester"^^xsd:string .
 
-:67dc08564bda4fd3b42f0547dc75249a_000001_SURNAME_001 a ies:Surname ;
+:d1cad107396448c88a59233538771bbe_000001_SURNAME_001 a ies:Surname ;
     ies:representationValue "Smith"^^xsd:string .
+
+:d1cad107396448c88a59233538771bbe_000010 a ies:Device .
+
+:d1cad107396448c88a59233538771bbe_000016 a ies:Identifier ;
+    ies:representationValue "CHF"^^xsd:string .
+
+:d1cad107396448c88a59233538771bbe_000018 a ies:Name ;
+    ies:representationValue "Swiss franc"^^xsd:string .
 
 iso3166:GBR_ISO3166_1Alpha_3 a ies:ISO3166_1Alpha_3 ;
     ies:representationValue "GBR"^^xsd:string .
@@ -51,23 +68,27 @@ iso3166:GBR_NAME_001 a ies:PlaceName ;
 iso3166:GBR_NAME_002 a ies:PlaceName ;
     ies:representationValue "Blighty"^^xsd:string .
 
+iso4217:CHF a ies:Currency ;
+    ies:hasName :d1cad107396448c88a59233538771bbe_000018 ;
+    ies:isIdentifiedBy :d1cad107396448c88a59233538771bbe_000016 .
+
 iso8601:1985-08-21 a ies:ParticularPeriod ;
     ies:iso8601PeriodRepresentation "1985-08-21"^^xsd:string .
 
 iso8601:2024-01-01 a ies:ParticularPeriod ;
     ies:iso8601PeriodRepresentation "2024-01-01"^^xsd:string .
 
-<https://ietf.org/rfc5322#fred.smith@fakedomain.int> a ies:TelephoneNumber ;
+<https://ietf.org/rfc5322#fred.smith@fakedomain.int> a ies:EmailAddress ;
     ies:representationValue "fred.smith@fakedomain.int"^^xsd:string .
 
 e164:447768899399 a ies:TelephoneNumber ;
     ies:representationValue "+447768899399"^^xsd:string .
 
-:67dc08564bda4fd3b42f0547dc75249a_000001 a ies:Person ;
-    ies:hasName :67dc08564bda4fd3b42f0547dc75249a_000001_GIVENNAME_001,
-        :67dc08564bda4fd3b42f0547dc75249a_000001_GIVENNAME_002,
-        :67dc08564bda4fd3b42f0547dc75249a_000001_GIVENNAME_003,
-        :67dc08564bda4fd3b42f0547dc75249a_000001_SURNAME_001 .
+:d1cad107396448c88a59233538771bbe_000006 a ies:Account .
 
-:67dc08564bda4fd3b42f0547dc75249a_000006 a ies:Account .
+:d1cad107396448c88a59233538771bbe_000001 a ies:Person ;
+    ies:hasName :d1cad107396448c88a59233538771bbe_000001_GIVENNAME_001,
+        :d1cad107396448c88a59233538771bbe_000001_GIVENNAME_002,
+        :d1cad107396448c88a59233538771bbe_000001_GIVENNAME_003,
+        :d1cad107396448c88a59233538771bbe_000001_SURNAME_001 .
 
