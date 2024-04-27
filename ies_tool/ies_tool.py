@@ -1490,12 +1490,12 @@ class Account(Entity):
         if validators.email(email_address):
             em_uri = self.tool.prefixes["rfc5322:"]+email_address
         else:
-            logger.warning(f"email address: {email_address} could not be parsed")
+            logger.warning(f"email address: {email_address} could not be validated")
             em_uri = None
 
         state_uri = self.tool._mint_dependent_uri(self.uri,"REG_EMAIL")
         state = self.create_state(uri=state_uri,start=start,end=end)
-        state.add_identifier(identifier=email_address,uri=em_uri,id_class=f"{IES_BASE}TelephoneNumber")
+        state.add_identifier(identifier=email_address,uri=em_uri,id_class=f"{IES_BASE}EmailAddress")
 
 class CommunicationsAccount(Account):
     """
