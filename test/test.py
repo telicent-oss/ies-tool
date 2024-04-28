@@ -13,7 +13,7 @@ def sparql_test():
     IES_TOOL.add_to_graph("http://a","http://t","test literal",True)
     out = IES_TOOL.run_sparql_query("SELECT * WHERE { <http://a> ?p ?o } LIMIT 4")
     print(out)
-    IES_TOOL.delete_triple("http://a",tool.rdf_type,"http://x")
+    IES_TOOL.delete_triple("http://a",IES_TOOL.rdf_type,"http://x")
     IES_TOOL.delete_triple("http://a","http://b","http://c")
     IES_TOOL.delete_triple("http://a","http://y","http://z")
     IES_TOOL.delete_triple("http://a","http://t","test literal",True)
@@ -54,7 +54,7 @@ def test_anne_person():
     e.add_participant(anne)
 
     acme = Organisation(name="ACME inc")
-    acme_director = acme.add_post(name="Witchfinder General", start="1612-01-01")
+    acme_director = acme.create_post(name="Witchfinder General", start="1612-01-01")
     acme.add_part("http://test#part1") #A test to see if dumb URIs can be passed
 
     anne.add_birth("1984-01-01", gp)

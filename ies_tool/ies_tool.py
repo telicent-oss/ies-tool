@@ -1288,7 +1288,7 @@ class ExchangedItem(RdfsResource):
 
     def add_name(
             self, name, name_class: str | None = None, uri=None, name_rel_type=None,
-            naming_scheme=None) -> bool:
+            naming_scheme=None) -> Name:
         """
         Adds an IES name to the node
 
@@ -1300,7 +1300,7 @@ class ExchangedItem(RdfsResource):
             naming_scheme (_type_, optional): connect the ies:Name instance to a NamingScheme. Defaults to None.
 
         Returns:
-            bool:
+            Name:
         """
         if name_rel_type is None:
             name_rel_type = f"{IES_BASE}hasName"
@@ -1312,24 +1312,25 @@ class ExchangedItem(RdfsResource):
             tool=self.tool, name_text=name, uri=uri,
             classes=[name_class], naming_scheme=naming_scheme
         )
-        return self.tool.add_triple(subject=self._uri, predicate=name_rel_type, obj=representation._uri)
+        self.tool.add_triple(subject=self._uri, predicate=name_rel_type, obj=representation._uri)
+        return representation
 
     def add_identifier(
             self, identifier, id_class: str | None = None, uri=None, id_rel_type=None,
-            naming_scheme=None) -> bool:
+            naming_scheme=None) -> Identifier:
         """
         Adds an IES identifier to the node
 
         Args:
             identifier (_type_): the text of the identifier
-            id_class (str | None, optional): The subclass of ies:Identifier to use if needed. 
+            id_class (str | None, optional): The subclass of ies:Identifier to use if needed.
                 Defaults to IES Identifier".
             uri (_type_, optional): set uri to override generated URI for the ies:Identifier object. Defaults to None.
             id_rel_type (_type_, optional): used to override the identification relationship. Defaults to None.
             naming_scheme (_type_, optional): connect the ies:Identifier instance to a NamingScheme. Defaults to None.
 
         Returns:
-            bool:
+            Identifier:
         """
         if id_rel_type is None:
             id_rel_type = f"{IES_BASE}isIdentifiedBy"
@@ -1340,7 +1341,8 @@ class ExchangedItem(RdfsResource):
         representation = Identifier(
             tool=self.tool, id_text=identifier, uri=uri, classes=[id_class], naming_scheme=naming_scheme
         )
-        return self.tool.add_triple(subject=self._uri, predicate=id_rel_type, obj=representation._uri)
+        self.tool.add_triple(subject=self._uri, predicate=id_rel_type, obj=representation._uri)
+        return representation
 
 
 class Element(ExchangedItem):
@@ -1467,7 +1469,16 @@ class Element(ExchangedItem):
                   uri: str | None = None) -> BoundingState:
         """
         Asserts an item started in a particular period
+
+        Args:
+            time_string (str): An ISO8601 datetime string representing the start period
+            bounding_state_class (str | None, optional): Used to override the type of bounding state. Defaults to None.
+            uri (str | None, optional): Used to override the URI of the produced state. Defaults to None.
+
+        Returns:
+            BoundingState:
         """
+
         self.tool._validate_datetime_string(time_string)
         if bounding_state_class is None:
             bounding_state_class = f"{IES_BASE}BoundingState"
@@ -1481,8 +1492,15 @@ class Element(ExchangedItem):
 
     def ends_in(self, time_string: str, bounding_state_class: str | None = None,
                 uri: str | None = None) -> BoundingState:
-        """
-        Asserts an item ended in a particular period.
+        """Asserts an item ended in a particular period.
+
+        Args:
+            time_string (str): An ISO8601 datetime string representing the end period
+            bounding_state_class (str | None, optional): Used to override the type of bounding state. Defaults to None.
+            uri (str | None, optional): Used to override the URI of the produced state. Defaults to None.
+
+        Returns:
+            BoundingState: _description_
         """
         self.tool._validate_datetime_string(time_string)
         if bounding_state_class is None:
@@ -1496,6 +1514,15 @@ class Element(ExchangedItem):
         return bs
 
     def add_measure(self, value, measure_class=None, uom=None, uri: str = None):
+        """
+        Creates a new Measure and applies it to the node
+
+        Args:
+            value (_type_): the value of the measure
+            measure_class (_type_, optional): _description_. Defaults to ies:MeasureClass.
+            uom (_type_, optional): the unit of measure. Defaults to None.
+            uri (str, optional): used to override the measure uri. Defaults to None.
+        """
         measure = Measure(
             tool=self.tool, uri=uri, classes=[measure_class], value=value, uom=uom
         )
@@ -1579,19 +1606,44 @@ class DeviceState(State):
             tool=tool, uri=uri, classes=classes, start=start, end=end
         )
 
-    def add_imsi(self, imsi:str):
+    def add_imsi(self, imsi:str) -> Identifier:
+        """
+        Creates an IMSI identifier for the Device or DeviceState
+
+        Args:
+            imsi (str): a valid IMSI code
+        Returns:
+            Identifier:
+        """
         if not len(imsi.replace("IMSI","")) not in (14, 15):
             logger.warning(f"IMSI: {imsi} does not appear to be valid")
         uri = f"{self.tool.prefixes['IMSI:']}{imsi.replace(' ','').replace('IMSI:','')}"
-        self.add_identifier(imsi,id_class=f'{IES_BASE}IMSI',uri=uri)
+        return self.add_identifier(imsi,id_class=f'{IES_BASE}IMSI',uri=uri)
 
-    def add_mac_address(self, mac_address:str):
+    def add_mac_address(self, mac_address:str) -> Identifier:
+        """
+        Creates a MAC identifier for the Device or DeviceState
+
+        Args:
+            mac_address (str): A valid MAC ID
+        Returns:
+            Identifier:
+        """
         if not validators.mac_address(mac_address):
             logger.warning(f"MAC address {mac_address} does not appear to be valid")
         uri = self.tool.prefixes["ieee802:"]+mac_address.replace(" ","").replace(":","")
-        self.add_identifier(mac_address,id_class=f'{IES_BASE}MACAddress',uri=uri)
+        return self.add_identifier(mac_address,id_class=f'{IES_BASE}MACAddress',uri=uri)
 
-    def add_ip_address(self, ip_address:str):
+    def add_ip_address(self, ip_address:str) -> Identifier:
+        """
+        Creates an IP Address for the Device or DeviceState
+
+        Args:
+            ip_address (str): a valid IPv4 or IPv6 IP Address
+
+        Returns:
+            Identifier:
+        """
         if validators.ipv4(ip_address):
             cls = f"{IES_BASE}IPv4Address"
         elif validators.ipv6(ip_address):
@@ -1600,8 +1652,17 @@ class DeviceState(State):
             cls = f"{IES_BASE}IPAddress"
         self.add_identifier(ip_address,id_class=cls)
 
-    def add_callsign(self, callsign:str):
-        self.add_identifier(callsign,id_class=f'{IES_BASE}Callsign')
+    def add_callsign(self, callsign:str) -> Identifier:
+        """
+        Creates a Callsign for the Device or DeviceState
+
+        Args:
+            callsign (str): the callsign text
+
+        Returns:
+            Identifier:
+        """
+        return self.add_identifier(callsign,id_class=f'{IES_BASE}Callsign')
 
 
 class Asset(Entity):
@@ -1720,11 +1781,21 @@ class Account(Entity):
 
         self._default_state_type = ACCOUNT_STATE
 
-    def add_account_number(self,account_number:str):
-        id_uri_acc_no = self.tool._mint_dependent_uri(self.uri,"ACC_NO")
-        self.add_identifier(identifier=account_number, uri=id_uri_acc_no, id_class=f"{IES_BASE}AccountNumber")
+    def add_account_number(self,account_number:str) -> Identifier:
+        """
+        Creates an account number identifier for the Account
 
-    def add_account_holder(self,holder,start: str | None = None, end: str | None = None, state_uri: str | None = None):
+        Args:
+            account_number (str): the account number
+
+        Returns:
+            Identifier:
+        """
+        id_uri_acc_no = self.tool._mint_dependent_uri(self.uri,"ACC_NO")
+        return self.add_identifier(identifier=account_number, uri=id_uri_acc_no, id_class=f"{IES_BASE}AccountNumber")
+
+    def add_account_holder(self,holder,start: str | None = None, end: str | None = None,
+                           state_uri: str | None = None) -> State:
         """
             add an AccountHolder to the Account
 
@@ -1742,7 +1813,7 @@ class Account(Entity):
         self.tool.add_triple(holder_state.uri,HOLDS_ACCOUNT,self.uri)
         return holder_state
 
-    def add_account_provider(self,provider):
+    def add_account_provider(self,provider) -> bool:
         """
             link the Account to its provider
 
@@ -1750,11 +1821,24 @@ class Account(Entity):
                 provider: an instance of a ReponsibleActor (or subclass) or a URI string (not recommended)
 
             Returns:
+                bool:
         """
         provider_object = self._validate_referenced_object(provider,ResponsibleActor,"add_account_provider")
-        self.tool.add_triple(provider_object.uri,PROVIDES_ACCOUNT,self.uri)
+        return self.tool.add_triple(provider_object.uri,PROVIDES_ACCOUNT,self.uri)
 
-    def add_registered_telephone_number(self,telephone_number:str,start: str | None = None, end: str | None = None):
+    def add_registered_telephone_number(self,telephone_number:str,start: str | None = None,
+                                        end: str | None = None) -> Identifier:
+        """
+        Adds the registered telephone number for the account
+
+        Args:
+            telephone_number (str): A valid telephone number with country code
+            start (str | None, optional): the start date fron which this was registered. Defaults to None.
+            end (str | None, optional): the date when the number was de-registered. Defaults to None.
+
+        Returns:
+            Identifier:
+        """
         try:
             tel = phonenumbers.parse(telephone_number, None)
             normalised = phonenumbers.format_number(tel, phonenumbers.PhoneNumberFormat.E164)
@@ -1765,9 +1849,21 @@ class Account(Entity):
             ph_uri = None
         state_uri = self.tool._mint_dependent_uri(self.uri,"REG_PHONE")
         state = self.create_state(uri=state_uri,start=start,end=end)
-        state.add_identifier(identifier=normalised,uri=ph_uri,id_class=f"{IES_BASE}TelephoneNumber")
+        return state.add_identifier(identifier=normalised,uri=ph_uri,id_class=f"{IES_BASE}TelephoneNumber")
 
-    def add_registered_email_address(self,email_address:str,start: str | None = None, end: str | None = None):
+    def add_registered_email_address(self,email_address:str,start: str | None = None,
+                                     end: str | None = None) -> Identifier:
+        """
+        Adds the registered email address for the account
+
+        Args:
+            email_address (str): A valid e-mail address
+            start (str | None, optional): the start date fron which this was registered. Defaults to None.
+            end (str | None, optional):the date when the email address was de-registered. Defaults to None.
+
+        Returns:
+            Identifier:
+        """
         if validators.email(email_address):
             em_uri = self.tool.prefixes["rfc5322:"]+email_address
         else:
@@ -1776,7 +1872,7 @@ class Account(Entity):
 
         state_uri = self.tool._mint_dependent_uri(self.uri,"REG_EMAIL")
         state = self.create_state(uri=state_uri,start=start,end=end)
-        state.add_identifier(identifier=email_address,uri=em_uri,id_class=f"{IES_BASE}EmailAddress")
+        return state.add_identifier(identifier=email_address,uri=em_uri,id_class=f"{IES_BASE}EmailAddress")
 
 class CommunicationsAccount(Account):
     """
@@ -1870,9 +1966,18 @@ class Country(Location):
             self.add_country_name(country_name)
 
 
-    def add_country_name(self,name:str):
+    def add_country_name(self,name:str) -> Name:
+        """
+        Adds a Placename for the Country
+
+        Args:
+            name (str): the country's name
+
+        Returns:
+            Name:
+        """
         name_uri = self.tool._mint_dependent_uri(self.uri,"NAME")
-        self.add_name(name,name_class=IES_BASE+"PlaceName",uri=name_uri)
+        return self.add_name(name,name_class=IES_BASE+"PlaceName",uri=name_uri)
 
 class GeoPoint(Location):
     """
@@ -1937,39 +2042,104 @@ class ResponsibleActor(Entity):
 
         self._default_state_type = f"{IES_BASE}ResponsibleActorState"
 
-    # Asserts the responsible actor works for another responsible actor
-    def works_for(self, employer, start: str | None = None, end: str | None = None):
+    def works_for(self, employer: ResponsibleActor | str, start: str | None = None, end: str | None = None) -> State:
+        """
+        Asserts the responsible actor works for another responsible actor
+
+        Args:
+            employer (ResponsibleActor | str): The ReponsibleActor that is the employer (or uri referring to)
+            start (str | None, optional): an ISO8601 datetime string - the start of the employment. Defaults to None.
+            end (str | None, optional): an ISO8601 datetime string - the end of the employment. Defaults to None.
+
+        Returns:
+            State:
+        """
         employer_object = self._validate_referenced_object(employer,ResponsibleActor,"works_for")
         state = self.create_state(start=start, end=end)
         self.tool.add_triple(subject=state._uri, predicate=f"{IES_BASE}worksFor",
                                 obj=employer_object._uri)
         return state
 
-    def in_post(self, post, start: str | None = None, end: str | None = None):
+    def in_post(self, post: Post | str, start: str | None = None, end: str | None = None) -> Post:
+        """
+        Asserts the ReponsibleActor is in a Post
+
+        Args:
+            post (Post | str): The post they are in
+            start (str | None, optional): an ISO8601 datetime string - the start of in-post. Defaults to None.
+            end (str | None, optional): an ISO8601 datetime string - the end of in-post. Defaults to None.
+
+        Returns:
+            Post:
+        """
         post_object = self._validate_referenced_object(post,Post,"in_post")
         in_post = self.create_state(state_type=f"{IES_BASE}InPost", start=start, end=end)
         post_object.add_part(in_post)
         return post_object
 
-    def has_access_to(self,accessed_item,start: str | None = None, end: str | None = None):
+    def has_access_to(self,accessed_item: Entity|str, start: str | None = None, end: str | None = None) -> State:
+        """
+        Asserts the ResponsibleActor has access to an Entity
+
+        Args:
+            accessed_item (Entity | str): The Entity (or reference to) that is accessed
+            start (str | None, optional): The start of the access period - ISO8601 string. Defaults to None.
+            end (str | None, optional): The end of the access period - ISO8601 string. Defaults to None.
+
+        Returns:
+            State:
+        """
         accessed_object = self._validate_referenced_object(accessed_item,Entity,"has_access_to")
         access = self.create_state(start=start, end=end)
         self.tool.add_triple(access.uri,f"{IES_BASE}hasAccessTo",accessed_object.uri)
         return access
 
-    def in_possession_of(self,accessed_item,start: str | None = None, end: str | None = None):
+    def in_possession_of(self,accessed_item : Entity|str, start: str | None = None, end: str | None = None) -> State:
+        """
+        Asserts the ResponsibleActor has possession of an Entity (not legal ownership)
+
+        Args:
+            accessed_item (Entity | str): The Entity (or reference to) that is possessed
+            start (str | None, optional): The start of the possession period - ISO8601 string. Defaults to None.
+            end (str | None, optional): The end of the possession period - ISO8601 string. Defaults to None.
+
+        Returns:
+            State: _description_
+        """
         accessed_object = self._validate_referenced_object(accessed_item,Entity,"in_possession_of")
         access = self.create_state(start=start, end=end)
         self.tool.add_triple(access.uri,f"{IES_BASE}inPossessionOf",accessed_object.uri)
         return access
 
-    def user_of(self,accessed_item,start: str | None = None, end: str | None = None):
+    def user_of(self,accessed_item : Entity|str, start: str | None = None, end: str | None = None) -> State:
+        """
+        Asserts the ResponsibleActor has use of an Entity (not legal ownership)
+
+        Args:
+            accessed_item (Entity | str): The Entity (or reference to) that is in use
+            start (str | None, optional): The start of the usage period - ISO8601 string. Defaults to None.
+            end (str | None, optional): The end of the usage period - ISO8601 string. Defaults to None.
+
+        Returns:
+            State:
+        """
         accessed_object = self._validate_referenced_object(accessed_item,Entity,"user_of")
         access = self.create_state(start=start, end=end)
         self.tool.add_triple(access.uri,f"{IES_BASE}userOf",accessed_object.uri)
         return access
 
-    def owns(self,owned_item,start: str | None = None, end: str | None = None):
+    def owns(self,owned_item : Entity|str, start: str | None = None, end: str | None = None) -> State:
+        """
+        Asserts the ResponsibleActor has legal ownership of an Entity
+
+        Args:
+            owned_item (Entity | str): the Entity that is owned
+            start (str | None, optional): The start of the ownership period - ISO8601 string. Defaults to None.
+            end (str | None, optional): The end of the ownership period - ISO8601 string. Defaults to None.
+
+        Returns:
+            State:
+        """
         owned_object = self._validate_referenced_object(owned_item,Asset,"owns")
         owned = self.create_state(start=start, end=end)
         self.tool.add_triple(owned.uri,f"{IES_BASE}owns",owned_object.uri)
@@ -2068,24 +2238,45 @@ class Person(ResponsibleActor):
         if end is not None:
             self.add_death(end, place_of_death)
 
-    def add_given_name(self,given_name:str):
+    def add_given_name(self,given_name:str) -> Name:
+        """
+        Adds a GivenName to a Person
+
+        Args:
+            given_name (str): the given name of the person
+
+        Returns:
+            Name:
+        """
         name_uri_firstname = self.tool._mint_dependent_uri(self.uri,"GIVENNAME")
-        self.add_name(given_name, uri=name_uri_firstname,
+        return self.add_name(given_name, uri=name_uri_firstname,
                           name_class=f"{IES_BASE}GivenName")
 
-    def add_surname(self,surname:str):
+    def add_surname(self,surname:str) -> Name:
+        """
+        Adds a Surname to a Person
+
+        Args:
+            surname (str): the person's surname
+
+        Returns:
+            Name:
+        """
         name_uri_surname = self.tool._mint_dependent_uri(self.uri,"SURNAME")
-        self.add_name(surname, uri=name_uri_surname,
+        return self.add_name(surname, uri=name_uri_surname,
                           name_class=f"{IES_BASE}Surname")
 
-    def add_birth(self, date_of_birth: str, place_of_birth = None) -> BoundingState:
+    def add_birth(self, date_of_birth: str, place_of_birth: Location|str = None) -> BoundingState:
         """
+        Adds birth state to a Person
 
-        :param dob: Date of birth represented as string
-        :param pob:  Location of birth
-        :return: BirthState object
+        Args:
+            date_of_birth (str): Date of birth represented as an ISO8601 string
+            place_of_birth (Location | str, optional): The Location of birth (or URI reference to it). Defaults to None.
+
+        Returns:
+            BoundingState:
         """
-
         birth_uri = self.tool._mint_dependent_uri(self.uri,"BIRTH")
         birth = self.starts_in(time_string=date_of_birth, bounding_state_class=f"{IES_BASE}BirthState",
                                uri=birth_uri)
@@ -2094,16 +2285,19 @@ class Person(ResponsibleActor):
             self.tool.add_triple(birth._uri, f"{IES_BASE}inLocation", pob_object._uri)
         return birth
 
-    def add_death(self, date_of_death: str, place_of_death = None, uri: str | None = None) -> BoundingState:
+    def add_death(self, date_of_death: str, place_of_death: Location|str = None) -> BoundingState:
         """
-        # Adds a death state and (optionally) a location of death to a being (usually a person)
-        :param date_of_death: Date of death represented as string
-        :param place_of_death: Location - to optionally specify place of death
-        :param uri:
-        :return: DeathState object
+        Adds death state to a Person
+
+        Args:
+            date_of_death (str): Date of death represented as an ISO8601 string
+            place_of_death (Location | str, optional): The Location of death (or URI reference to it). Defaults to None.
+
+        Returns:
+            BoundingState:
         """
 
-        uri = uri or self._uri + "_DEATH"
+        uri = self.tool._mint_dependent_uri(self.uri,"DEATH")
         death = self.ends_in(
             date_of_death, bounding_state_class=f"{IES_BASE}DeathState", uri=uri
         )
@@ -2142,7 +2336,21 @@ class Organisation(ResponsibleActor):
         if name is not None and name != "":
             self.add_name(name, name_class=ORGANISATION_NAME)
 
-    def add_post(self, name, start: str | None = None, end: str | None = None, uri: str | None = None):
+    def create_post(self, name:str, start: str | None = None, end: str | None = None, uri: str | None = None) -> Post:
+        """
+        Creates a new post in the organisation
+
+        Args:
+            name (str): the name of the post
+            start (str | None, optional): An ISO8601 string marking start of post. Defaults to None.
+            end (str | None, optional): An ISO8601 string marking end of post. Defaults to None.
+            uri (str | None, optional): Use to override post URI. Defaults to None.
+
+        Returns:
+            Post: _description_
+        """
+        if uri is None:
+            uri = self.tool._mint_dependent_uri(self.uri,"POST")
         post = Post(tool=self.tool, uri=uri, start=start, end=end)
         if name is not None and name != "":
             post.add_name(name)
@@ -2170,8 +2378,17 @@ class ClassOfElement(RdfsClass, ExchangedItem):
             classes = [CLASS_OF_ELEMENT]
         super().__init__(tool=tool, uri=uri, classes=classes)
 
-    def add_measure(self, value, measure_class: str | None = None, uom: UnitOfMeasure | None = None, uri: str = None):
+    def add_measure(self, value:str, measure_class: str | None = None,
+                    uom: UnitOfMeasure | None = None, uri: str = None):
+        """
+        Creates a new Measure and applies it to the class - meaning all members possess this measure
 
+        Args:
+            value (str): the value of the measure
+            measure_class (str, optional): _description_. Defaults to ies:MeasureClass.
+            uom (UnitOfMeasure, optional): the unit of measure. Defaults to None.
+            uri (str, optional): used to override the measure uri. Defaults to None.
+        """
         measure = Measure(
             tool=self.tool, value=value, uom=uom, uri=uri, classes=[measure_class]
         )
@@ -2566,20 +2783,27 @@ class Event(Element):
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
     def add_participant(self,
-                        participating_entity,
+                        participating_entity : Entity|str,
                         uri: str | None = None,
                         participation_type: str | None = None,
                         start: str | None = None,
                         end: str | None = None
-                        ) -> State:
+                        ) -> EventParticipant:
         """
-        Adds a participant to an event
-        :param participating_entity:
-        :param uri:
-        :param participation_type:
-        :param start:
-        :param end:
-        :return:
+        Adds a participant to the Event
+
+        Args:
+            participating_entity (Entity | str): The Entity (or uri ref to it) that is participating
+            uri (str | None, optional): use to override participant uri. Defaults to None.
+            participation_type (str | None, optional): use to override participation type.
+            Defaults to ies:EventParticipant.
+            start (str | None, optional): an ISO8601 datetime string that marks the start of the participation.
+            Defaults to None.
+            end (str | None, optional): an ISO8601 datetime string that marks the end of the participation.
+            Defaults to None.
+
+        Returns:
+            EventParticipant:
         """
 
         pe_object = self._validate_referenced_object(participating_entity,Entity,"add_participant")
@@ -2721,17 +2945,20 @@ class PartyInCommunication(Event):
         if communication is not None:
             communication.add_part(self)
 
-    def add_account(self, account, uri: str | None = None):
-        """_summary_
+    def add_account(self, account:Account|str, uri: str | None = None)->EventParticipant:
+        """
+        Adds an Account to the PartyInCommunication
 
         Args:
-            account (_type_): _description_
-            uri (str | None, optional): _description_. Defaults to None.
+            account (Account|str): the account (or referred URI) to add
+            uri (str | None, optional): Use to override the uri of the created EventParticipant. Defaults to None.
 
         Returns:
-            _type_: _description_
+            EventParticipant:
         """
-        uri = uri or self._uri + "-account"
+        if uri is None:
+            uri = self.tool._mint_dependent_uri(self.uri,"ACCOUNT")
+
         account_object = self._validate_referenced_object(account,Event,"add_account")
         try:
             aic = EventParticipant(
@@ -2750,11 +2977,22 @@ class PartyInCommunication(Event):
             logger.warning(
                 f"Exception occurred while trying to add account, no account will be added."
                 f" {repr(e)}")
-        return account_object
+        return aic
 
-    def add_device(self, device, uri: str | None = None):
+    def add_device(self, device: Device|str, uri: str | None = None) -> EventParticipant:
+        """
+        Adds a Device to the PartyInCommunication
+
+        Args:
+            device (Device | str): the Device (or referred URI) to add
+            uri (str | None, optional): Use to override the uri of the created EventParticipant. Defaults to None.
+
+        Returns:
+            EventParticipant:
+        """
         device_object = self._validate_referenced_object(device,Device,"add_device")
-        uri = uri or self._uri + "-account"
+        if uri is None:
+            uri = self.tool._mint_dependent_uri(self.uri,"DEVICE")
         try:
             dic = EventParticipant(
                 tool=self.tool, uri=uri,
@@ -2773,11 +3011,22 @@ class PartyInCommunication(Event):
                 f"Exception occurred while trying to add device, no device will be added."
                 f" {repr(e)}"
             )
-        return device_object
+        return dic
 
-    def add_person(self, person, uri: str | None = None):
+    def add_person(self, person: Person|str, uri: str | None = None) -> EventParticipant:
+        """
+        Adds a Person to the PartyInCommunication
+
+        Args:
+            person (Person | str): the Person (or referred URI) to add
+            uri (str | None, optional): Use to override the uri of the created EventParticipant. Defaults to None.
+
+        Returns:
+            EventParticipant:
+        """
         person_object = self._validate_referenced_object(person,Person,"add_person")
-        uri = uri or self._uri + "-account"
+        if uri is None:
+            uri = self.tool._mint_dependent_uri(self.uri,"PERSON")
         try:
             pic = EventParticipant(
                 tool=self.tool, uri=uri,
