@@ -39,6 +39,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+IES_TOOL = None
+
 RdfsClassType = TypeVar('RdfsClassType', bound='RdfsClass')
 
 RDFS = "http://www.w3.org/2000/01/rdf-schema#"
@@ -866,7 +868,7 @@ class IESTool:
         """
         logger.warning("IESTool.create_event is deprecated - please initiate Event Python class directly")
         if classes is None:
-            classes = ["http://ies.data.gov.uk/ontology/ies4#Event"]
+            classes = [f"{IES_BASE}Event"]
 
         event = Event(
             tool=self, start=event_start, end=event_end, uri=uri, classes=classes
@@ -895,7 +897,7 @@ class IESTool:
         logger.warning("IESTool.create_person is deprecated - please initiate Person Python class directly")
 
         if classes is None:
-            classes = ["http://ies.data.gov.uk/ontology/ies4#Person"]
+            classes = [f"{IES_BASE}Person"]
 
         person = Person(
             tool=self, surname=surname, given_name=given_name, start=dob, pob=pob, uri=uri, end=dod, pod=pod,
@@ -921,7 +923,7 @@ class IESTool:
         logger.warning("IESTool.create_measure is deprecated - please initiate Measure Python class directly")
 
         if classes is None:
-            classes = ["http://ies.data.gov.uk/ontology/ies4#Measure"]
+            classes = [f"{IES_BASE}Measure"]
 
         measure = Measure(
             tool=self, value=value, uom=uom, uri=uri, classes=classes
@@ -949,7 +951,7 @@ class IESTool:
         logger.warning("IESTool.create_communication deprecated - please initiate Communication Python class directly")
 
         if classes is None:
-            classes = ["http://ies.data.gov.uk/ontology/ies4#Communication"]
+            classes = [f"{IES_BASE}Communication"]
 
         communication = Communication(
             tool=self, uri=uri, classes=classes, start=starts_in, end=ends_in,
@@ -977,7 +979,7 @@ class IESTool:
         logger.warning("IESTool.create_geopoint is deprecated - please initiate GeoPoint Python class directly")
 
         if classes is None:
-            classes = ["http://ies.data.gov.uk/ontology/ies4#GeoPoint"]
+            classes = [f"{IES_BASE}GeoPoint"]
 
         for _class in classes:
             if _class not in self.ontology.geopoint_subtypes:
@@ -1002,7 +1004,7 @@ class IESTool:
         logger.warning("IESTool.create_organisation is deprecated - please initiate Organisation Python class directly")
 
         if classes is None:
-            classes = ["http://ies.data.gov.uk/ontology/ies4#Organisation"]
+            classes = [f"{IES_BASE}Organisation"]
         return Organisation(
             tool=self, name=name, uri=uri, classes=classes
         )
@@ -1016,8 +1018,10 @@ class Unique(type):
     """
     def __call__(cls, *args, **kwargs):
         if "tool" not in kwargs:
-            raise Exception("Please use keyword arguments when initialising classes, starting with tool=")
-        tool = kwargs["tool"]
+            #raise Exception("Please use keyword arguments when initialising classes, starting with tool=")
+            tool = IES_TOOL
+        else:
+            tool = kwargs["tool"]
         # Annoyingly, classes doesn't seem to reach this, despite being set as default parameters.
         # classes = kwargs["classes"]
         cache = tool.instances
@@ -1040,12 +1044,14 @@ class Unique(type):
             return cached_item
 
 
+
+
 class RdfsResource(metaclass=Unique):
     """
     A Python wrapper class for RDFS Resources
     """
     def __init__(
-            self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None
+            self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None
     ):
         """
             Instantiate the RDFS Resource
@@ -1058,10 +1064,12 @@ class RdfsResource(metaclass=Unique):
             Returns:
                 RdfsResource:
         """
-        if classes is None:
+
+        if classes is None or classes == []:
             classes = [RDFS_RESOURCE]
         if tool is None:
-            raise RuntimeError("No IES Tool provided")
+            self._tool = IES_TOOL
+            #raise RuntimeError("No IES Tool provided")
         else:
             self._tool = tool
         if not uri:
@@ -1153,7 +1161,7 @@ class RdfsResource(metaclass=Unique):
         related_object = self._validate_referenced_object(related_object,context="add_relation")
         return self.tool.add_triple(self._uri,predicate=predicate,obj=related_object,is_literal=False)
 
-    def _validate_referenced_object(self,reference,base_type:Unique=None,context:str="") -> Unique:
+    def _validate_referenced_object(self,reference,base_type:Unique=None,context:str="") -> RdfsResource:
         """
         An internal method for ascertaining the best base class of a given URI.
         If you pass it an object, it just returns the object you gave it
@@ -1168,7 +1176,7 @@ class RdfsResource(metaclass=Unique):
             Exception: An exception is raised if something that is neither a string or a base class is passed
 
         Returns:
-            Unique: The provided or inferred object
+            RdfsResource: The provided or inferred object
         """
         if isinstance(reference,str):
             inst = self.tool._get_instance(reference)
@@ -1193,7 +1201,7 @@ class RdfsClass(RdfsResource):
         A Python wrapper class for RDFS Class
     """
     def __init__(
-            self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None
+            self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None
     ):
         """
             Instantiate the RDFS Class
@@ -1230,7 +1238,7 @@ class RdfsClass(RdfsResource):
         Returns:
             bool:
         """
-        return self.tool.add_triple(sub_class.uri,f"{RDFS}subClassOf",self.uri)
+        return self.tool.add_triple(sub_class,f"{RDFS}subClassOf",self.uri)
 
 
 class ExchangedItem(RdfsResource):
@@ -1238,7 +1246,7 @@ class ExchangedItem(RdfsResource):
         A Python wrapper class for IES ExchangedItem
     """
     def __init__(
-            self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None):
+            self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None):
         """
             Instantiate the IES ExchangedItem
 
@@ -1255,10 +1263,22 @@ class ExchangedItem(RdfsResource):
         super().__init__(tool=tool, uri=uri, classes=classes)
 
     def add_representation(
-            self, representation_text, representation_class: str | None = f"{IES_BASE}Representation",
-            uri: str | None = None, rep_rel_type: str | None = None, naming_scheme=None):
+            self, representation_text:str, representation_class: str | None = f"{IES_BASE}Representation",
+            uri: str | None = None, rep_rel_type: str | None = None, naming_scheme=None) -> Representation:
+        """Adds a new IES representation to this node
+
+        Args:
+            representation_text (str): Th
+            representation_class (str | None, optional): the URI. Defaults to ies:Representation".
+            uri (str | None, optional): _description_. Defaults to None.
+            rep_rel_type (str | None, optional): _description_. Defaults to None.
+            naming_scheme (_type_, optional): _description_. Defaults to None.
+
+        Returns:
+            Representation: _description_
+        """
         if not rep_rel_type:
-            rep_rel_type = "http://ies.data.gov.uk/ontology/ies4#isRepresentedAs"
+            rep_rel_type = f"{IES_BASE}isRepresentedAs"
         representation = Representation(
             tool=self.tool, representation_text=representation_text, uri=uri,
             classes=[representation_class], naming_scheme=naming_scheme
@@ -1267,33 +1287,67 @@ class ExchangedItem(RdfsResource):
         return representation
 
     def add_name(
-            self, name, name_class: str | None = f"{IES_BASE}Name", uri=None, name_rel_type=None,
-            naming_scheme=None):
-        if not name_rel_type:
-            name_rel_type = "http://ies.data.gov.uk/ontology/ies4#hasName"
+            self, name, name_class: str | None = None, uri=None, name_rel_type=None,
+            naming_scheme=None) -> bool:
+        """
+        Adds an IES name to the node
+
+        Args:
+            name (_type_): The text of the name
+            name_class (str | None, optional): The subclass of ies:Name to use if needed. Defaults to IES Name".
+            uri (_type_, optional): set uri to override generated URI for the ies:Name object. Defaults to None.
+            name_rel_type (_type_, optional): used to override the naming relationship. Defaults to None.
+            naming_scheme (_type_, optional): connect the ies:Name instance to a NamingScheme. Defaults to None.
+
+        Returns:
+            bool:
+        """
+        if name_rel_type is None:
+            name_rel_type = f"{IES_BASE}hasName"
+
+        if name_class is None:
+            name_class = f"{IES_BASE}Name"
 
         representation = Name(
             tool=self.tool, name_text=name, uri=uri,
             classes=[name_class], naming_scheme=naming_scheme
         )
-        self.tool.add_triple(subject=self._uri, predicate=name_rel_type, obj=representation._uri)
+        return self.tool.add_triple(subject=self._uri, predicate=name_rel_type, obj=representation._uri)
 
     def add_identifier(
-            self, identifier, id_class: str | None = f"{IES_BASE}Identifier", uri=None, id_rel_type=None,
-            naming_scheme=None):
-        if not id_rel_type:
-            id_rel_type = "http://ies.data.gov.uk/ontology/ies4#isIdentifiedBy"
+            self, identifier, id_class: str | None = None, uri=None, id_rel_type=None,
+            naming_scheme=None) -> bool:
+        """
+        Adds an IES identifier to the node
+
+        Args:
+            identifier (_type_): the text of the identifier
+            id_class (str | None, optional): The subclass of ies:Identifier to use if needed. 
+                Defaults to IES Identifier".
+            uri (_type_, optional): set uri to override generated URI for the ies:Identifier object. Defaults to None.
+            id_rel_type (_type_, optional): used to override the identification relationship. Defaults to None.
+            naming_scheme (_type_, optional): connect the ies:Identifier instance to a NamingScheme. Defaults to None.
+
+        Returns:
+            bool:
+        """
+        if id_rel_type is None:
+            id_rel_type = f"{IES_BASE}isIdentifiedBy"
+
+        if id_class is None:
+            id_class = f"{IES_BASE}Identifier"
+
         representation = Identifier(
             tool=self.tool, id_text=identifier, uri=uri, classes=[id_class], naming_scheme=naming_scheme
         )
-        self.tool.add_triple(subject=self._uri, predicate=id_rel_type, obj=representation._uri)
+        return self.tool.add_triple(subject=self._uri, predicate=id_rel_type, obj=representation._uri)
 
 
 class Element(ExchangedItem):
     """
         A Python wrapper class for IES Element
     """
-    def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate the IES Element
@@ -1308,23 +1362,29 @@ class Element(ExchangedItem):
                 Element:
         """
         if classes is None:
-            classes = ["http://ies.data.gov.uk/ontology/ies4#Element"]
+            classes = [f"{IES_BASE}Element"]
 
         super().__init__(tool=tool, uri=uri, classes=classes)
-        self._default_state_type = "http://ies.data.gov.uk/ontology/ies4#State"
+        self._default_state_type = f"{IES_BASE}State"
 
         if start:
             self.starts_in(start)
         if end:
             self.ends_in(end)
 
-    def add_part(self, part, part_rel_type=None):
-        """
-            takes an Element instance and adds it as part of the current Element
+    def add_part(self, part:Element|str, part_rel_type:str=None):
+        """_summary_
+
+        Args:
+            part (Element | str): _description_
+            part_rel_type (str, optional): _description_. Defaults to None.
+
+        Returns:
+            _type_: _description_
         """
         part_object = self._validate_referenced_object(part,Element,"add_part")
         if part_rel_type is None:
-            part_rel_type = "http://ies.data.gov.uk/ontology/ies4#isPartOf"
+            part_rel_type = f"{IES_BASE}isPartOf"
         self.tool.add_triple(part_object.uri, part_rel_type, self._uri)
         return part_object
 
@@ -1333,16 +1393,27 @@ class Element(ExchangedItem):
             state_rel: str | None = None, start: str | None = None, end: str | None = None,
             in_location: Location | None = None
     ) -> State:
+        """Creates a state of this node
+
+        Args:
+            state_type (str | None, optional): The type of state - must be subclass of ies:State. Defaults to None.
+            uri (str | None, optional): Use to override the uri of the state. Defaults to ies:State.
+            state_rel (str | None, optional): use to override the state relationship . Defaults to ies:isStateOf.
+            start (str | None, optional): an iso8601 string representing the start of the State. Defaults to None.
+            end (str | None, optional): an iso8601 string representing the end of the State. Defaults to None.
+            in_location (Location | None, optional): Add a location for the state. Defaults to None.
+
+        Returns:
+            State:
         """
-        creates a state to an item (needs to be deprecated and replaced by create_state in next version)
-        """
+
         if not state_type:
             state_type = self._default_state_type
 
         state = State(tool=self.tool, start=start, end=end, uri=uri, classes=[state_type])
 
         if not state_rel:
-            state_rel = "http://ies.data.gov.uk/ontology/ies4#isStateOf"
+            state_rel = f"{IES_BASE}isStateOf"
 
         self.tool.add_triple(subject=state._uri, predicate=state_rel, obj=self._uri)
 
@@ -1355,27 +1426,41 @@ class Element(ExchangedItem):
             state_rel: str | None = None, start: str | None = None, end: str | None = None,
             in_location: Location | None = None
     ) -> State:
+        """
+        DEPRECATED - use create_state()
+        """
         logger.warning("add_state() is deprecated - use create_state()")
         return self.create_state(state_type=state_type,uri=uri,state_rel=state_rel,
                                  start=start,end=end,in_location=in_location)
 
-    def in_location(self, location):
-        """
-            places the Element in a Location
+    def in_location(self, location:Location|str) -> Location:
+        """Places the Element in a Location
+
+        Args:
+            location (Location | str): A location object or uri string of a location object
+
+        Returns:
+            Location:
         """
         location_object = self._validate_referenced_object(location,Location,"in_location")
         self.tool.add_triple(
-            subject=self.uri, predicate="http://ies.data.gov.uk/ontology/ies4#inLocation",
+            subject=self.uri, predicate=f"{IES_BASE}inLocation",
             obj=location_object.uri)
         return location_object
 
-    def put_in_period(self, time_string: str):
+    def put_in_period(self, time_string: str)->ParticularPeriod:
         """
         Puts an item in a particular period
+
+        Args:
+            time_string (str): An ISO8601 datetime string
+
+        Returns:
+            ParticularPeriod:
         """
         self.tool._validate_datetime_string(time_string)
         pp_instance = ParticularPeriod(tool=self.tool, time_string=time_string)
-        self.tool.add_triple(self._uri, "http://ies.data.gov.uk/ontology/ies4#inPeriod", pp_instance._uri)
+        self.tool.add_triple(self._uri, f"{IES_BASE}inPeriod", pp_instance._uri)
         return pp_instance
 
     def starts_in(self, time_string: str, bounding_state_class: str | None = None,
@@ -1385,10 +1470,10 @@ class Element(ExchangedItem):
         """
         self.tool._validate_datetime_string(time_string)
         if bounding_state_class is None:
-            bounding_state_class = "http://ies.data.gov.uk/ontology/ies4#BoundingState"
+            bounding_state_class = f"{IES_BASE}BoundingState"
 
         bs = BoundingState(tool=self.tool, classes=[bounding_state_class], uri=uri)
-        self.tool.add_triple(subject=bs._uri, predicate="http://ies.data.gov.uk/ontology/ies4#isStartOf",
+        self.tool.add_triple(subject=bs._uri, predicate=f"{IES_BASE}isStartOf",
                                 obj=self._uri)
         if time_string:
             bs.put_in_period(time_string=time_string)
@@ -1401,10 +1486,10 @@ class Element(ExchangedItem):
         """
         self.tool._validate_datetime_string(time_string)
         if bounding_state_class is None:
-            bounding_state_class = "http://ies.data.gov.uk/ontology/ies4#BoundingState"
+            bounding_state_class = f"{IES_BASE}BoundingState"
 
         bs = BoundingState(tool=self.tool, classes=[bounding_state_class], uri=uri)
-        self.tool.add_triple(subject=bs._uri, predicate="http://ies.data.gov.uk/ontology/ies4#isEndOf",
+        self.tool.add_triple(subject=bs._uri, predicate=f"{IES_BASE}isEndOf",
                                 obj=self._uri)
         if time_string:
             bs.put_in_period(time_string=time_string)
@@ -1415,7 +1500,7 @@ class Element(ExchangedItem):
             tool=self.tool, uri=uri, classes=[measure_class], value=value, uom=uom
         )
         self.tool.add_triple(
-            subject=self._uri, predicate="http://ies.data.gov.uk/ontology/ies4#hasCharacteristic", obj=measure._uri
+            subject=self._uri, predicate=f"{IES_BASE}hasCharacteristic", obj=measure._uri
         )
 
 
@@ -1423,7 +1508,7 @@ class Entity(Element):
     """
         A Python wrapper class for IES Entity
     """
-    def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate the IES Entity
@@ -1448,7 +1533,7 @@ class State(Element):
     """
         A Python wrapper class for IES State
     """
-    def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate the IES State
@@ -1473,7 +1558,7 @@ class DeviceState(State):
     """
         A Python wrapper class for IES DeviceState
     """
-    def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate the IES DeviceState
@@ -1523,7 +1608,7 @@ class Asset(Entity):
     """
         A Python wrapper class for IES Asset
     """
-    def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate the IES Device
@@ -1548,7 +1633,7 @@ class AmountOfMoney(Asset):
     """
         A Python wrapper class for IES AmountOfMoney
     """
-    def __init__(self, tool: IESTool, amount:float, iso_4217_currency_code_alpha3:str,
+    def __init__(self, *, tool: IESTool = IES_TOOL, amount:float, iso_4217_currency_code_alpha3:str,
                  uri: str | None = None, classes: list[str] | None = None):
         """
             Instantiate the IES AmountOfMoney
@@ -1589,7 +1674,7 @@ class Device(Asset, DeviceState):
     """
         A Python wrapper class for IES Device
     """
-    def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate the IES Device
@@ -1614,7 +1699,7 @@ class Account(Entity):
     """
         A Python wrapper class for IES Account
     """
-    def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate an IES Account
@@ -1697,7 +1782,7 @@ class CommunicationsAccount(Account):
     """
         A Python wrapper class for IES Account
     """
-    def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate an IES CommunicationsAccount
@@ -1723,7 +1808,7 @@ class Location(Entity):
     """
         A Python wrapper class for IES Location
     """
-    def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate the IES Location
@@ -1749,7 +1834,7 @@ class Country(Location):
     Python wrapper class for IES Country, where ISO country code forms the URI
     """
 
-    def __init__(self, tool: IESTool, country_alpha_3_code: str, country_name:str=None,
+    def __init__(self, *, tool: IESTool = IES_TOOL, country_alpha_3_code: str, country_name:str=None,
                  classes: list[str] | None = None, uri:str=None, validate:bool = True):
         """
             Instantiate the IES Country
@@ -1760,7 +1845,8 @@ class Country(Location):
             Returns:
                 Country:
         """
-        uri = tool.prefixes["iso3166:"]+country_alpha_3_code
+
+        uri = f"http://iso.org/iso3166#{country_alpha_3_code}"
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
@@ -1793,7 +1879,7 @@ class GeoPoint(Location):
     Python wrapper class for IES GeoPoint, with geo-hashes used to make the URI
     """
 
-    def __init__(self, tool: IESTool, classes: list[str] | None = None,
+    def __init__(self, *,tool: IESTool = IES_TOOL, classes: list[str] | None = None,
                  lat: float = None, lon: float = None, precision: int = None, uri:str=None):
         """
             Instantiate the IES GeoPoint
@@ -1820,17 +1906,17 @@ class GeoPoint(Location):
         lon_uri = f"{uri}_LON"
 
         self.add_identifier(identifier=str(lat), uri=lat_uri,
-                            id_class="http://ies.data.gov.uk/ontology/ies4#Latitude")
+                            id_class=f"{IES_BASE}Latitude")
 
         self.add_identifier(identifier=str(lon), uri=lon_uri,
-                            id_class="http://ies.data.gov.uk/ontology/ies4#Longitude")
+                            id_class=f"{IES_BASE}Longitude")
 
 
 class ResponsibleActor(Entity):
     """
     Python wrapper class for IES ResponsibleActor
     """
-    def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate the IES ResponsibleActor
@@ -1849,19 +1935,19 @@ class ResponsibleActor(Entity):
             classes = [RESPONSIBLE_ACTOR]
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
-        self._default_state_type = "http://ies.data.gov.uk/ontology/ies4#ResponsibleActorState"
+        self._default_state_type = f"{IES_BASE}ResponsibleActorState"
 
     # Asserts the responsible actor works for another responsible actor
     def works_for(self, employer, start: str | None = None, end: str | None = None):
         employer_object = self._validate_referenced_object(employer,ResponsibleActor,"works_for")
         state = self.create_state(start=start, end=end)
-        self.tool.add_triple(subject=state._uri, predicate="http://ies.data.gov.uk/ontology/ies4#worksFor",
+        self.tool.add_triple(subject=state._uri, predicate=f"{IES_BASE}worksFor",
                                 obj=employer_object._uri)
         return state
 
     def in_post(self, post, start: str | None = None, end: str | None = None):
         post_object = self._validate_referenced_object(post,Post,"in_post")
-        in_post = self.create_state(state_type="http://ies.data.gov.uk/ontology/ies4#InPost", start=start, end=end)
+        in_post = self.create_state(state_type=f"{IES_BASE}InPost", start=start, end=end)
         post_object.add_part(in_post)
         return post_object
 
@@ -1894,7 +1980,7 @@ class Post(ResponsibleActor):
     """
     Python wrapper class for IES Post
     """
-    def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate the IES Post
@@ -1923,7 +2009,7 @@ class Person(ResponsibleActor):
     """
     Python wrapper class for IES Person
     """
-    def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None, surname: str | None = None,
                  given_name: str | None = None, date_of_birth: str | None = None, date_of_death: str | None = None,
                  place_of_birth: Location | None = None, place_of_death: Location | None = None,
@@ -1962,7 +2048,7 @@ class Person(ResponsibleActor):
             end = date_of_death
 
 
-        self._default_state_type = "http://ies.data.gov.uk/ontology/ies4#PersonState"
+        self._default_state_type = f"{IES_BASE}PersonState"
 
         if given_name:
             self.add_given_name(given_name=given_name)
@@ -1985,12 +2071,12 @@ class Person(ResponsibleActor):
     def add_given_name(self,given_name:str):
         name_uri_firstname = self.tool._mint_dependent_uri(self.uri,"GIVENNAME")
         self.add_name(given_name, uri=name_uri_firstname,
-                          name_class="http://ies.data.gov.uk/ontology/ies4#GivenName")
+                          name_class=f"{IES_BASE}GivenName")
 
     def add_surname(self,surname:str):
         name_uri_surname = self.tool._mint_dependent_uri(self.uri,"SURNAME")
         self.add_name(surname, uri=name_uri_surname,
-                          name_class="http://ies.data.gov.uk/ontology/ies4#Surname")
+                          name_class=f"{IES_BASE}Surname")
 
     def add_birth(self, date_of_birth: str, place_of_birth = None) -> BoundingState:
         """
@@ -2001,11 +2087,11 @@ class Person(ResponsibleActor):
         """
 
         birth_uri = self.tool._mint_dependent_uri(self.uri,"BIRTH")
-        birth = self.starts_in(time_string=date_of_birth, bounding_state_class="http://ies.data.gov.uk/ontology/ies4#BirthState",
+        birth = self.starts_in(time_string=date_of_birth, bounding_state_class=f"{IES_BASE}BirthState",
                                uri=birth_uri)
         if place_of_birth:
             pob_object = self._validate_referenced_object(place_of_birth,Location,"add_birth")
-            self.tool.add_triple(birth._uri, "http://ies.data.gov.uk/ontology/ies4#inLocation", pob_object._uri)
+            self.tool.add_triple(birth._uri, f"{IES_BASE}inLocation", pob_object._uri)
         return birth
 
     def add_death(self, date_of_death: str, place_of_death = None, uri: str | None = None) -> BoundingState:
@@ -2019,11 +2105,11 @@ class Person(ResponsibleActor):
 
         uri = uri or self._uri + "_DEATH"
         death = self.ends_in(
-            date_of_death, bounding_state_class="http://ies.data.gov.uk/ontology/ies4#DeathState", uri=uri
+            date_of_death, bounding_state_class=f"{IES_BASE}DeathState", uri=uri
         )
         if place_of_death:
             pod_object = self._validate_referenced_object(place_of_death,Location,"add_death")
-            self.tool.add_triple(death._uri, "http://ies.data.gov.uk/ontology/ies4#inLocation", pod_object._uri)
+            self.tool.add_triple(death._uri, f"{IES_BASE}inLocation", pod_object._uri)
 
         return death
 
@@ -2032,7 +2118,7 @@ class Organisation(ResponsibleActor):
     """
     Python wrapper class for IES Organisation
     """
-    def __init__(self, tool: IESTool, uri: str | None = None, classes: list | None = None,
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list | None = None,
                  start: str | None = None, end: str | None = None, name=None):
         """
             Instantiate the IES Organisation
@@ -2051,7 +2137,7 @@ class Organisation(ResponsibleActor):
             classes = [ORGANISATION]
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
-        self._default_state_type = "http://ies.data.gov.uk/ontology/ies4#OrganisationState"
+        self._default_state_type = f"{IES_BASE}OrganisationState"
 
         if name is not None and name != "":
             self.add_name(name, name_class=ORGANISATION_NAME)
@@ -2068,7 +2154,7 @@ class ClassOfElement(RdfsClass, ExchangedItem):
     """
     Python wrapper class for IES ClassOfElement
     """
-    def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None):
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None):
         """
             Instantiate the IES ClassOfElement
 
@@ -2090,7 +2176,7 @@ class ClassOfElement(RdfsClass, ExchangedItem):
             tool=self.tool, value=value, uom=uom, uri=uri, classes=[measure_class]
         )
         self.tool.add_triple(subject=self._uri,
-                                predicate="http://ies.data.gov.uk/ontology/ies4#allHaveCharacteristic",
+                                predicate=f"{IES_BASE}allHaveCharacteristic",
                                 obj=measure._uri)
 
 
@@ -2098,7 +2184,7 @@ class ClassOfClassOfElement(RdfsClass, ExchangedItem):
     """
     Python wrapper class for IES ClassOfClassOfElement
     """
-    def __init__(self, tool: IESTool, uri: str = None, classes: list[str] | None = None):
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str = None, classes: list[str] | None = None):
         """
             Instantiate the IES ClassOfClassOfElement
 
@@ -2119,7 +2205,7 @@ class ParticularPeriod(Element):
     """
     Python wrapper class for IES ParticularPeriod
     """
-    def __init__(self, tool: IESTool, classes: list[str] | None = None, time_string: str = None):
+    def __init__(self, *, tool: IESTool = IES_TOOL, classes: list[str] | None = None, time_string: str = None):
         """
             Instantiate the IES ParticularPeriod
 
@@ -2140,7 +2226,7 @@ class ParticularPeriod(Element):
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
-        self.add_literal(predicate="http://ies.data.gov.uk/ontology/ies4#iso8601PeriodRepresentation",
+        self.add_literal(predicate=f"{IES_BASE}iso8601PeriodRepresentation",
                          literal=str(iso8601_time_string))
 
 
@@ -2148,7 +2234,7 @@ class BoundingState(State):
     """
     Python wrapper class for IES BoundingState
     """
-    def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None):
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None):
         """
             Instantiate the IES BoundingState
 
@@ -2170,7 +2256,7 @@ class BirthState(BoundingState):
     """
     Python wrapper class for IES BirthState
     """
-    def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None):
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None):
         """
             Instantiate the IES BirthState
 
@@ -2192,7 +2278,7 @@ class DeathState(BoundingState):
     """
     Python wrapper class for IES DeathState
     """
-    def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None):
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None):
         """
             Instantiate the IES DeathState
 
@@ -2214,7 +2300,7 @@ class UnitOfMeasure(ClassOfClassOfElement):
     """
     Python wrapper class for IES UnitOfMeasure
     """
-    def __init__(self, tool: IESTool,  uri: str = None, classes: list[str] | None = None):
+    def __init__(self, *, tool: IESTool = IES_TOOL,  uri: str = None, classes: list[str] | None = None):
         """
             Instantiate the IES UnitOfMeasure
 
@@ -2237,7 +2323,7 @@ class Representation(ClassOfElement):
     Python wrapper class for IES Representation
     """
 
-    def __init__(self, tool: IESTool, representation_text: str | None = None, uri: str | None = None,
+    def __init__(self, *, tool: IESTool = IES_TOOL, representation_text: str | None = None, uri: str | None = None,
                  classes: list[str] | None = None, naming_scheme: NamingScheme | None = None):
         """
             Instantiate the IES Representation
@@ -2258,10 +2344,10 @@ class Representation(ClassOfElement):
         super().__init__(tool=tool, uri=uri, classes=classes)
 
         if representation_text:
-            self.tool.add_triple(subject=self._uri, predicate="http://ies.data.gov.uk/ontology/ies4#representationValue",
+            self.tool.add_triple(subject=self._uri, predicate=f"{IES_BASE}representationValue",
                                 obj=representation_text, is_literal=True, literal_type="string")
         if naming_scheme:
-            self.tool.add_triple(subject=self._uri, predicate="http://ies.data.gov.uk/ontology/ies4#inScheme",
+            self.tool.add_triple(subject=self._uri, predicate=f"{IES_BASE}inScheme",
                                     obj=naming_scheme.uri)
 
 class WorkOfDocumentation(Representation):
@@ -2269,7 +2355,7 @@ class WorkOfDocumentation(Representation):
     Python wrapper class for IES WorkOfDocumentation
     """
 
-    def __init__(self, tool: IESTool, uri: str | None = None,
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None,
                  classes: list[str] | None = None):
         """
             Instantiate the IES WorkOfDocumentation
@@ -2293,7 +2379,7 @@ class MeasureValue(Representation):
     """
     Python wrapper class for IES MeasureValue
     """
-    def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  value: str | None = None, uom: UnitOfMeasure | None = None, measure: Measure | None = None):
         """
             Instantiate the IES MeasureValue
@@ -2315,11 +2401,11 @@ class MeasureValue(Representation):
             raise Exception("MeasureValue must have a valid value")
         super().__init__(tool=tool, representation_text=value, uri=uri, classes=classes, naming_scheme=None)
         if uom is not None:
-            self.tool.add_triple(self._uri, "http://ies.data.gov.uk/ontology/ies4#measureUnit", obj=uom._uri)
+            self.tool.add_triple(self._uri, f"{IES_BASE}measureUnit", obj=uom._uri)
         if measure is None:
             logger.warning("MeasureValue created without a corresponding measure")
         else:
-            self.tool.add_triple(subject=measure._uri, predicate="http://ies.data.gov.uk/ontology/ies4#hasValue",
+            self.tool.add_triple(subject=measure._uri, predicate=f"{IES_BASE}hasValue",
                                     obj=self._uri)
 
 
@@ -2328,7 +2414,7 @@ class Measure(ClassOfElement):
     Python wrapper class for IES Measure
     """
     def __init__(
-            self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
+            self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
             value: str = None, uom: UnitOfMeasure | None = None):
         """
             Instantiate the IES Measure
@@ -2349,20 +2435,20 @@ class Measure(ClassOfElement):
 
         super().__init__(tool=tool, uri=uri, classes=classes)
         value = str(value)
-        if _class == "http://ies.data.gov.uk/ontology/ies4#Length":
-            value_class = "http://ies.data.gov.uk/ontology/ies4#ValueInMetres"
-        elif _class == "http://ies.data.gov.uk/ontology/ies4#Mass":
-            value_class = "http://ies.data.gov.uk/ontology/ies4#ValueInKilograms"
-        elif _class == "http://ies.data.gov.uk/ontology/ies4#Duration":
-            value_class = "http://ies.data.gov.uk/ontology/ies4#ValueInSeconds"
-        elif _class == "http://ies.data.gov.uk/ontology/ies4#ElectricCurrent":
-            value_class = "http://ies.data.gov.uk/ontology/ies4#ValueInAmperes"
-        elif _class == "http://ies.data.gov.uk/ontology/ies4#Temperature":
-            value_class = "http://ies.data.gov.uk/ontology/ies4#ValueInKelvin"
-        elif _class == "http://ies.data.gov.uk/ontology/ies4#AmountOfSubstance":
-            value_class = "http://ies.data.gov.uk/ontology/ies4#ValueInMoles"
-        elif _class == "http://ies.data.gov.uk/ontology/ies4#LuminousIntensity":
-            value_class = "http://ies.data.gov.uk/ontology/ies4#ValueInCandela"
+        if _class == f"{IES_BASE}Length":
+            value_class = f"{IES_BASE}ValueInMetres"
+        elif _class == f"{IES_BASE}Mass":
+            value_class = f"{IES_BASE}ValueInKilograms"
+        elif _class == f"{IES_BASE}Duration":
+            value_class = f"{IES_BASE}ValueInSeconds"
+        elif _class == f"{IES_BASE}ElectricCurrent":
+            value_class = f"{IES_BASE}ValueInAmperes"
+        elif _class == f"{IES_BASE}Temperature":
+            value_class = f"{IES_BASE}ValueInKelvin"
+        elif _class == f"{IES_BASE}AmountOfSubstance":
+            value_class = f"{IES_BASE}ValueInMoles"
+        elif _class == f"{IES_BASE}LuminousIntensity":
+            value_class = f"{IES_BASE}ValueInCandela"
         else:
             value_class = MEASURE_VALUE
         if value_class != MEASURE_VALUE and uom is not None:
@@ -2376,7 +2462,7 @@ class Identifier(Representation):
     Python wrapper class for IES Identifier
     """
     def __init__(
-            self, tool: IESTool, id_text="", uri: str | None = None, classes: list[str] | None = None,
+            self, tool: IESTool = IES_TOOL, id_text="", uri: str | None = None, classes: list[str] | None = None,
             naming_scheme: NamingScheme = None
     ):
         """
@@ -2400,7 +2486,7 @@ class Name(Representation):
     """
     Python wrapper class for IES Name
     """
-    def __init__(self, tool: IESTool, name_text="", uri: str | None = None,
+    def __init__(self, *, tool: IESTool = IES_TOOL, name_text="", uri: str | None = None,
                  classes: list[str] | None = None, naming_scheme: NamingScheme = None):
         """
             Instantiate the IES Name
@@ -2426,7 +2512,7 @@ class NamingScheme(ClassOfClassOfElement):
     """
     Python wrapper class for IES NamingScheme
     """
-    def __init__(self, tool: IESTool, owner: ResponsibleActor | None = None, uri: str | None = None,
+    def __init__(self, *, tool: IESTool = IES_TOOL, owner: ResponsibleActor | None = None, uri: str | None = None,
                  classes: list[str] | None = None):
         """
             Instantiate the IES NamingScheme
@@ -2444,13 +2530,13 @@ class NamingScheme(ClassOfClassOfElement):
         super().__init__(tool=tool, uri=uri, classes=classes)
         if owner is not None:
             self.tool.add_triple(
-                subject=self._uri, predicate="http://ies.data.gov.uk/ontology/ies4#schemeOwner", obj=owner._uri
+                subject=self._uri, predicate=f"{IES_BASE}schemeOwner", obj=owner._uri
             )
 
     def add_mastering_system(self, system: Entity):
         if system is not None:
             self.tool.add_triple(
-                subject=self._uri, predicate="http://ies.data.gov.uk/ontology/ies4#schemeMasteredIn", obj=system._uri
+                subject=self._uri, predicate=f"{IES_BASE}schemeMasteredIn", obj=system._uri
             )
 
 
@@ -2459,7 +2545,7 @@ class Event(Element):
     Python wrapper class for IES class Event
     """
 
-    def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate the IES Event
@@ -2502,12 +2588,12 @@ class Event(Element):
             uri = self.tool.generate_data_uri()
 
         if participation_type is None:
-            participation_type = "http://ies.data.gov.uk/ontology/ies4#EventParticipant"
+            participation_type = f"{IES_BASE}EventParticipant"
 
         participant = EventParticipant(tool=self.tool, uri=uri, start=start, end=end, classes=[participation_type])
 
-        self.tool.add_triple(participant._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipantIn", self._uri)
-        self.tool.add_triple(participant._uri, "http://ies.data.gov.uk/ontology/ies4#isParticipationOf",
+        self.tool.add_triple(participant._uri, f"{IES_BASE}isParticipantIn", self._uri)
+        self.tool.add_triple(participant._uri, f"{IES_BASE}isParticipationOf",
                                 pe_object._uri)
         return participant
 
@@ -2516,7 +2602,7 @@ class EventParticipant(State):
     """
     Python wrapper class for IES EventParticipant
     """
-    def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate the IES EventParticipant
@@ -2541,7 +2627,7 @@ class Communication(Event):
     """
     Python wrapper class for IES Communication
     """
-    def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None,
                  message_content: str | None = None):
         """
@@ -2611,7 +2697,7 @@ class PartyInCommunication(Event):
     Python wrapper class for IES PartyInCommunication
     """
 
-    def __init__(self, tool: IESTool, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  communication: Event | None = None, start: str | None = None,
                  end: str | None = None):
         """
@@ -2650,15 +2736,15 @@ class PartyInCommunication(Event):
         try:
             aic = EventParticipant(
                 tool=self.tool, uri=uri,
-                classes=["http://ies.data.gov.uk/ontology/ies4#AccountInCommunication"]
+                classes=[f"{IES_BASE}AccountInCommunication"]
             )
             self.tool.add_triple(
                 aic._uri,
-                "http://ies.data.gov.uk/ontology/ies4#isParticipantIn",
+                f"{IES_BASE}isParticipantIn",
                 self._uri)
             self.tool.add_triple(
                 aic._uri,
-                "http://ies.data.gov.uk/ontology/ies4#isParticipationOf",
+                f"{IES_BASE}isParticipationOf",
                 account_object._uri)
         except AttributeError as e:
             logger.warning(
@@ -2672,15 +2758,15 @@ class PartyInCommunication(Event):
         try:
             dic = EventParticipant(
                 tool=self.tool, uri=uri,
-                classes=["http://ies.data.gov.uk/ontology/ies4#DeviceInCommunication"]
+                classes=[f"{IES_BASE}DeviceInCommunication"]
             )
             self.tool.add_triple(
                 dic._uri,
-                "http://ies.data.gov.uk/ontology/ies4#isParticipantIn",
+                f"{IES_BASE}isParticipantIn",
                 self._uri)
             self.tool.add_triple(
                 dic._uri,
-                "http://ies.data.gov.uk/ontology/ies4#isParticipationOf",
+                f"{IES_BASE}isParticipationOf",
                 device_object._uri)
         except AttributeError as e:
             logger.warning(
@@ -2695,15 +2781,15 @@ class PartyInCommunication(Event):
         try:
             pic = EventParticipant(
                 tool=self.tool, uri=uri,
-                classes=["http://ies.data.gov.uk/ontology/ies4#PersonInCommunication"]
+                classes=[f"{IES_BASE}PersonInCommunication"]
             )
             self.tool.add_triple(
                 pic._uri,
-                "http://ies.data.gov.uk/ontology/ies4#isParticipantIn",
+                f"{IES_BASE}isParticipantIn",
                 self._uri)
             self.tool.add_triple(
                 pic._uri,
-                "http://ies.data.gov.uk/ontology/ies4#isParticipationOf",
+                f"{IES_BASE}isParticipationOf",
                 person_object._uri)
         except AttributeError as e:
             logger.warning(
@@ -2711,3 +2797,5 @@ class PartyInCommunication(Event):
                 f" {repr(e)}"
             )
         return person_object
+
+IES_TOOL = IESTool()

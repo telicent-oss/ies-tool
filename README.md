@@ -25,8 +25,6 @@ identify the requirement in customer projects.
 
 Python >= 3.8
 
-
-
 ## Install
 
 ```shell
@@ -35,14 +33,16 @@ pip install telicent-ies-tool
 
 ## Overview & Approach
 
-The IES Tool has a main factory class - `IESTool` - that takes care of storage, caching, and Python object instantiation.
-It is necessary to initiate a tool object for every dataset you wish to work with. 
+The IES Tool has a main factory class - `IESTool` - that takes care of storage, caching, and Python object instantiation. 
+This will be automatically initiated as the default `IES_TOOL` constant which can be imported It is necessary to initiate
+a tool object for every dataset you wish to work with. 
 
 ```python
-tool = IESTool()
+from ies_tool.ies_tool import IESTool, IES_TOOL
 ```
 
-As well as the main factory class, there are base Python classes for all the significant IES classes:
+As well as the main factory class, and the default instance of the tool (IES_TOOL), there are base Python classes for all
+the significant IES classes:
 
 
 * <a href="https://www.w3.org/TR/rdf-schema/#ch_resource">RdfsResource</a>
@@ -88,16 +88,18 @@ As well as the main factory class, there are base Python classes for all the sig
 
 Each of these classes can be instantiated using typical Pythonic approach - e.g. 
 ```python
-anne = Person(tool=tool, given_name="Anne", surname="Smith")
+anne = Person(given_name="Anne", surname="Smith")
 ```
-Note that the initiation parameters must specify the IESTool instance you're using so it knows where to create the RDF
-data. It is recommended that this approach is used in most cases. However, data can also be created using the `instantiate()` 
-method on IESTool, the tool will attempt to determine the most appropriate Python base class to initiate - e.g.
+Note that the default IES_TOOL instance will be used unless you specify the `tool=` parameter in the class initiation you're using
+so it knows where to create the RDF data. It is recommended that this approach is used in most cases. 
+
+However, data can also be created using the `instantiate()` method on IESTool, the tool will attempt to determine the most
+appropriate Python base class to initiate - e.g.
 
 ```python
 fred = tool.instantiate(classes=['http://ies.data.gov.uk/ontology/ies4#Person'])
 ```
-The 'fred' object returned will be a Python Person object. It's generally better to just initiate the based classes though, as
+The 'fred' object returned will be a Python Person object. It's generally better to just initiate the classes directly, as
 it is not always possible to deterministically infer the Python class from the `instantiate()` call. Developers can override
 the inference by setting the `base_class` parameter - e.g.
 
@@ -107,10 +109,12 @@ the inference by setting the `base_class` parameter - e.g.
 To import, use:
 
 ```python
-from ies_tool.ies_tool import IESTool
+from ies_tool.ies_tool import IESTool, IES_TOOL
 ```
 
-To instantiate the tool (factory) object:
+This will import a pre-initiated IESTool object that is ready to use, and will be the default factory object for all other classes
+
+To manually instantiate another tool (factory) object:
 
 ```python
 tool = IESTool()
@@ -122,17 +126,17 @@ tool = IESTool()
 ### Creating Data
 
 #### Person
-To create a person we need to instantiate a `Person` object first. We can pass in several parameters, but the only mandatory one is the `tool` parameter which refers to the IESTool factory object being used. The instantiated person graph will be stored in tool dataset.
+To create a person we need to instantiate a `Person` object first. We can pass in several parameters, but the only mandatory one is the `tool` 
+parameter which refers to the IESTool factory object being used. The instantiated person graph will be stored in tool dataset.
 
 ```python
 my_person = Person(
-    tool=tool,
     given_name='Fred',
     surname='Smith',
     date_of_birth="1985-08-21"
 )
 ```
-Note that `start` is used for the date of birth as this is inherited from Element. 
+Note that `start` is used for the date of birth as this is inherited from Element. This person instance will be created in the default IES_TOOL.
 
 We can then add additional information associated with the person using one of the available methods such as 
 `add_identifier()`, `add_state()`, `in_location()`, `works_for()` etc.
@@ -180,7 +184,7 @@ my_person.add_related_object(predicate="http://ies.data.gov.uk/ontology/ies4#anc
 The IES tool itself also provides a set of low-level methods for working with the graph, such as `add_to_graph` which adds an RDF statement:
 
 ```python
-tool.add_to_graph(
+IES_TOOL.add_to_graph(
     subject=my_person.uri,
     predicate='http://ies.data.gov.uk/ontology/ies4#hasCharacteristic',
     obj=characteristic_uri
@@ -196,17 +200,16 @@ Registering these prefixes just enables shorter, more readable RDF to be produce
 require fully expanded URIs. 
 
 ```python
-from ies_tool.ies_tool import IESTool
+from ies_tool.ies_tool import IES_TOOL
 
-tool = IESTool(mode="rdflib")
 
-tool.add_prefix("data:", "http://example.com/rdf/testdata#")
+IES_TOOL.add_prefix("data:", "http://example.com/rdf/testdata#")
 ```
 
 As a default `http://example.com/rdf/testdata#` is used as a data uri stub. This can be changed: 
 
 ```python
-tool.uri_stub = 'http://domain/rdf/stub#'
+IES_TOOL.uri_stub = 'http://domain/rdf/stub#'
 ```
 Note this will also set the blank prefix `:` to `http://domain/rdf/stub#`
 
@@ -216,18 +219,18 @@ Note this will also set the blank prefix `:` to `http://domain/rdf/stub#`
 #### As a text string
 
 ```python
-my_rdf_string = tool.get_rdf(format="turtle") 
+my_rdf_string = IES_TOOL.get_rdf(format="turtle") 
 ```
 As the IES tool uses RDFLib by default. If another storage plug-in has been used, it may not support all the RDF bindings.
 
 #### Saving RDF locally
 
 ```python
-tool.save_rdf("path/to/my/file.ttl",format="ttl")  
+IES_TOOL.save_rdf("path/to/my/file.ttl",format="ttl")  
 ```
 
 ### To clear the graph:
 
 ```python
-tool.clear_graph()
+IES_TOOL.clear_graph()
 ```

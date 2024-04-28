@@ -2,27 +2,27 @@ import time
 from unittest import TestCase
 from unittest.mock import mock_open, patch
 
-from ies_tool.ies_tool import Element, Entity, IESTool, Person
+from ies_tool.ies_tool import IES_TOOL, Communication, Element, Entity, Event, GeoPoint, IESTool, Organisation, Person
 
 
 def sparql_test():
-    tool = IESTool(mode="sparql_server", validate=False, server_dataset="ontology")
-    tool.run_sparql_update("INSERT DATA {<http://a> a <http://x>}")
-    tool.run_sparql_update("INSERT DATA {<http://a> <http://b> <http://c>}")
-    tool.add_to_graph("http://a","http://y","http://z",False)
-    tool.add_to_graph("http://a","http://t","test literal",True)
-    out = tool.run_sparql_query("SELECT * WHERE { <http://a> ?p ?o } LIMIT 4")
+    #tool = IESTool(mode="sparql_server", validate=False, server_dataset="ontology")
+    IES_TOOL.run_sparql_update("INSERT DATA {<http://a> a <http://x>}")
+    IES_TOOL.run_sparql_update("INSERT DATA {<http://a> <http://b> <http://c>}")
+    IES_TOOL.add_to_graph("http://a","http://y","http://z",False)
+    IES_TOOL.add_to_graph("http://a","http://t","test literal",True)
+    out = IES_TOOL.run_sparql_query("SELECT * WHERE { <http://a> ?p ?o } LIMIT 4")
     print(out)
-    tool.delete_triple("http://a",tool.rdf_type,"http://x")
-    tool.delete_triple("http://a","http://b","http://c")
-    tool.delete_triple("http://a","http://y","http://z")
-    tool.delete_triple("http://a","http://t","test literal",True)
+    IES_TOOL.delete_triple("http://a",tool.rdf_type,"http://x")
+    IES_TOOL.delete_triple("http://a","http://b","http://c")
+    IES_TOOL.delete_triple("http://a","http://y","http://z")
+    IES_TOOL.delete_triple("http://a","http://t","test literal",True)
     time.sleep(1)
-    out = tool.run_sparql_query("SELECT * WHERE { <http://a> ?p ?o } LIMIT 4")
+    out = IES_TOOL.run_sparql_query("SELECT * WHERE { <http://a> ?p ?o } LIMIT 4")
     print(out)
 
 
-def run_test(tool):
+def run_test(tool=IES_TOOL):
     for c in tool.ontology.classes:
         inst = tool.instantiate([c])
         if isinstance(inst, Element):
@@ -36,25 +36,24 @@ def run_test(tool):
 
 
 def test_anne_person():
-    tool = IESTool(validate=True)
-    tool.clear_graph()
-    anne = Person(tool=tool, given_name="Anne", surname="Smith", date_of_birth="1492-01-13")
-    anne.add_measure(measure_class=tool.ontology.ies_class("Mass"), value=104)
+    IES_TOOL.clear_graph()
+    anne = Person(given_name="Anne", surname="Smith", date_of_birth="1492-01-13")
+    anne.add_measure(measure_class=IES_TOOL.ontology.ies_class("Mass"), value=104)
 
     anne.add_identifier("blah")
     anne.add_name("blah name")
     anne.add_label("Anne Label")
     anne.add_representation("blah rep")
 
-    tool.instantiate(
+    IES_TOOL.instantiate(
         ["http://ies.data.gov.uk/ontology/ies4#Device", "http://ies.data.gov.uk/ontology/ies4#Person"]
     )
 
-    gp = tool.create_geopoint(lat=52.41419458448101, lon=16.899256413657202, precision=9)
-    e = tool.create_event(event_end="1999-09-09")
+    gp = GeoPoint(lat=52.41419458448101, lon=16.899256413657202, precision=9)
+    e = Event(end="1999-09-09")
     e.add_participant(anne)
 
-    acme = tool.create_organisation(name="ACME inc")
+    acme = Organisation(name="ACME inc")
     acme_director = acme.add_post(name="Witchfinder General", start="1612-01-01")
     acme.add_part("http://test#part1") #A test to see if dumb URIs can be passed
 
@@ -65,10 +64,10 @@ def test_anne_person():
 
     anne.in_post(acme_director, start="2015-12-05", end="2017-06-20")
 
-    comm = tool.create_communication()
+    comm = Communication()
     comm.add_participant(anne)
     comm.add_participant("http://test#particpant1")
-    tool.save_rdf('./test-anne.ttl', format="ttl")
+    IES_TOOL.save_rdf('./test-anne.ttl', format="ttl")
 
 
 class MainTestCase(TestCase):
