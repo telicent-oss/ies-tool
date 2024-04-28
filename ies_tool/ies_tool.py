@@ -2592,7 +2592,7 @@ class Communication(Event):
         """DEPRECATED - USE create_party().
 
         Args:
-            uri (str | None, optional): Set this if you want to use a specific URI for the PartyInCommunication. Defaults to None.
+            uri (str | None, optional): Set this  to use a specific URI for the PartyInCommunication. Defaults to None.
             party_role (str | None, optional): Use this to select a subclass of PartyInCommunication. Defaults to None.
             starts_in (str | None, optional): ISO8601 string - the start of the party's involvement. Defaults to None.
             ends_in (str | None, optional): ISO8601 string - the end of the party's involvement. Defaults to None.
