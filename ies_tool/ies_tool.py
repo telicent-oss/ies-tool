@@ -2570,7 +2570,7 @@ class Communication(Event):
         """Creates a PartyInCommunication instance and relates it to the Communication instance
 
         Args:
-            uri (str | None, optional): Set this if you want to use a specific URI for the PartyInCommunication. Defaults to None.
+            uri (str | None, optional): Set this to use a specific URI for the PartyInCommunication. Defaults to None.
             party_role (str | None, optional): Use this to select a subclass of PartyInCommunication. Defaults to None.
             start (str | None, optional): ISO8601 string - the start of the party's involvement. Defaults to None.
             end (str | None, optional): ISO8601 string - the end of the party's involvement. Defaults to None.
@@ -2583,7 +2583,8 @@ class Communication(Event):
         if party_role not in self.tool.ontology.pic_subtypes:
             logger.warning(f"{party_role} is not a subtype of ies:PartyInCommunication")
 
-        party = PartyInCommunication(tool=self.tool, uri=uri, communication=self, start=start, end=end,classes=[party_role])
+        party = PartyInCommunication(tool=self.tool, uri=uri, communication=self,
+                                     start=start, end=end,classes=[party_role])
 
         return party
 
