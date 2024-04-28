@@ -87,6 +87,7 @@ EVENT = f"{IES_BASE}Event"
 EVENT_PARTICIPANT = f"{IES_BASE}EventParticipant"
 COMMUNICATION = f"{IES_BASE}Communication"
 PARTY_IN_COMMUNICATION = f"{IES_BASE}PartyInCommunication"
+WORK_OF_DOCUMENTATION = f"{IES_BASE}WorkOfDocumentation"
 
 TELICENT_PRIMARY_NAME = "http://telicent.io/ontology/primaryName"
 
@@ -96,11 +97,11 @@ logger = logging.getLogger(__name__)
 class IESTool:
     """
     IESTool is a Python library for working with the UK Government Information Exchange Standard. This is the main class
-    you need to initialise to start creating IES RDF data.
+    you need to initialise to start creating IES RDF data. The IESTool class acts as a factory for classes, and holds
+    the created RDF instances.
 
-    The idea with this library is that you instantiate the IESTool class once - don't keep creating it, as there is some
-    overhead in this. Instead, the idea is that you just run clear_graph every time you want to cycle out a new set
-    of data.
+    Once created, and IESTool object can be used over and over again for creating new IES files. Simply clear_graph()
+    between file creation runs rather than initiating a new IESTool object (which carries some overhead and delay)
 
     Instances of the IESTool class hold an in-memory copy of the IES ontology in an
     [rdflib](https://github.com/RDFLib/rdflib) graph which can be accessed through self.ontology.graph
@@ -110,14 +111,14 @@ class IESTool:
     """
 
     def __init__(
-            self, uri_stub: str = "http://example.com/rdf/testdata#", mode: str = "rdflib",
+            self, default_data_namespace: str = "http://example.com/rdf/testdata#", mode: str = "rdflib",
             plug_in: IESPlugin | None = None, validate: bool = False, server_host: str = "http://localhost:3030/",
             server_dataset: str = "ds", default_security_label: str = ""
     ):
         """
 
         Args:
-            uri_stub (str): The default URI path used for generating node URIs
+            default_data_namespace (str): The default URI path used for generating node URIs
             mode (str):
                 The mode that the tool should run in. Should be one of:
                     - rdflib (default) - slow, but includes a lot of RDF checking. Ideal for dev and testing
@@ -198,7 +199,7 @@ class IESTool:
 
         self.__mode = mode
         if mode not in ["rdflib", "sparql_server"]:
-            self.__register_plugin(mode, plug_in)
+            self._register_plugin(mode, plug_in)
 
         if self.__mode == "plugin":
             logger.info("Using a user-defined storage plugin")
@@ -209,7 +210,7 @@ class IESTool:
             if not validate:
                 logger.warning('Enabling validation for rdflib mode')
             self.__validate = True
-            self.__init_shacl(os.path.join(self.current_dir, "ies_r4_2_0.shacl"))
+            self._init_shacl(os.path.join(self.current_dir, "ies_r4_2_0.shacl"))
             logger.info("IES Tool set to validate all messages. This might get a bit slow")
         elif mode == "sparql_server":
             self.server_host = server_host
@@ -228,7 +229,7 @@ class IESTool:
         self.graph = Graph()
 
         self.prefixes = {}
-        self.uri_stub = uri_stub
+        self.default_data_namespace = default_data_namespace
         # Establish a set of useful prefixes
         self.add_prefix("xsd:", "http://www.w3.org/2001/XMLSchema#")
         self.add_prefix("dc:", "http://purl.org/dc/elements/1.1/")
@@ -248,8 +249,8 @@ class IESTool:
         if self.__mode != "sparql_server":
             self.clear_graph()
 
-        self.ies_uri_stub = IES_BASE
-        self.iso8601_uri_stub = "http://iso.org/iso8601#"
+        self.ies_namespace = IES_BASE
+        self.iso8601_namespace = "http://iso.org/iso8601#"
         self.rdf_type = f"{self.prefixes['rdf:']}type"
         self.rdfs_resource = f"{self.prefixes['rdfs:']}Resource"
         self.rdfs_comment = f"{self.prefixes['rdfs:']}comment"
@@ -261,20 +262,24 @@ class IESTool:
         #This enables look up of most appropriate base class when call instantiate
         #This may be better if it was in the ies_ontology library, but they don't have access to
         # the class definitions and didn't want to create a circular dependency...again
-        self.base_classes = self.__all_python_subclasses({},RdfsResource,0)
+        self.base_classes = self._all_python_subclasses({},RdfsResource,0)
+
 
     @property
-    def uri_stub(self):
+    def default_data_namespace(self):
         return self.prefixes[":"]
 
-    @uri_stub.setter
-    def uri_stub(self,value):
+    @default_data_namespace.setter
+    def default_data_namespace(self,value):
         self.add_prefix(":",value)
 
     def add_prefix(self, prefix: str, uri: str):
         """
         Adds an RDF prefix to the internal list of namespace prefixes. If using rdflib for the in-memory graph,
-        it will also register the namespace there
+        it will also register the namespace there.
+
+        Note that if the prefix is an empty string or ':' it will set the default_data_namespace for the
+        IESTool instance.
 
         Args:
             prefix (str): The prefix to add
@@ -289,7 +294,19 @@ class IESTool:
             ns = Namespace(uri)
             self.graph.bind(prefix.replace(":",""), ns)
 
-    def _validate_datetime_string(self, dt_string: str):
+    def _validate_datetime_string(self, dt_string: str) -> bool:
+        """Validates ISO8601 datetime strings
+
+        Args:
+            dt_string (str): the datetime string to be validated against the ISO8601 standard
+
+        Raises:
+            RuntimeError: Default behaviour is to raise and exception if the string isn't valid
+            - use exception handlers if you wish processing to carry on
+
+        Returns:
+            bool: returns True if the string is valid, otherwise raises exception
+        """
         try:
             dt.datetime.fromisoformat(dt_string.replace('Z', '+00:00'))
         except RuntimeError as exc:
@@ -297,7 +314,7 @@ class IESTool:
             raise RuntimeError(f'invalid ISO8601 datetime string: {dt_string}') from exc
         return True
 
-    def _mint_dependent_uri(self,parent_uri:str,postfix:str):
+    def _mint_dependent_uri(self,parent_uri:str,postfix:str) -> str:
         new_uri = f'{parent_uri}_{postfix}_001'
         counter=1
         while new_uri in self.instances:
@@ -318,10 +335,17 @@ class IESTool:
             prefix_str = f"{prefix_str}PREFIX {prefix} <{self.prefixes[prefix]}> "
         return prefix_str
 
-    #Creates a tiered dictionary (with integer keys for each tier).
-    #Each tier has a dictionary of base classes, keyed by their equivalent IES Class URI
-    #Each leaf object also holds a reference to the Python class and all the IES subclasses
-    def __all_python_subclasses(self,hierarchy,cls,level):
+    def _all_python_subclasses(self,hierarchy:dict,cls:Unique,level:int) -> dict:
+        """_summary_
+
+        Args:
+            hierarchy (dict): _description_
+            cls (Unique): _description_
+            level (int): _description_
+
+        Returns:
+            dict: _description_
+        """
         if level not in hierarchy:
             hierarchy[level] = {}
         uri = ''
@@ -335,12 +359,12 @@ class IESTool:
         subclasses = cls.__subclasses__()
         if len(subclasses) > 0:
             for sub in subclasses:
-                self.__all_python_subclasses(hierarchy,sub,level+1)
+                self._all_python_subclasses(hierarchy,sub,level+1)
         return hierarchy
 
     #Given an IES or RDFS class, this function will attempt to return the most appropriate base class
     # (and its level identifier)
-    def __determine_base_class(self,classes):
+    def _determine_base_class(self,classes):
         keys = reversed(self.base_classes.keys())
         for level_number in keys:
             level = self.base_classes[level_number]
@@ -352,7 +376,7 @@ class IESTool:
         return self.base_classes[0]["python_class"],0
 
 
-    def __get_instance(self, uri: str) -> RdfsResource | None:
+    def _get_instance(self, uri: str) -> RdfsResource | None:
         """
         Gets an instance (by its URI) that has already been created in this session. Note if you are connected to a
         remote SPARQL server or have loaded data into in-memory graph, pre-existing instances will not have been
@@ -368,10 +392,9 @@ class IESTool:
         if uri in self.instances:
             return self.instances[uri]
         else:
-            logger.warning("no instance with a uri: {uri}")
             return None
 
-    def __register_plugin(self, plugin_name: str, plugin: IESPlugin | None):
+    def _register_plugin(self, plugin_name: str, plugin: IESPlugin | None):
         """
         Registers a plugin after initialisation.
 
@@ -391,7 +414,12 @@ class IESTool:
             self.plug_in.set_classes(self.ontology.classes)
             self.plug_in.set_properties(self.ontology.properties)
 
-    def __init_shacl(self, shacl_filename: str):
+    def _init_shacl(self, shacl_filename: str):
+        """Loads SHACL shapes for validation
+
+        Args:
+            shacl_filename (str): the shacl file to use
+        """
         logger.info("parsing SHACL rules")
         self.shacl = Graph()
         self.shacl.parse(shacl_filename)
@@ -401,7 +429,8 @@ class IESTool:
 
     def clear_graph(self) -> uuid.UUID:
         """
-        Clears the graph currently in use
+        Clears the graph currently in use. This is the quickest way to run repeated IES data runs - far quicker
+        than constantly initiating new IESTool objects
 
         Returns:
             uuid.UUID: The session uuid.
@@ -422,18 +451,6 @@ class IESTool:
         self.session_instance_count = 0
         self.instances = {}
         return self.session_uuid
-
-    def set_uri_stub(self, uri_stub: str):
-        """
-        IES Tool maintains a default URI stub (namespace) for the data you're creating - this is used when generating
-        UUID-based URIs.
-
-        Args:
-            uri_stub (str): The URI stub to add.
-        """
-
-        self.uri_stub = uri_stub
-        self.add_prefix("data", uri_stub)
 
     def run_sparql_update(self, query: str, security_label: str | None = None):
         """
@@ -462,7 +479,7 @@ class IESTool:
                 f"Cannot issue SPARQL Update unless using rdflib or remote sparql. You are using {self.__mode}"
             )
 
-    def make_results_list_from_query(self, query: str, sparql_var_name: str):
+    def make_results_list_from_query(self, query: str, sparql_var_name: str) -> list:
         """
         Pulls out individual variable from each row returned from sparql query. It's a bit niche, I know.
 
@@ -478,7 +495,7 @@ class IESTool:
                 return_set.add(binding[sparql_var_name]['value'])
         return list(return_set)
 
-    def run_sparql_query(self, query: str):
+    def run_sparql_query(self, query: str) -> dict:
         """
         Runs a SPARQL query on the data - DOES NOT WORK ON plugins (yet)
 
@@ -502,7 +519,7 @@ class IESTool:
             )
 
     @staticmethod
-    def __str(_input: str | Graph):
+    def _str(_input: str | Graph) -> str:
         """
         Designed to catch iffy datatypes being passed in (e.g. legacy rdflib types)
 
@@ -528,7 +545,7 @@ class IESTool:
                 raise RuntimeError(f"Cannot create a triple where one place is of type {str(_input)}") from e
 
     @staticmethod
-    def __prep_object(obj: str, is_literal: bool, literal_type: str):
+    def _prep_object(obj: str, is_literal: bool, literal_type: str) -> str:
         """
         Checks the type of object place in an RDF triple and formats it for use in a SPARQL query
 
@@ -536,7 +553,11 @@ class IESTool:
             obj (str) - the RDF object (third position in an RDF triple)
             is_literal (bool) - set to true if passing a literal object
             literal_type (str) - an XML schema datatype
+
+        Returns:
+            str: _description_
         """
+
         if is_literal:
             o = f'"{obj}"'
             if literal_type:
@@ -545,19 +566,19 @@ class IESTool:
             o = f'<{obj}>'
         return o
 
-    def __prep_spo(self, subject: str, predicate: str, obj: str, is_literal: bool = True,
-                   literal_type: str | None = None):
+    def _prep_spo(self, subject: str, predicate: str, obj: str, is_literal: bool = True,
+                   literal_type: str | None = None) -> str:
         """
-            Formats an RDF triple so it can be used in a SPARQL query or update
+        Formats an RDF triple so it can be used in a SPARQL query or update
 
-            Args:
-                subject - the first position of the triple
-                predicate - the second position of the triple
-                obj - the third position of the triple
-                is_literal - set to true if the third position is a literal
-                literal_type - if the third position is a literal, set its XML datatype
+        Args:
+            subject - the first position of the triple
+            predicate - the second position of the triple
+            obj - the third position of the triple
+            is_literal - set to true if the third position is a literal
+            literal_type - if the third position is a literal, set its XML datatype
         """
-        return f"<{subject}> <{predicate}> {self.__prep_object(obj, is_literal, literal_type)}"
+        return f"<{subject}> <{predicate}> {self._prep_object(obj, is_literal, literal_type)}"
 
     def switch_mode(self, mode: str):
         """
@@ -571,12 +592,11 @@ class IESTool:
         else:
             self.__mode = mode
             self.clear_graph()
-            self.clear_graph()
 
-    def get_rdf(self, rdf_format: str = "nt", clear: bool = False):
+    def get_rdf(self, rdf_format: str = "nt", clear: bool = False) -> dict:
         """
-        Returns the RDF in the format requested. Note this only applies if in rdflib mode, or if the storage plugin
-        supports data export
+        Returns the RDF in the format requested embedded in a dictionary.
+        Note this only applies if in rdflib mode, or if the storage plugin supports data export
 
         Args:
             rdf_format (str): The requested rdf format (default is "nt" for n-triples)
@@ -659,22 +679,22 @@ class IESTool:
         if self.__mode == "plugin":
             return self.plug_in.in_graph(subject, predicate, obj, is_literal=is_literal)
         elif self.__mode == "sparql_server":
-            f'ASK {{ <> <>  {self.__prep_object(obj, is_literal, literal_type)}}}'
+            f'ASK {{ <> <>  {self._prep_object(obj, is_literal, literal_type)}}}'
         else:
             if is_literal:
                 return (URIRef(subject), URIRef(predicate), Literal(obj)) in self.graph
             else:
                 return (URIRef(subject), URIRef(predicate), Literal(obj)) in self.graph
 
-    def generate_data_uri(self, context: str = ""):
+    def generate_data_uri(self, context: str = "") -> str:
         """
-        Creates a random (UUID) appended to the default uri_stub namespace in use
+        Creates a random (UUID) appended to the default data namespace in use
 
         Args:
             context (str): an additional string to insert into the URI to provide human-readable context
         """
 
-        uri = f'{self.uri_stub}{self.session_uuid_str}{context}_{self.session_instance_count:06d}'
+        uri = f'{self.default_data_namespace}{self.session_uuid_str}{context}_{self.session_instance_count:06d}'
         self.session_instance_count = self.session_instance_count + 1
         return uri
 
@@ -704,6 +724,19 @@ class IESTool:
 
     def add_to_graph(self, subject: str, predicate: str, obj: str, is_literal: bool = False,
                      literal_type: str = "string", security_label: str = "") -> bool:
+        """DEPRECATED - use add_triple()
+
+        Args:
+            subject (str): _description_
+            predicate (str): _description_
+            obj (str): _description_
+            is_literal (bool, optional): _description_. Defaults to False.
+            literal_type (str, optional): _description_. Defaults to "string".
+            security_label (str, optional): _description_. Defaults to "".
+
+        Returns:
+            bool: _description_
+        """
         logger.warn("add_to_graph() is deprecated - please use add_triple()")
         return self.add_triple(subject=subject, predicate=predicate, obj=obj, is_literal=is_literal,
                      literal_type=literal_type, security_label=security_label)
@@ -741,9 +774,9 @@ class IESTool:
                 subject=subject, predicate=predicate, obj=obj, is_literal=is_literal, literal_type=literal_type
         ):
             # See is someone has passed a rdflib type and fix it
-            subject = self.__str(subject)
-            predicate = self.__str(predicate)
-            obj = self.__str(obj)
+            subject = self._str(subject)
+            predicate = self._str(predicate)
+            obj = self._str(obj)
 
             # Send out a warning if a non-IES predicate is used
             if is_literal:
@@ -763,7 +796,7 @@ class IESTool:
                 obj = URIRef(obj)
             self.graph.add((URIRef(subject), URIRef(predicate), obj))
 
-    def add_literal_property(self, subject: str, predicate: str, obj: str, literal_type: str = "string"):
+    def add_literal_property(self, subject: str, predicate: str, obj: str, literal_type: str = "string") -> bool:
         """
         Adds a triple where the object is a literal
 
@@ -778,7 +811,7 @@ class IESTool:
 
 
     def instantiate(self, classes: list | None = None, uri: str = None, instance_uri_context: str = "",
-                    base_class: RdfsResource | None = None):
+                    base_class: RdfsResource | None = None) -> RdfsResource:
         """
         Instantiates a list of classes
 
@@ -799,7 +832,7 @@ class IESTool:
                 " make a singleton list"
             )
         if base_class is None:
-            base_class,level = self.__determine_base_class(classes)
+            base_class,level = self._determine_base_class(classes)
 
         if uri is None:
             # Make an uri based on the data stub...
@@ -811,7 +844,7 @@ class IESTool:
         # If we have more than one class, we make a new class name by concatenating the class names
 
         for cls in classes:
-            cls_name = cls.replace(self.ies_uri_stub, "")
+            cls_name = cls.replace(self.ies_namespace, "")
             cls_str = f"{cls_str}{cls_name}"
 
         return base_class(uri=uri, tool=self)
@@ -820,7 +853,7 @@ class IESTool:
                      event_start: str | None = None, event_end: str | None = None,
                      ) -> Event:
         """
-        Instantiate an IES Event.
+        DEPRECATED - use Event() to instantiate an IES Event.
 
         Args:
             uri (str): The URI for the event
@@ -844,7 +877,7 @@ class IESTool:
                       given_name: str | None = None, surname: str | None = None, dob: str | None = None,
                       pob: Location | None = None, dod: str | None = None, pod: Location | None = None) -> Person:
         """
-        Instantiate an IES Person
+        DEPRECATED - use Person() to instantiate an IES Person
 
         Args:
             given_name (str): first name of the person
@@ -874,7 +907,7 @@ class IESTool:
     def create_measure(self, uri: str | None = None, classes: list | None = None,
                        value: str | None = None, uom: UnitOfMeasure | None = None) -> Measure:
         """
-        Creates a measure that's an instance of a given measureClass, adds its value and unit of measure.
+        DEPRECATED - Use Measure() to instantiate a measure.
 
         Args:
             uri (str): the URI of the Measure instance
@@ -899,7 +932,7 @@ class IESTool:
                              starts_in: str | None = None, ends_in: str | None = None,
                              message_content: str | None = None) -> Communication:
         """
-        Instantiates an IES Communication class
+        DEPRECATED - Use Communication() to Instantiate an IES Communication class
 
         Args:
             uri (str): the URI of the Communication instance
@@ -929,7 +962,7 @@ class IESTool:
             lat: float | None = None, lon: float | None = None, precision: int | None = 6
     ) -> GeoPoint:
         """
-        Creates instance of GeoPoint object.
+        DEPRECATED - use GeoPoint() to create an instance of the IES GeoPoint class.
 
         Args:
             uri (str): the URI of the GeoPoint instance
@@ -956,7 +989,7 @@ class IESTool:
     def create_organisation(self, uri: str | None = None, classes: list | None = None,
                             name: str | None = None) -> Organisation:
         """
-        Create instance of Organisation object.
+        DEPRECATED - use Organisation() to create an instance of the IES Organisation class.
 
         Args:
             uri (str): the URI of the Organisation instance
@@ -976,6 +1009,11 @@ class IESTool:
 
 
 class Unique(type):
+    """Metaclass used to manage housekeeping around base class instantiation
+
+    Args:
+        type (_type_):
+    """
     def __call__(cls, *args, **kwargs):
         if "tool" not in kwargs:
             raise Exception("Please use keyword arguments when initialising classes, starting with tool=")
@@ -1055,36 +1093,87 @@ class RdfsResource(metaclass=Unique):
         return self.tool.make_results_list_from_query(
             "SELECT ?c WHERE {<" + self._uri + "> <http://www.w3.org/2000/01/rdf-schema#comment> ?c }", "c")
 
-    def add_type(self, uri):
-        self.tool.add_triple(self.uri, predicate=RDF_TYPE, obj=uri)
+    def add_type(self, class_uri) -> bool:
+        """Adds an rdf:type predicate from this object to an rdfs:Class referenced by the class_uri
 
-    # Adds a triple where the object is a literal
-    def add_literal(self, predicate: str, literal: str, literal_type: str = "string"):
+        Args:
+            class_uri (_type_): the rdfs:Class to reference
+        """
+        self.tool.add_triple(self.uri, predicate=RDF_TYPE, obj=class_uri)
+
+
+    def add_literal(self, predicate: str, literal: str, literal_type: str = "string") -> bool:
+        """Adds a triple where the object is a literal
+
+        Args:
+            predicate (str): the uri of the predicate (as a fully formed URI)
+            literal (str): the literal string to be assigned
+            literal_type (str, optional): a valid xsd datatype without the prefix. Defaults to "string".
+
+        Returns:
+            _type_: _description_
+        """
         return self.tool.add_triple(self._uri, predicate, literal, is_literal=True, literal_type=literal_type)
 
-    # Adds an rdfs label to this node
-    def add_label(self, label):
+    def add_label(self, label:str):
+        """Adds an rdfs label to the node
+
+        Args:
+            label (str): The text string of the label
+        """
         self.add_literal(predicate=self.tool.rdfs_label, literal=label)
 
-    # Adds an rdfs comment to this node
-    def add_comment(self, comment):
+
+    def add_comment(self, comment:str):
+        """Adds an rdfs comment to this node
+
+        Args:
+            comment (str): The text string of the comment
+        """
         self.add_literal(predicate=self.tool.rdfs_comment, literal=comment)
 
-    # Adds a telicent primary name to the node - for use in the Telicent CORE platform
-    def add_telicent_primary_name(self,name):
+    def add_telicent_primary_name(self,name:str):
+        """Adds a telicent primary name to the node - for use in the Telicent CORE platform
+
+        Args:
+            name (_type_): The text string of the name
+        """
         self.add_literal(predicte=TELICENT_PRIMARY_NAME,literal=name)
 
-    # Adds a predicate to relate this node to another via a specified predicate
-    def add_related_object(self,predicate,related_object):
+    def add_related_object(self,predicate:str,related_object) -> bool:
+        """Adds a predicate to relate this node to another via a specified predicate
+
+        Args:
+            predicate (str): the URI of the rdf property of the predicate
+            related_object (): Either an object (subtype of RdfsResource) or a string representing the URI of the object
+
+        Returns:
+            bool:
+        """
         related_object = self._validate_referenced_object(related_object,context="add_relation")
         return self.tool.add_triple(self._uri,predicate=predicate,obj=related_object,is_literal=False)
 
-    # An internal method for ascertaining the best base class of a given URI.
-    # If you pass it an object, it just returns the object you gave it
-    def _validate_referenced_object(self,reference,base_type=None,context=""):
+    def _validate_referenced_object(self,reference,base_type:Unique=None,context:str="") -> Unique:
+        """
+        An internal method for ascertaining the best base class of a given URI.
+        If you pass it an object, it just returns the object you gave it
+
+        Args:
+            reference (): Either an object (subtype of RdfsResource) or a URI referance to an instance (i.e. a string)
+            base_type (Unique, optional): Used to override the type of object return if one is being inferred
+                (i.e. when a string is passed). Defaults to None.
+            context (str, optional): A helper string for debugging output. Defaults to "".
+
+        Raises:
+            Exception: An exception is raised if something that is neither a string or a base class is passed
+
+        Returns:
+            Unique: The provided or inferred object
+        """
         if isinstance(reference,str):
-            if reference in self.tool.instances:
-                return self.tool.instances[reference]
+            inst = self.tool._get_instance(reference)
+            if inst is not None:
+                return inst
             else:
                 logger.warning(
                     f'''String passed instead of object in {context}
@@ -1121,11 +1210,27 @@ class RdfsClass(RdfsResource):
             classes = [RDFS_CLASS]
         super().__init__(tool=tool, uri=uri, classes=classes)
 
-    def instantiate(self, uri=None):
-        self.tool.instantiate([self.uri], uri)
+    def instantiate(self, uri=None) -> RdfsResource:
+        """Creates an instance of this class
 
-    def add_sub_class(self, sub_class: type[RdfsClassType]):
-        pass
+        Args:
+            uri (_type_, optional): _description_. Defaults to None.
+
+            Returns:
+                RdfsResource:
+        """
+        return self.tool.instantiate([self.uri], uri, base_class=self)
+
+    def add_sub_class(self, sub_class: str) -> bool:
+        """adds a subClassOf relationship to the provided sub_class
+
+        Args:
+            sub_class (str): the uri of the class that will inherit from this one in the RDF
+
+        Returns:
+            bool:
+        """
+        return self.tool.add_triple(sub_class.uri,f"{RDFS}subClassOf",self.uri)
 
 
 class ExchangedItem(RdfsResource):
@@ -1468,7 +1573,8 @@ class AmountOfMoney(Asset):
 
         currency_uri = self.tool.prefixes["iso4217:"]+iso_4217_currency_code_alpha3
 
-        if currency_uri not in self.tool.instances:
+        currency_object = self.tool._get_instance(currency_uri)
+        if currency_object is None:
             currency_object = ClassOfElement(tool=self.tool,uri=currency_uri,classes=[IES_BASE+"Currency"])
             currency_object.add_identifier(iso_4217_currency_code_alpha3)
             if currency:
@@ -2131,7 +2237,7 @@ class Representation(ClassOfElement):
     Python wrapper class for IES Representation
     """
 
-    def __init__(self, tool: IESTool, representation_text: str, uri: str | None = None,
+    def __init__(self, tool: IESTool, representation_text: str | None = None, uri: str | None = None,
                  classes: list[str] | None = None, naming_scheme: NamingScheme | None = None):
         """
             Instantiate the IES Representation
@@ -2151,11 +2257,36 @@ class Representation(ClassOfElement):
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
-        self.tool.add_triple(subject=self._uri, predicate="http://ies.data.gov.uk/ontology/ies4#representationValue",
+        if representation_text:
+            self.tool.add_triple(subject=self._uri, predicate="http://ies.data.gov.uk/ontology/ies4#representationValue",
                                 obj=representation_text, is_literal=True, literal_type="string")
         if naming_scheme:
             self.tool.add_triple(subject=self._uri, predicate="http://ies.data.gov.uk/ontology/ies4#inScheme",
                                     obj=naming_scheme.uri)
+
+class WorkOfDocumentation(Representation):
+    """
+    Python wrapper class for IES WorkOfDocumentation
+    """
+
+    def __init__(self, tool: IESTool, uri: str | None = None,
+                 classes: list[str] | None = None):
+        """
+            Instantiate the IES WorkOfDocumentation
+
+            Args:
+                tool (IESTool): The IES Tool which holds the data you're working with
+                uri (str): the URI of the IES Representation
+                classes (list): the IES types to instantiate
+
+            Returns:
+                WorkOfDocumentation:
+        """
+
+        if classes is None:
+            classes = [WORK_OF_DOCUMENTATION]
+
+        super().__init__(tool=tool, uri=uri, classes=classes)
 
 
 class MeasureValue(Representation):
@@ -2432,18 +2563,46 @@ class Communication(Event):
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         if message_content:
-            self.add_literal("http://ies.data.gov.uk/ontology/ies4#messageContent", message_content)
+            self.add_literal(f"{IES_BASE}messageContent", message_content)
 
-    def add_party(self, uri: str | None = None, party_role: str | None = None, starts_in: str | None = None,
-                  ends_in: str | None = None) -> Event:
-        party_role = party_role or "http://ies.data.gov.uk/ontology/ies4#PartyInCommunication"
+    def create_party(self, uri: str | None = None, party_role: str | None = None, start: str | None = None,
+                  end: str | None = None) -> PartyInCommunication:
+        """Creates a PartyInCommunication instance and relates it to the Communication instance
+
+        Args:
+            uri (str | None, optional): Set this if you want to use a specific URI for the PartyInCommunication. Defaults to None.
+            party_role (str | None, optional): Use this to select a subclass of PartyInCommunication. Defaults to None.
+            start (str | None, optional): ISO8601 string - the start of the party's involvement. Defaults to None.
+            end (str | None, optional): ISO8601 string - the end of the party's involvement. Defaults to None.
+
+        Returns:
+            PartyInCommunication: the PartyInCommunication instance
+        """
+        party_role = party_role or f"{IES_BASE}PartyInCommunication"
 
         if party_role not in self.tool.ontology.pic_subtypes:
             logger.warning(f"{party_role} is not a subtype of ies:PartyInCommunication")
 
-        party = PartyInCommunication(tool=self.tool, uri=uri, communication=self, start=starts_in, end=ends_in)
+        party = PartyInCommunication(tool=self.tool, uri=uri, communication=self, start=start, end=end,classes=[party_role])
 
         return party
+
+    def add_party(self, uri: str | None = None, party_role: str | None = None, starts_in: str | None = None,
+                  ends_in: str | None = None) -> PartyInCommunication:
+        """DEPRECATED - USE create_party().
+
+        Args:
+            uri (str | None, optional): Set this if you want to use a specific URI for the PartyInCommunication. Defaults to None.
+            party_role (str | None, optional): Use this to select a subclass of PartyInCommunication. Defaults to None.
+            starts_in (str | None, optional): ISO8601 string - the start of the party's involvement. Defaults to None.
+            ends_in (str | None, optional): ISO8601 string - the end of the party's involvement. Defaults to None.
+
+        Returns:
+            PartyInCommunication: the PartyInCommunication instance
+        """
+        logger.warning("add_party() is deprecated - please use create_party()")
+        return self.add_party(uri=uri,party_role=party_role,start=starts_in,end=ends_in)
+
 
 
 class PartyInCommunication(Event):
@@ -2476,7 +2635,15 @@ class PartyInCommunication(Event):
             communication.add_part(self)
 
     def add_account(self, account, uri: str | None = None):
+        """_summary_
 
+        Args:
+            account (_type_): _description_
+            uri (str | None, optional): _description_. Defaults to None.
+
+        Returns:
+            _type_: _description_
+        """
         uri = uri or self._uri + "-account"
         account_object = self._validate_referenced_object(account,Event,"add_account")
         try:
