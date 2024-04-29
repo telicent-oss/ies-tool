@@ -49,8 +49,8 @@ RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 RDFS_CLASS = "http://www.w3.org/2000/01/rdf-schema#Class"
 EXCHANGED_ITEM = f"{IES_BASE}ExchangedItem"
 ELEMENT = f"{IES_BASE}Element"
-CLASS_OF_ELEMENT = f"{IES_BASE}#ClassOfElement"
-CLASS_OF_CLASS_OF_ELEMENT = f"{IES_BASE}#ClassOfClassOfElement"
+CLASS_OF_ELEMENT = f"{IES_BASE}ClassOfElement"
+CLASS_OF_CLASS_OF_ELEMENT = f"{IES_BASE}ClassOfClassOfElement"
 PARTICULAR_PERIOD = f"{IES_BASE}ParticularPeriod"
 ACCOUNT = f"{IES_BASE}Account"
 ACCOUNT_HOLDER = f"{IES_BASE}AccountHolder"
@@ -78,7 +78,7 @@ DEVICE_STATE = f"{IES_BASE}DeviceState"
 DEVICE = f"{IES_BASE}Device"
 LOCATION = f"{IES_BASE}Location"
 LOCATION_STATE = f"{IES_BASE}#LocationState"
-COUNTRY = f"{IES_BASE}#Country"
+COUNTRY = f"{IES_BASE}Country"
 GEOPOINT = f"{IES_BASE}GeoPoint"
 RESPONSIBLE_ACTOR = f"{IES_BASE}ResponsibleActor"
 POST = f"{IES_BASE}Post"
@@ -849,7 +849,7 @@ class IESTool:
             cls_name = cls.replace(self.ies_namespace, "")
             cls_str = f"{cls_str}{cls_name}"
 
-        return base_class(uri=uri, tool=self)
+        return base_class(uri=uri, tool=self, classes=classes)
 
     def create_event(self, uri: str | None = None, classes: list | None = None,
                      event_start: str | None = None, event_end: str | None = None,

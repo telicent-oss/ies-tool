@@ -31,4 +31,5 @@ my_amount = AmountOfMoney(iso_4217_currency_code_alpha3="CHF",amount=32.56)
 
 my_person.owns(my_amount)
 
+
 IES_TOOL.save_rdf("person.ttl",format="ttl")
