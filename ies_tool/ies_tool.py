@@ -1851,7 +1851,9 @@ class Account(Entity):
             ph_uri = None
         state_uri = self.tool._mint_dependent_uri(self.uri,"REG_PHONE")
         state = self.create_state(uri=state_uri,start=start,end=end)
-        return state.add_identifier(identifier=normalised,uri=ph_uri,id_class=f"{IES_BASE}TelephoneNumber")
+        tel_no = Identifier(self.tool,id_text=normalised,uri=ph_uri,classes=[f"{IES_BASE}TelephoneNumber"])
+        self.tool.add_triple(subject = state,predicate=f"{IES_BASE}hasRegisteredCommID",obj=tel_no)
+        return tel_no
 
     def add_registered_email_address(self,email_address:str,start: str | None = None,
                                      end: str | None = None) -> Identifier:
@@ -1874,7 +1876,9 @@ class Account(Entity):
 
         state_uri = self.tool._mint_dependent_uri(self.uri,"REG_EMAIL")
         state = self.create_state(uri=state_uri,start=start,end=end)
-        return state.add_identifier(identifier=email_address,uri=em_uri,id_class=f"{IES_BASE}EmailAddress")
+        email_obj = Identifier(self.tool,id_text=email_address,uri=em_uri,classes=[f"{IES_BASE}EmailAddress"])
+        self.tool.add_triple(subject = state,predicate=f"{IES_BASE}hasRegisteredCommID",obj=email_obj)
+        return email_obj
 
 class CommunicationsAccount(Account):
     """
