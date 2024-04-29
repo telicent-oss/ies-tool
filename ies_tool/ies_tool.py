@@ -1877,7 +1877,7 @@ class Account(Entity):
         state_uri = self.tool._mint_dependent_uri(self.uri,"REG_EMAIL")
         state = self.create_state(uri=state_uri,start=start,end=end)
         email_obj = Identifier(self.tool,id_text=email_address,uri=em_uri,classes=[f"{IES_BASE}EmailAddress"])
-        self.tool.add_triple(subject = state.uri,predicate=f"{IES_BASE}hasRegisteredCommID",obj=email_obj.uri)
+        self.tool.add_triple(subject = state.uri,predicate=f"{IES_BASE}hasRegisteredCommsID",obj=email_obj.uri)
         return email_obj
 
 class CommunicationsAccount(Account):
