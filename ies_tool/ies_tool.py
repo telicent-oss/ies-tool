@@ -1946,7 +1946,9 @@ class Country(Location):
 
         uri = f"http://iso.org/iso3166#{country_alpha_3_code}"
 
-        classes = [COUNTRY]
+        if classes is None or classes == []:
+            classes = [COUNTRY]
+
         super().__init__(tool=tool, uri=uri, classes=classes)
 
         if validate:
