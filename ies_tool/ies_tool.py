@@ -1067,6 +1067,8 @@ class RdfsResource(metaclass=Unique):
 
         if classes is None or classes == []:
             classes = [RDFS_RESOURCE]
+        elif not isinstance(classes,list):
+            raise Exception("classes parameter must be a list")
         if tool is None:
             self._tool = IES_TOOL
             #raise RuntimeError("No IES Tool provided")
