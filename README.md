@@ -167,7 +167,7 @@ iso8601:1985-08-21 a ies:ParticularPeriod ;
     ies:iso8601PeriodRepresentation "1985-08-21"^^xsd:string .
 ```
 
-Note that the URIs are generated automatically (UUIDs plus a URI stub) unless the uri parameter is used to manually set them.
+Note that the URIs are generated automatically (UUIDs appended to the default data namespace) unless the uri parameter is used to manually set them.
 
 
 ### Low-level operations (RDF / RDFS)
@@ -181,10 +181,10 @@ my_person.add_telicent_primary_name("SMITH, Fred")
 my_person.add_related_object(predicate="http://ies.data.gov.uk/ontology/ies4#ancestorOf",related_object=my_other_person)
 ```
 
-The IES tool itself also provides a set of low-level methods for working with the graph, such as `add_to_graph` which adds an RDF statement:
+The IES tool itself also provides a set of low-level methods for working with the graph, such as `add_triple` which adds an RDF statement:
 
 ```python
-IES_TOOL.add_to_graph(
+IES_TOOL.add_triple(
     subject=my_person.uri,
     predicate='http://ies.data.gov.uk/ontology/ies4#hasCharacteristic',
     obj=characteristic_uri
@@ -206,12 +206,12 @@ from ies_tool.ies_tool import IES_TOOL
 IES_TOOL.add_prefix("data:", "http://example.com/rdf/testdata#")
 ```
 
-As a default `http://example.com/rdf/testdata#` is used as a data uri stub. This can be changed: 
+As a default `http://example.com/rdf/testdata#` is used as a default data namespace. This can be changed: 
 
 ```python
-IES_TOOL.uri_stub = 'http://domain/rdf/stub#'
+IES_TOOL.uri_stub = 'http://mydomain.org/rdf-data#'
 ```
-Note this will also set the blank prefix `:` to `http://domain/rdf/stub#`
+Note this will also set the blank prefix `:` to `http://mydomain.org/rdf-data#`
 
 
 ### Saving/creating RDF
