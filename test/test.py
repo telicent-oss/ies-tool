@@ -67,7 +67,7 @@ def test_anne_person():
     comm = Communication()
     comm.add_participant(anne)
     comm.add_participant("http://test#particpant1")
-    IES_TOOL.save_rdf('./test-anne.ttl', format="ttl")
+    IES_TOOL.save_rdf('./test-anne.ttl', rdf_format="ttl")
 
 
 class MainTestCase(TestCase):

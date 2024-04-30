@@ -226,7 +226,7 @@ As the IES tool uses RDFLib by default. If another storage plug-in has been used
 #### Saving RDF locally
 
 ```python
-IES_TOOL.save_rdf("path/to/my/file.ttl",format="ttl")  
+IES_TOOL.save_rdf("path/to/my/file.ttl", rdf_format="ttl")  
 ```
 
 ### To clear the graph:
