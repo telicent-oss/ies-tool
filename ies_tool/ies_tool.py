@@ -248,7 +248,7 @@ class IESTool:
         # Note that both plugin and rdflib datasets are initialised to enable quick changeover
         self.graph = Graph()
 
-        self.prefixes = {}
+        self.prefixes: dict[str, str] = {}
         self.default_data_namespace = default_data_namespace
 
         # Establish a set of useful prefixes
@@ -382,7 +382,7 @@ class IESTool:
         else:
             return None
 
-    def _register_plugin(self, plugin_name: str, plugin: IESPlugin | None):
+    def _register_plugin(self, plugin_name: str, plugin: IESPlugin):
         """
         Registers a plugin after initialisation.
 
@@ -398,7 +398,7 @@ class IESTool:
         elif plugin_name == "sparql_server":
             raise RuntimeError("'sparql_server' is a reserved name")
         else:
-            self.plug_in: IESPlugin | None = plugin
+            setattr(self, 'plug_in', plugin)
             self.plug_in.set_classes(self.ontology.classes)
             self.plug_in.set_properties(self.ontology.properties)
 
@@ -505,7 +505,7 @@ class IESTool:
             )
 
     @staticmethod
-    def _str(_input: str | Graph) -> str:
+    def _str(_input: str | Graph) -> str | Graph:
         """
         Designed to catch iffy datatypes being passed in (e.g. legacy rdflib types)
 
@@ -590,10 +590,11 @@ class IESTool:
         :return:
         """
 
-        ret_dict = {
+        ret_dict: dict[str, str | list] = {
             "session_uuid": self.session_uuid,
             "triples": "",
-            "validation_errors": ""
+            "validation_errors": "",
+            "warnings": [],
         }
         if self.__mode == "plugin":
             if rdf_format not in self.plug_in.supported_rdf_serialisations:
@@ -1343,7 +1344,7 @@ class Element(ExchangedItem):
         A Python wrapper class for IES Element
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate the IES Element
@@ -1530,7 +1531,7 @@ class Entity(Element):
         A Python wrapper class for IES Entity
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate the IES Entity
@@ -1556,7 +1557,7 @@ class State(Element):
         A Python wrapper class for IES State
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate the IES State
@@ -1582,7 +1583,7 @@ class DeviceState(State):
         A Python wrapper class for IES DeviceState
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate the IES DeviceState
@@ -1667,7 +1668,7 @@ class Asset(Entity):
         A Python wrapper class for IES Asset
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate the IES Device
@@ -1694,7 +1695,7 @@ class AmountOfMoney(Asset):
         A Python wrapper class for IES AmountOfMoney
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, amount: float, iso_4217_currency_code_alpha3: str,
+    def __init__(self, /, tool: IESTool = IES_TOOL, *, amount: float, iso_4217_currency_code_alpha3: str,
                  uri: str | None = None, classes: list[str] | None = None):
         """
             Instantiate the IES AmountOfMoney
@@ -1737,7 +1738,7 @@ class Device(Asset, DeviceState):
         A Python wrapper class for IES Device
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate the IES Device
@@ -1764,7 +1765,7 @@ class Account(Entity):
         A Python wrapper class for IES Account
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate an IES Account
@@ -1888,7 +1889,7 @@ class CommunicationsAccount(Account):
         A Python wrapper class for IES Account
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate an IES CommunicationsAccount
@@ -1915,7 +1916,7 @@ class Location(Entity):
         A Python wrapper class for IES Location
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate the IES Location
@@ -1942,7 +1943,7 @@ class Country(Location):
     Python wrapper class for IES Country, where ISO country code forms the URI
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, country_alpha_3_code: str, country_name: str = None,
+    def __init__(self, /,tool: IESTool = IES_TOOL, *,country_alpha_3_code: str, country_name: str = None,
                  classes: list[str] | None = None, uri: str = None, validate: bool = True):
         """
             Instantiate the IES Country
@@ -1998,7 +1999,7 @@ class GeoPoint(Location):
     Python wrapper class for IES GeoPoint, with geo-hashes used to make the URI
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, classes: list[str] | None = None,
+    def __init__(self, tool: IESTool = IES_TOOL, classes: list[str] | None = None,
                  lat: float = None, lon: float = None, precision: int = None):
         """
             Instantiate the IES GeoPoint
@@ -2035,7 +2036,7 @@ class ResponsibleActor(Entity):
     Python wrapper class for IES ResponsibleActor
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate the IES ResponsibleActor
@@ -2165,7 +2166,7 @@ class Post(ResponsibleActor):
     Python wrapper class for IES Post
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate the IES Post
@@ -2195,7 +2196,7 @@ class Person(ResponsibleActor):
     Python wrapper class for IES Person
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None, surname: str | None = None,
                  given_name: str | None = None, date_of_birth: str | None = None, date_of_death: str | None = None,
                  place_of_birth: Location | None = None, place_of_death: Location | None = None,
@@ -2328,7 +2329,7 @@ class Organisation(ResponsibleActor):
     Python wrapper class for IES Organisation
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list | None = None,
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list | None = None,
                  start: str | None = None, end: str | None = None, name=None):
         """
             Instantiate the IES Organisation
@@ -2379,7 +2380,7 @@ class ClassOfElement(RdfsClass, ExchangedItem):
     Python wrapper class for IES ClassOfElement
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None):
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None):
         """
             Instantiate the IES ClassOfElement
 
@@ -2419,7 +2420,7 @@ class ClassOfClassOfElement(RdfsClass, ExchangedItem):
     Python wrapper class for IES ClassOfClassOfElement
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str = None, classes: list[str] | None = None):
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str = None, classes: list[str] | None = None):
         """
             Instantiate the IES ClassOfClassOfElement
 
@@ -2441,7 +2442,7 @@ class ParticularPeriod(Element):
     Python wrapper class for IES ParticularPeriod
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, classes: list[str] | None = None, time_string: str = None):
+    def __init__(self, tool: IESTool = IES_TOOL, classes: list[str] | None = None, time_string: str = None):
         """
             Instantiate the IES ParticularPeriod
 
@@ -2471,7 +2472,7 @@ class BoundingState(State):
     Python wrapper class for IES BoundingState
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None):
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None):
         """
             Instantiate the IES BoundingState
 
@@ -2494,7 +2495,7 @@ class BirthState(BoundingState):
     Python wrapper class for IES BirthState
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None):
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None):
         """
             Instantiate the IES BirthState
 
@@ -2517,7 +2518,7 @@ class DeathState(BoundingState):
     Python wrapper class for IES DeathState
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None):
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None):
         """
             Instantiate the IES DeathState
 
@@ -2540,7 +2541,7 @@ class UnitOfMeasure(ClassOfClassOfElement):
     Python wrapper class for IES UnitOfMeasure
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str = None, classes: list[str] | None = None):
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str = None, classes: list[str] | None = None):
         """
             Instantiate the IES UnitOfMeasure
 
@@ -2563,7 +2564,7 @@ class Representation(ClassOfElement):
     Python wrapper class for IES Representation
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, representation_text: str | None = None, uri: str | None = None,
+    def __init__(self, tool: IESTool = IES_TOOL, representation_text: str | None = None, uri: str | None = None,
                  classes: list[str] | None = None, naming_scheme: NamingScheme | None = None):
         """
             Instantiate the IES Representation
@@ -2596,7 +2597,7 @@ class WorkOfDocumentation(Representation):
     Python wrapper class for IES WorkOfDocumentation
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None,
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None,
                  classes: list[str] | None = None):
         """
             Instantiate the IES WorkOfDocumentation
@@ -2621,7 +2622,7 @@ class MeasureValue(Representation):
     Python wrapper class for IES MeasureValue
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  value: str | None = None, uom: UnitOfMeasure | None = None, measure: Measure | None = None):
         """
             Instantiate the IES MeasureValue
@@ -2727,7 +2728,7 @@ class Name(Representation):
     Python wrapper class for IES Name
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, name_text="", uri: str | None = None,
+    def __init__(self, tool: IESTool = IES_TOOL, name_text="", uri: str | None = None,
                  classes: list[str] | None = None, naming_scheme: NamingScheme = None):
         """
             Instantiate the IES Name
@@ -2754,7 +2755,7 @@ class NamingScheme(ClassOfClassOfElement):
     Python wrapper class for IES NamingScheme
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, owner: ResponsibleActor | None = None, uri: str | None = None,
+    def __init__(self, tool: IESTool = IES_TOOL, owner: ResponsibleActor | None = None, uri: str | None = None,
                  classes: list[str] | None = None):
         """
             Instantiate the IES NamingScheme
@@ -2787,7 +2788,7 @@ class Event(Element):
     Python wrapper class for IES class Event
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate the IES Event
@@ -2851,7 +2852,7 @@ class EventParticipant(State):
     Python wrapper class for IES EventParticipant
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None):
         """
             Instantiate the IES EventParticipant
@@ -2877,7 +2878,7 @@ class Communication(Event):
     Python wrapper class for IES Communication
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  start: str | None = None, end: str | None = None,
                  message_content: str | None = None):
         """
@@ -2938,7 +2939,7 @@ class Communication(Event):
             PartyInCommunication: the PartyInCommunication instance
         """
         logger.warning("add_party() is deprecated - please use create_party()")
-        return self.add_party(uri=uri, party_role=party_role, start=starts_in, end=ends_in)
+        return self.add_party(uri=uri, party_role=party_role, starts_in=starts_in, ends_in=ends_in)
 
 
 class PartyInCommunication(Event):
@@ -2946,7 +2947,7 @@ class PartyInCommunication(Event):
     Python wrapper class for IES PartyInCommunication
     """
 
-    def __init__(self, *, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
+    def __init__(self, tool: IESTool | None = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
                  communication: Event | None = None, start: str | None = None,
                  end: str | None = None):
         """
@@ -3040,13 +3041,14 @@ class PartyInCommunication(Event):
                 f"{IES_BASE}isParticipationOf",
                 device_object._uri)
 
-            return dic
 
         except AttributeError as e:
             logger.warning(
                 f"Exception occurred while trying to add device, no device will be added."
                 f" {repr(e)}"
             )
+
+        return dic
 
     def add_person(self, person: Person | str, uri: str | None = None) -> EventParticipant:
         """
