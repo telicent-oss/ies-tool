@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import io
 import json
 import logging
@@ -6,6 +7,7 @@ import os
 import pathlib
 import uuid
 import warnings
+from typing import TypeVar
 
 import iso4217parse
 import phonenumbers
@@ -16,8 +18,6 @@ import validators.uri
 from geohash_tools import encode
 from pyshacl import validate as pyshacl_validate
 from rdflib import XSD, Graph, Literal, Namespace, URIRef
-
-from typing import TypeVar
 
 from ies_tool.ies_ontology import IES_BASE, Ontology
 from ies_tool.ies_plugin import IESPlugin
@@ -398,7 +398,7 @@ class IESTool:
         elif plugin_name == "sparql_server":
             raise RuntimeError("'sparql_server' is a reserved name")
         else:
-            setattr(self, 'plug_in', plugin)
+            self.plug_in = plugin
             self.plug_in.set_classes(self.ontology.classes)
             self.plug_in.set_properties(self.ontology.properties)
 

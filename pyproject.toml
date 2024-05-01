@@ -101,8 +101,13 @@ exclude = [
     "dist",
     "node_modules",
     "venv",
+    "ies_tool/*.ttl",
+    "module_to_check/*.shacl"
 ]
 line-length = 120
+
+# Module or directory that contains the files to check
+src = ["ies_tool"]
 
 [tool.mypy]
 python_version = "3.10"
