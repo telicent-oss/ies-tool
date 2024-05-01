@@ -133,7 +133,6 @@ class Ontology:
                 return_set.add(binding[sparql_var_name]['value'])
         return return_set
 
-        # pulls out individual variable from each row returned from sparql query. It's a bit niche, I know.
     def make_results_dict_from_query(self, query: str, sparql_var_name: str) -> dict[str, dict]:
         result_object = self.__run_query(query)
         return_dict: dict[str, dict] = {}

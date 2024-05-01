@@ -8,13 +8,9 @@ import uuid
 import warnings
 import threading
 
-import iso4217parse
-import phonenumbers
-import pycountry
+from ies_tool.ies_classes import RdfsResource
+from ies_tool.constants import RDFS
 import requests
-import validators
-import validators.uri
-from geohash_tools import encode
 from pyshacl import validate as pyshacl_validate
 from rdflib import XSD, Graph, Literal, Namespace, URIRef
 
@@ -22,11 +18,9 @@ from typing import TypeVar
 
 from ies_tool.ies_ontology import IES_BASE, Ontology
 from ies_tool.ies_plugin import IESPlugin
-from ies_tool.utils import RDFEntityFactory
+from ies_tool.entity_factory import RDFEntityFactory
 
 
-# todo Remove after deprication cleanup
-from ies_tool.ies_classes import *
 __license__ = """
 Copyright TELICENT LTD
 
@@ -236,7 +230,7 @@ class IESTool:
 
     @property
     def entity_factory(self):
-        return RDFEntityFactory(self.get_instance())
+        return RDFEntityFactory(self)
 
     @default_data_namespace.setter
     def default_data_namespace(self, value):
@@ -326,7 +320,7 @@ class IESTool:
         return self.base_classes[0]["python_class"], 0
 
     def get_obj_instance(self, from_type: str | RdfsResource, to_type: object | None = None,
-                         context: str | None = None):
+                         context: str | None = None, classes: list[str] | None = None):
         """
         Gets an instance (by its URI) that has already been created in this session. Note if you are connected to a
         remote SPARQL server or have loaded data into in-memory graph, pre-existing instances will not have been
@@ -341,12 +335,18 @@ class IESTool:
         Returns:
            Reference to an instance
         """
+        if classes is None:
+            classes = []
+        if isinstance(classes, str):
+            classes = [classes]
+        if to_type is None:
+            to_type = RdfsResource
         logger.debug(f"Getting object instance {from_type=}, {to_type=}, {context=}")
-        to_type = to_type or RdfsResource
+        # to_type = to_type or RdfsClassType
         if isinstance(from_type, str):
-            return self.instances.get(from_type, to_type(self, uri=from_type, classes=[]))
+            return self.instances.get(from_type, None) or to_type(self, uri=from_type, classes=classes)
 
-        return self.instances.get(from_type.uri, to_type(self, uri=from_type.uri, classes=[]))
+        return self.instances.get(from_type.uri, None) or to_type(self, uri=from_type.uri, classes=classes)
 
     def _register_plugin(self, plugin_name: str, plugin: IESPlugin):
         """
@@ -826,7 +826,7 @@ class IESTool:
                       DeprecationWarning, stacklevel=2)
         kwargs = locals()
         del kwargs['self']
-        return self.entity_factory.create_event(**kwargs)
+        return self.entity_factory.create_entity('event', **kwargs)
 
     def create_person(self, uri: str | None = None, classes: list | None = None,
                       given_name: str | None = None, surname: str | None = None, date_of_birth: str | None = None,
@@ -853,7 +853,7 @@ class IESTool:
                       DeprecationWarning, stacklevel=2)
         kwargs = locals()
         del kwargs['self']
-        return self.entity_factory.create_person(**kwargs)
+        return self.entity_factory.create_entity('person', **kwargs)
 
     def create_measure(self, uri: str | None = None, classes: list | None = None,
                        value: str | None = None, uom: UnitOfMeasure | None = None) -> Measure:
