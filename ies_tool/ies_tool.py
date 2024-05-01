@@ -76,9 +76,17 @@ class IESTool:
     _instance = None
     _lock = threading.Lock()
 
+    def __new__(cls, *args, force_new=False, **kwargs):
+        if force_new or cls._instance is None:
+            with cls._lock:
+                if force_new or cls._instance is None:
+                    cls._instance = super(IESTool, cls).__new__(cls)
+        return cls._instance
+
     def __init__(
-            self, default_data_namespace: str = "http://example.com/rdf/testdata#", mode: str = "rdflib",
-            plug_in: IESPlugin | None = None, validate: bool = False, server_host: str = "http://localhost:3030/",
+             self, force_new: bool = False, default_data_namespace: str = "http://example.com/rdf/testdata#",
+            mode: str = "rdflib", plug_in: IESPlugin | None = None, validate: bool = False,
+            server_host: str = "http://localhost:3030/",
             server_dataset: str = "ds", default_security_label: str | None = None
     ):
         """
@@ -103,8 +111,7 @@ class IESTool:
         """
         with self.__class__._lock:
             # The following check ensures that initialization only happens once.
-            if not hasattr(self, '_initialized'):
-                # Perform initialization here.
+            if not hasattr(self, '_initialized') or force_new:                # Perform initialization here.
                 self.instances: dict = {}
                 # Lookup for XSD datatypes
                 self.xsdDatatypes = [
@@ -221,8 +228,8 @@ class IESTool:
                 self._initialized = True
 
     @staticmethod
-    def get_instance():
-        return IESTool()
+    def get_instance(*args, **kwargs):
+        return IESTool(*args, **kwargs)
 
     @property
     def default_data_namespace(self):

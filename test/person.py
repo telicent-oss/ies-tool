@@ -1,5 +1,6 @@
 from ies_tool.ies_tool import IESTool
 from ies_tool.ies_classes import RdfsResource, Country, Account, Device, AmountOfMoney
+
 if __name__ == '__main__':
     IES_TOOL = IESTool.get_instance()
     my_r = RdfsResource(tool=IES_TOOL)
@@ -17,12 +18,12 @@ if __name__ == '__main__':
     my_person.add_given_name("Bernard")
     my_person.add_given_name("Lester")
     print(str(my_person.__dict__))
-    my_country = Country(tool=IES_TOOL, country_alpha_3_code="GBR",country_name="Blighty")
+    my_country = Country(tool=IES_TOOL, country_alpha_3_code="GBR", country_name="Blighty")
     print(str(my_country.__dict__))
     # Pay attention to how IESTool object is shared - this is purposely done
     # we can do weird stuff now
 
-    #my_account = Account(tool=IES_TOOL)
+    # my_account = Account(tool=IES_TOOL)
     my_account = IES_TOOL.entity_factory.create_entity('aCCoUnT')
     print(str(my_account.__dict__))
     my_account.add_account_holder(my_person)
@@ -37,13 +38,11 @@ if __name__ == '__main__':
 
     my_person.owns(my_device)
 
-    my_amount = AmountOfMoney(IES_TOOL, iso_4217_currency_code_alpha3="CHF",amount=32.56)
+    my_amount = AmountOfMoney(IES_TOOL, iso_4217_currency_code_alpha3="CHF", amount=32.56)
 
     my_person.owns(my_amount)
 
-
-    IES_TOOL.save_rdf("person3.ttl",rdf_format="ttl")
-
+    IES_TOOL.save_rdf("person3.ttl", rdf_format="ttl")
 
     # change the IES TOOL instance
     IES_TOOL = IESTool.get_instance(force_new=True)
@@ -60,4 +59,4 @@ if __name__ == '__main__':
     )
     print(my_person.__dict__)
 
-    IES_TOOL.save_rdf("person23.ttl",rdf_format="ttl")
+    IES_TOOL.save_rdf("person23.ttl", rdf_format="ttl")
