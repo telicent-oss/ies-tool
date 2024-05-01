@@ -110,3 +110,4 @@ check_untyped_defs = true
 disallow_untyped_defs = false
 ignore_missing_imports = true
 ignore_errors = true
+modules = ["ies_tool"]
