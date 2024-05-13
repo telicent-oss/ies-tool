@@ -11,10 +11,4 @@ permissions:
 
 jobs:
   create-release-pr:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: google-github-actions/release-please-action@v4.0.2
-        with:
-          release-type: python
-          package-name: release-please-action
-          prerelease: false
+    uses: telicent-oss/shared-workflows/.github/workflows/python-create-release-pr.yml@main
