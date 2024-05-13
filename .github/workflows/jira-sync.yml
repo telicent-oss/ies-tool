@@ -1,0 +1,19 @@
+name: Sync with JIRA
+
+on:
+  workflow_dispatch:
+  issues:
+    types:
+      - opened
+      - edited
+      - transferred
+      - reopened
+
+jobs:
+  sync-to-jira:
+    uses: telicent-oss/shared-workflows/.github/workflows/jira-sync.yml@jira-sync
+    with:
+      jira-url: https://telicent.atlassian.net
+      jira-project: TPT
+      issue-mapping-file: .github/jira-mapping-rules.yml
+    secrets: inherit
