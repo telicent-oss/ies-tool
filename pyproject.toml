@@ -13,7 +13,7 @@ readme = "README.md"
 dependencies = [
     "geohash-tools==0.2.0",
     "python-geohash==0.8.5",
-    "pyshacl==0.22.2",
+    "pyshacl==0.25.0",
     "requests==2.31.0",
     "rdflib==6.3.2",
     "phonenumbers==8.13.35",
