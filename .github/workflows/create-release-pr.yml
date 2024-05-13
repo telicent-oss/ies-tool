@@ -11,6 +11,4 @@ permissions:
 
 jobs:
   create-release-pr:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: telicent-oss/shared-workflows/.github/workflows/python-create-release-pr.yml@main
+    uses: telicent-oss/shared-workflows/.github/workflows/python-create-release-pr.yml@main
