@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/telicent-oss/ies-tool/compare/v1.0.2...v1.0.3) (2024-08-27)
+
+
+### Miscellaneous
+
+* updated requests ([#12](https://github.com/telicent-oss/ies-tool/issues/12)) ([1208d8c](https://github.com/telicent-oss/ies-tool/commit/1208d8ca3af832435454a9f258f6412f44b2e805))
+
 ## [1.0.2](https://github.com/telicent-oss/ies-tool/compare/v1.0.1...v1.0.2) (2024-05-13)
 
 
