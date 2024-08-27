@@ -10,11 +10,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  test_and_build:
+  test-and-build:
+    name: Python Test and Build
     strategy:
       fail-fast: true
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
-    uses: telicent-oss/shared-workflows/.github/workflows/python-test-library.yml@main
+    uses: telicent-oss/shared-workflows/.github/workflows/python-ci-qa.yml@main
     with:
       PYTHON_VERSION: ${{ matrix.python-version }}
