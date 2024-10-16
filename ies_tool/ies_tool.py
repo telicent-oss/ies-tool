@@ -596,7 +596,9 @@ class IESTool:
             "validation_errors": "",
             "warnings": [],
         }
-        if self.__mode == "plugin":
+        if self.__mode == "sparql_server":
+            logger.warning("Export RDF not supported in sparql server mode")
+        elif self.__mode == "plugin":
             if rdf_format not in self.plug_in.supported_rdf_serialisations:
                 logger.warning(
                     f"Current plugin only supports {str(self.plug_in.supported_rdf_serialisations)}"
@@ -606,8 +608,6 @@ class IESTool:
             ret_dict["warnings"].extend(self.plug_in.get_warnings())
             if clear:
                 self.clear_graph()
-        if self.__mode == "sparql_server":
-            logger.warning("Export RDF not supported in sparql server mode")
         else:
             if self.__validate:
                 r = pyshacl_validate(
