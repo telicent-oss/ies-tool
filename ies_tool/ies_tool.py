@@ -156,6 +156,7 @@ class IESTool:
                 For use in sparql_server mode, the name of the triplestore dataset you want to work on
         """
 
+
         # Instances dict is used as a local cache for all instances created. It's a bit wasteful, but it does
         # allow quick access to IES Tool instances
         self.instances: dict = {}
@@ -208,7 +209,7 @@ class IESTool:
 
         # Property initialisations
 
-        self.session_instance_count = None
+
         self.session_uuid_str = None
         self.session_uuid = None
         self.current_dir = pathlib.Path(__file__).parent.resolve()
@@ -250,6 +251,17 @@ class IESTool:
 
         self.prefixes: dict[str, str] = {}
         self.default_data_namespace = default_data_namespace
+
+        #Test that the default data stub generates valid URIs
+        self.session_instance_count = 0
+        test_uri1 = self.generate_data_uri()
+        if not validators.url(test_uri1):
+            logger.error(f"Default data namespace is not generating valid URIs: {self.default_data_namespace}")
+        test_uri2 = self.generate_data_uri(context="test")
+        if not validators.url(test_uri2):
+            logger.error(
+                f"Default data namespace is not generating valid URIs when context is set: {self.default_data_namespace}")
+        self.session_instance_count = None
 
         # Establish a set of useful prefixes
         for k, v in DEFAULT_PREFIXES.items():
@@ -1021,8 +1033,9 @@ class Unique(type):
             uri = kwargs["uri"]
             if not uri:
                 uri = tool.generate_data_uri()
-        if not validators.url(uri):
-            logger.error(f"Invalid URI: {uri}")
+            else:
+                if not validators.url(uri):
+                    logger.error(f"Invalid URI: {uri}")
         if uri not in cache:
             self = cls.__new__(cls, args, kwargs)
             cls.__init__(self, *args, **kwargs)
