@@ -605,8 +605,7 @@ class IESTool:
         ret_dict: dict[str, str | list] = {
             "session_uuid": self.session_uuid,
             "triples": "",
-            "validation_errors": "",
-            "warnings": [],
+            "validation_errors": ""
         }
         if self.__mode == "sparql_server":
             logger.warning("Export RDF not supported in sparql server mode")
@@ -617,7 +616,6 @@ class IESTool:
                     f" - you tried to export as {rdf_format}"
                 )
             ret_dict["triples"] = self.plug_in.get_rdf()
-            ret_dict["warnings"].extend(self.plug_in.get_warnings())
             if clear:
                 self.clear_graph()
         else:
