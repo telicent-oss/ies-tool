@@ -254,13 +254,7 @@ class IESTool:
 
         #Test that the default data stub generates valid URIs
         self.session_instance_count = 0
-        test_uri1 = self.generate_data_uri()
-        if not validators.url(test_uri1):
-            logger.error(f"Default data namespace is not generating valid URIs: {self.default_data_namespace}")
-        test_uri2 = self.generate_data_uri(context="test")
-        if not validators.url(test_uri2):
-            logger.error(
-                f"Default data namespace is not generating valid URIs when context is set: {self.default_data_namespace}")
+        self.check_valid_uri_production()
         self.session_instance_count = None
 
         # Establish a set of useful prefixes
@@ -285,12 +279,23 @@ class IESTool:
         # the class definitions and didn't want to create a circular dependency...again
         self.base_classes = self._all_python_subclasses({}, RdfsResource, 0)
 
+    def check_valid_uri_production(self):
+        test_uri1 = self.generate_data_uri()
+        if not validators.url(test_uri1):
+            logger.error(f"Default data namespace is not generating valid URIs: {self.default_data_namespace}")
+        test_uri2 = self.generate_data_uri(context="test")
+        if not validators.url(test_uri2):
+            logger.error(
+                f"Default data namespace is not generating valid URIs when context is set: {self.default_data_namespace}")
+
+
     @property
     def default_data_namespace(self):
         return self.prefixes[":"]
 
     @default_data_namespace.setter
     def default_data_namespace(self, value):
+        self.check_valid_uri_production()
         self.add_prefix(":", value)
 
     def add_prefix(self, prefix: str, uri: str):
