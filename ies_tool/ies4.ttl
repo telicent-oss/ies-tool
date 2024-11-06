@@ -2012,7 +2012,11 @@ ies:model rdfs:comment "A relationship from the device to the ModelOfDevice" .
 ies:model rdfs:subPropertyOf ies:relationship . 
 ies:model rdfs:domain ies:Device . 
 ies:model rdfs:subPropertyOf rdf:type . 
-ies:model rdfs:range ies:Model . 
+ies:model rdfs:range ies:Model .
+ies:ModelOfDevice a rdfs:Class .
+ies:ModelOfDevice sparx:guid "EAID_7A879268_33C2_4f2b_8928_9E78AFF01E69" .
+ies:ModelOfDevice rdfs:comment """A type of Device - i.e. a ClassOfDevice Examples: Smartphone , Apple iPhone 6S""" .
+ies:ModelOfDevice rdfs:subClassOf ies:ClassOfDevice .
 ies:Modifier rdf:type rdfs:Class . 
 ies:Modifier sparx:guid "{21A341AE-9A38-4f45-BCB5-B29B02DC1B90}" . 
 ies:Modifier rdfs:comment "An EventParticipant where a ResponsibleActor participates in a Modify event as a modifier" . 
