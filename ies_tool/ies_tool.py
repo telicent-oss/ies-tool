@@ -7,7 +7,7 @@ import os
 import pathlib
 import uuid
 import warnings
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import iso4217parse
 import phonenumbers
@@ -801,7 +801,7 @@ class IESTool:
         return self.add_triple(subject, predicate, obj, is_literal=True, literal_type=literal_type)
 
     def instantiate(self, classes: list | None = None, uri: str = None, instance_uri_context: str | None = None,
-                    base_class: RdfsResource | None = None) -> RdfsResource:
+                    base_class: RdfsResource | None = None, **kwargs : dict[str, Any]) -> RdfsResource:
         """
         Instantiates a list of classes
 
@@ -811,6 +811,7 @@ class IESTool:
             instance_uri_context (str): an additional string to insert into the URI to provide human-readable
             context if no URI is provided
             base_class (RdfsResource): The base Python class to use (default is RdfsResource)
+            **kwargs (dict[str, Any]): Additional arguments for instantiating RDF classes that lack a wrapper class
         """
 
         if instance_uri_context is None:
@@ -839,7 +840,7 @@ class IESTool:
             cls_name = cls.replace(self.ies_namespace, "")
             cls_str = f"{cls_str}{cls_name}"
 
-        return base_class(uri=uri, tool=self, classes=classes)
+        return base_class(uri=uri, tool=self, classes=classes, **kwargs)
 
     def create_event(self, uri: str | None = None, classes: list | None = None,
                      event_start: str | None = None, event_end: str | None = None,
