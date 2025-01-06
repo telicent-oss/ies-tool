@@ -230,7 +230,7 @@ class IESTool:
             if not validate:
                 logger.warning('Enabling validation for rdflib mode')
             self.__validate = True
-            self._init_shacl(os.path.join(self.current_dir, "ies_r4_2_0.shacl"))
+            self._init_shacl(os.path.join(self.current_dir, "ies_r4_3_0.shacl"))
             logger.info("IES Tool set to validate all messages. This might get a bit slow")
         elif mode == "sparql_server":
             self.server_host = server_host
