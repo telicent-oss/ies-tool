@@ -1,0 +1,50 @@
+@prefix : <http://example.com/rdf/testdata#> .
+@prefix ies: <http://ies.data.gov.uk/ontology/ies4#> .
+@prefix iso8601: <http://iso.org/iso8601#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+:8f6ebb974d6b4643834cd4ef716b78c7_000002_BIRTH_001 a ies:BirthState ;
+    ies:inPeriod iso8601:1985-08-21 ;
+    ies:isStartOf :8f6ebb974d6b4643834cd4ef716b78c7_000002 .
+
+:8f6ebb974d6b4643834cd4ef716b78c7_000002_DEATH_001 a ies:DeathState ;
+    ies:inPeriod iso8601:2024-01-01 ;
+    ies:isEndOf :8f6ebb974d6b4643834cd4ef716b78c7_000002 .
+
+:8f6ebb974d6b4643834cd4ef716b78c7_000008 a ies:Location ;
+    ies:isIdentifiedBy :8f6ebb974d6b4643834cd4ef716b78c7_000010 .
+
+<http://geohash.org/gcp06kx33yj> a ies:GeoPoint ;
+    ies:isIdentifiedBy <http://geohash.org/gcp06kx33yj_LAT>,
+        <http://geohash.org/gcp06kx33yj_LON> .
+
+:8f6ebb974d6b4643834cd4ef716b78c7_000002_GIVENNAME_001 a ies:GivenName ;
+    ies:representationValue "John"^^xsd:string .
+
+:8f6ebb974d6b4643834cd4ef716b78c7_000002_SURNAME_001 a ies:Surname ;
+    ies:representationValue "Smith"^^xsd:string .
+
+:8f6ebb974d6b4643834cd4ef716b78c7_000006 a ies:Representation ;
+    ies:representationValue 1234567890.0 .
+
+:8f6ebb974d6b4643834cd4ef716b78c7_000010 a ies:Identifier ;
+    ies:representationValue "ABC"^^xsd:string .
+
+<http://geohash.org/gcp06kx33yj_LAT> a ies:Latitude ;
+    ies:representationValue 50.69391243207585 .
+
+<http://geohash.org/gcp06kx33yj_LON> a ies:Longitude ;
+    ies:representationValue -1.2973339742186603 .
+
+iso8601:1985-08-21 a ies:ParticularPeriod ;
+    ies:iso8601PeriodRepresentation "1985-08-21"^^xsd:string .
+
+iso8601:2024-01-01 a ies:ParticularPeriod ;
+    ies:iso8601PeriodRepresentation "2024-01-01"^^xsd:string .
+
+:8f6ebb974d6b4643834cd4ef716b78c7_000002 a ies:Person ;
+    ies:hasIdentifier "123.0"^^xsd:float ;
+    ies:hasName :8f6ebb974d6b4643834cd4ef716b78c7_000002_GIVENNAME_001,
+        :8f6ebb974d6b4643834cd4ef716b78c7_000002_SURNAME_001 ;
+    ies:isRepresentedAs :8f6ebb974d6b4643834cd4ef716b78c7_000006 .
+

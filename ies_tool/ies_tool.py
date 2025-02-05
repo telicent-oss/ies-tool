@@ -947,7 +947,7 @@ class IESTool:
 
     def create_geopoint(
             self, uri: str | None = None, classes: list | None = None,
-            lat: float | None = None, lon: float | None = None, precision: int | None = 6
+            lat: float | None = None, lon: float | None = None, precision: int | None = 6, literal_type: str = "decimal"
     ) -> GeoPoint:
         """
         DEPRECATED - use GeoPoint() to create an instance of the IES GeoPoint class.
@@ -973,7 +973,7 @@ class IESTool:
             if _class not in self.ontology.geopoint_subtypes:
                 logger.warning(f"{_class} is not a subtype of ies:GeoPoint")
         return GeoPoint(
-            tool=self, uri=uri, lat=lat, lon=lon, precision=precision, classes=classes
+            tool=self, uri=uri, lat=lat, lon=lon, precision=precision, classes=classes, literal_type=literal_type
         )
 
     def create_organisation(self, uri: str | None = None, classes: list | None = None,
@@ -1258,7 +1258,8 @@ class ExchangedItem(RdfsResource):
 
     def add_representation(
             self, representation_text: str, representation_class: str | None = REPRESENTATION,
-            uri: str | None = None, rep_rel_type: str | None = None, naming_scheme=None) -> Representation:
+            uri: str | None = None, rep_rel_type: str | None = None,
+            naming_scheme=None, literal_type = "string") -> Representation:
         """Adds a new IES representation to this node
 
         Args:
@@ -1267,6 +1268,7 @@ class ExchangedItem(RdfsResource):
             uri (str | None, optional): _description_. Defaults to None.
             rep_rel_type (str | None, optional): _description_. Defaults to None.
             naming_scheme (_type_, optional): _description_. Defaults to None.
+            literal_type (str, optional): The XSD datatype for the representation value. Defaults to "string".
 
         Returns:
             Representation: _description_
@@ -1275,7 +1277,7 @@ class ExchangedItem(RdfsResource):
             rep_rel_type = f"{IES_BASE}isRepresentedAs"
         representation = Representation(
             tool=self.tool, representation_text=representation_text, uri=uri,
-            classes=[representation_class], naming_scheme=naming_scheme
+            classes=[representation_class], naming_scheme=naming_scheme,literal_type=literal_type
         )
         self.tool.add_triple(subject=self._uri, predicate=rep_rel_type, obj=representation._uri)
         return representation
@@ -1311,7 +1313,7 @@ class ExchangedItem(RdfsResource):
 
     def add_identifier(
             self, identifier, id_class: str | None = None, uri=None, id_rel_type=None,
-            naming_scheme=None) -> Identifier:
+            naming_scheme=None, literal_type: str = "string") -> Identifier:
         """
         Adds an IES identifier to the node
 
@@ -1322,6 +1324,7 @@ class ExchangedItem(RdfsResource):
             uri (_type_, optional): set uri to override generated URI for the ies:Identifier object. Defaults to None.
             id_rel_type (_type_, optional): used to override the identification relationship. Defaults to None.
             naming_scheme (_type_, optional): connect the ies:Identifier instance to a NamingScheme. Defaults to None.
+            literal_type (str, optional): The XSD datatype for the identifier value. Defaults to "string".
 
         Returns:
             Identifier:
@@ -1333,7 +1336,8 @@ class ExchangedItem(RdfsResource):
             id_class = IDENTIFIER
 
         representation = Identifier(
-            tool=self.tool, id_text=identifier, uri=uri, classes=[id_class], naming_scheme=naming_scheme
+            tool=self.tool, id_text=identifier, uri=uri, classes=[id_class],
+            naming_scheme=naming_scheme, literal_type=literal_type
         )
         self.tool.add_triple(subject=self._uri, predicate=id_rel_type, obj=representation._uri)
         return representation
@@ -1508,7 +1512,7 @@ class Element(ExchangedItem):
             bs.put_in_period(time_string=time_string)
         return bs
 
-    def add_measure(self, value, measure_class=None, uom=None, uri: str = None):
+    def add_measure(self, value, measure_class=None, uom=None, uri: str = None, literal_type: str = "string"):
         """
         Creates a new Measure and applies it to the node
 
@@ -1517,9 +1521,11 @@ class Element(ExchangedItem):
             measure_class (_type_, optional): _description_. Defaults to ies:MeasureClass.
             uom (_type_, optional): the unit of measure. Defaults to None.
             uri (str, optional): used to override the measure uri. Defaults to None.
+            literal_type (str, optional): The XSD datatype for the measure value. Defaults to "string".
         """
         measure = Measure(
-            tool=self.tool, uri=uri, classes=[measure_class], value=value, uom=uom
+            tool=self.tool, uri=uri, classes=[measure_class], value=value, uom=uom,
+            literal_type=literal_type
         )
         self.tool.add_triple(
             subject=self._uri, predicate=f"{IES_BASE}hasCharacteristic", obj=measure._uri
@@ -2000,7 +2006,7 @@ class GeoPoint(Location):
     """
 
     def __init__(self, tool: IESTool = IES_TOOL, classes: list[str] | None = None,
-                 lat: float = None, lon: float = None, precision: int = None):
+                 lat: float = None, lon: float = None, precision: int = None, literal_type: str = "decimal"):
         """
             Instantiate the IES GeoPoint
 
@@ -2025,10 +2031,10 @@ class GeoPoint(Location):
         lon_uri = f"{uri}_LON"
 
         self.add_identifier(identifier=str(lat), uri=lat_uri,
-                            id_class=f"{IES_BASE}Latitude")
+                            id_class=f"{IES_BASE}Latitude", literal_type=literal_type)
 
         self.add_identifier(identifier=str(lon), uri=lon_uri,
-                            id_class=f"{IES_BASE}Longitude")
+                            id_class=f"{IES_BASE}Longitude", literal_type=literal_type)
 
 
 class ResponsibleActor(Entity):
@@ -2565,7 +2571,8 @@ class Representation(ClassOfElement):
     """
 
     def __init__(self, tool: IESTool = IES_TOOL, representation_text: str | None = None, uri: str | None = None,
-                 classes: list[str] | None = None, naming_scheme: NamingScheme | None = None):
+                 classes: list[str] | None = None, naming_scheme: NamingScheme | None = None,
+                 literal_type: str = "string"):
         """
             Instantiate the IES Representation
 
@@ -2575,6 +2582,7 @@ class Representation(ClassOfElement):
                 uri (str): the URI of the IES Representation
                 classes (list): the IES types to instantiate
                 naming_scheme (NamingScheme): the IES NamingScheme the representation belongs to
+                literal_type (str): The XSD datatype for the representation value. Defaults to "string".
             Returns:
                 Representation:
         """
@@ -2586,7 +2594,7 @@ class Representation(ClassOfElement):
 
         if representation_text:
             self.tool.add_triple(subject=self._uri, predicate=f"{IES_BASE}representationValue",
-                                 obj=representation_text, is_literal=True, literal_type="string")
+                                 obj=representation_text, is_literal=True, literal_type=literal_type)
         if naming_scheme:
             self.tool.add_triple(subject=self._uri, predicate=f"{IES_BASE}inScheme",
                                  obj=naming_scheme.uri)
@@ -2623,7 +2631,8 @@ class MeasureValue(Representation):
     """
 
     def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
-                 value: str | None = None, uom: UnitOfMeasure | None = None, measure: Measure | None = None):
+                 value: str | None = None, uom: UnitOfMeasure | None = None, measure: Measure | None = None,
+                 literal_type: str = "string"):
         """
             Instantiate the IES MeasureValue
 
@@ -2634,6 +2643,7 @@ class MeasureValue(Representation):
                 value (str): the value of the measure as a literal
                 uom (UnitOfMeasure): the unit of measure of this value
                 measure (Measure): the IES measure this is a value for
+                literal_type (str): The XSD datatype for the measure value. Defaults to "string".
             Returns:
                 MeasureValue:
         """
@@ -2642,7 +2652,8 @@ class MeasureValue(Representation):
             classes = [MEASURE_VALUE]
         if not value:
             raise Exception("MeasureValue must have a valid value")
-        super().__init__(tool=tool, representation_text=value, uri=uri, classes=classes, naming_scheme=None)
+        super().__init__(tool=tool, representation_text=value, uri=uri, classes=classes,
+                        naming_scheme=None, literal_type=literal_type)
         if uom is not None:
             self.tool.add_triple(self._uri, f"{IES_BASE}measureUnit", obj=uom._uri)
         if measure is None:
@@ -2659,7 +2670,7 @@ class Measure(ClassOfElement):
 
     def __init__(
             self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
-            value: str = None, uom: UnitOfMeasure | None = None):
+            value: str = None, uom: UnitOfMeasure | None = None, literal_type: str = "decimal"):
         """
             Instantiate the IES Measure
 
@@ -2694,7 +2705,8 @@ class Measure(ClassOfElement):
         if value_class != MEASURE_VALUE and uom is not None:
             logger.warning("Standard measure: " + value_class + " do not require a unit of measure")
 
-        MeasureValue(tool=self.tool, value=value, uom=uom, measure=self, classes=[value_class])
+        MeasureValue(tool=self.tool, value=value, uom=uom, measure=self,
+                     classes=[value_class], literal_type=literal_type)
 
 
 class Identifier(Representation):
@@ -2704,7 +2716,7 @@ class Identifier(Representation):
 
     def __init__(
             self, tool: IESTool = IES_TOOL, id_text="", uri: str | None = None, classes: list[str] | None = None,
-            naming_scheme: NamingScheme = None
+            naming_scheme: NamingScheme = None, literal_type: str = "string"
     ):
         """
             Instantiate the IES Identifier
@@ -2714,13 +2726,15 @@ class Identifier(Representation):
                 uri (str): the URI of the IES Identifier
                 classes (list): the IES types to instantiate
                 naming_scheme (NamingScheme): the IES NamingScheme the Identifier belongs to
+                literal_type (str): The XSD datatype for the identifier value. Defaults to "string".
             Returns:
                 Identifier:
         """
 
         if classes is None:
             classes = [IDENTIFIER]
-        super().__init__(tool=tool, uri=uri, classes=classes, representation_text=id_text, naming_scheme=naming_scheme)
+        super().__init__(tool=tool, uri=uri, classes=classes, representation_text=id_text,
+                        naming_scheme=naming_scheme, literal_type=literal_type)
 
 
 class Name(Representation):
@@ -2729,7 +2743,8 @@ class Name(Representation):
     """
 
     def __init__(self, tool: IESTool = IES_TOOL, name_text="", uri: str | None = None,
-                 classes: list[str] | None = None, naming_scheme: NamingScheme = None):
+                 classes: list[str] | None = None, naming_scheme: NamingScheme = None,
+                 literal_type: str = "string"):
         """
             Instantiate the IES Name
 
@@ -2738,6 +2753,7 @@ class Name(Representation):
                 uri (str): the URI of the IES Name
                 classes (list): the IES types to instantiate
                 naming_scheme (NamingScheme): the IES NamingScheme the Name belongs to
+                literal_type (str): The XSD datatype for the name value. Defaults to "string".
             Returns:
                 Name:
         """
@@ -2746,7 +2762,8 @@ class Name(Representation):
             classes = [NAME]
 
         super().__init__(
-            tool=tool, uri=uri, classes=classes, representation_text=name_text, naming_scheme=naming_scheme
+            tool=tool, uri=uri, classes=classes, representation_text=name_text,
+            naming_scheme=naming_scheme, literal_type=literal_type
         )
 
 
