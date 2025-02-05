@@ -2670,7 +2670,7 @@ class Measure(ClassOfElement):
 
     def __init__(
             self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
-            value: str = None, uom: UnitOfMeasure | None = None, literal_type: str = "decimal"):
+            value: str = None, uom: UnitOfMeasure | None = None, literal_type: str = "string"):
         """
             Instantiate the IES Measure
 
@@ -2680,6 +2680,7 @@ class Measure(ClassOfElement):
                 classes (list): the IES types to instantiate
                 value (str): the value of the measure as a literal
                 uom (UnitOfMeasure): the unit of measure of the value applied to this measure
+                literal_type (str): The XSD datatype for the measure value. Defaults to "string".
         """
         self.measurements_map = {
             "Length": "ValueInMetres",
