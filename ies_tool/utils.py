@@ -11,28 +11,23 @@ def validate_datetime_string(func):
     """
     def wrapper(self, time_string, *args, **kwargs):
         try:
-            # datetime
             try:
+                # Adjusts for UTC 'Z' to '+00:00'
                 dt.datetime.fromisoformat(time_string.replace('Z', '+00:00'))
-                return func(self, time_string, *args, **kwargs)
             except ValueError:
-                pass
-
-            # other date formats
-            if len(time_string) == 4:  # YYYY
-                dt.datetime.strptime(time_string, '%Y')
-            elif len(time_string) == 7:  # YYYY-MM
-                dt.datetime.strptime(time_string, '%Y-%m')
-            else:  # YYYY-MM-DD
-                dt.date.fromisoformat(time_string)
-
-            return func(self, time_string, *args, **kwargs)
-
+                # Try different date formats
+                if len(time_string) == 4:  # YYYY
+                    dt.datetime.strptime(time_string, '%Y')
+                elif len(time_string) == 7:  # YYYY-MM
+                    dt.datetime.strptime(time_string, '%Y-%m')
+                else:  # YYYY-MM-DD
+                    dt.date.fromisoformat(time_string)
         except ValueError as exc:
             # Using the logger from the class instance 'self'
             if hasattr(self, 'logger'):
-                self.logger.error(f'invalid ISO8601 datetime or date string: {time_string}')
-            raise RuntimeError(f'invalid ISO8601 datetime or date string: {time_string}') from exc
+                self.logger.error(f'invalid ISO8601 datetime string: {time_string}')
+            raise RuntimeError(f'invalid ISO8601 datetime string: {time_string}') from exc
+        return func(self, time_string, *args, **kwargs)
     return wrapper
 
 
