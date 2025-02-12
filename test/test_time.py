@@ -6,7 +6,7 @@ import ies_tool.ies_tool as ies
 class TestDateTimeValidation(unittest.TestCase):
     def setUp(self):
         self.tool = ies.IESTool(mode="rdflib")
-        self.clearGraph()
+        self.clear_graph()
         self.save_rdf = True
         self.file_name = "test/test_dates.ttl"
 
