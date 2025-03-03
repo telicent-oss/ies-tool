@@ -2006,7 +2006,7 @@ class GeoPoint(Location):
     """
 
     def __init__(self, tool: IESTool = IES_TOOL, classes: list[str] | None = None,
-                 lat: float = None, lon: float = None, precision: int = None, literal_type: str = "decimal"):
+                 lat: float = None, lon: float = None, precision: int | None = 6, literal_type: str = "decimal"):
         """
             Instantiate the IES GeoPoint
 
