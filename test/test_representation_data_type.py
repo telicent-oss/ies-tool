@@ -173,7 +173,7 @@ class TestRepresentationDataType(unittest.TestCase):
         result = self.tool.graph.query(query)
         self.assertTrue(result, "Measure values should have correct datatypes (string, decimal and float)")
 
-    # test that lat/lon defaults to precision of 6 decimal places
+    # test that lat/lon URI defaults to precision of 6 decimal places
     def test_geo_point_default_precision(self):
         lat = 23.4567891234
         lon = 12.3456891234
@@ -183,7 +183,6 @@ class TestRepresentationDataType(unittest.TestCase):
             lon=lon
         )
 
-        # Get the specific URI for this point
         base_uri = "http://geohash.org/" + str(encode(float(lat), float(lon), precision=6))
         lat_uri = f"{base_uri}_LAT"
         lon_uri = f"{base_uri}_LON"
