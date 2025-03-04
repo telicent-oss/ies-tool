@@ -2006,7 +2006,7 @@ class GeoPoint(Location):
     """
 
     def __init__(self, tool: IESTool = IES_TOOL, classes: list[str] | None = None,
-                 lat: float = None, lon: float = None, precision: int | None = 6, literal_type: str = "decimal"):
+                 lat: float = None, lon: float = None, precision: int = 6, literal_type: str = "decimal"):
         """
             Instantiate the IES GeoPoint
 
@@ -2015,7 +2015,7 @@ class GeoPoint(Location):
                 classes (list): the IES types to instantiate
                 lat (float): the latitude of the GeoPoint as a decimal
                 lon (float): the longitude of the GeoPOint as a decimal
-                precision (int): number of decimal places for lat and lon
+                precision (int): number of decimal places for lat and lon (defaults to 6)
                 start (str): an ISO8601 datetime string that marks the start of the GeoPoint
                 end (str): an ISO8601 datetime string that marks the end of the GeoPoint
             Returns:
