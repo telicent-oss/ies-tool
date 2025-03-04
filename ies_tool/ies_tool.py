@@ -1722,9 +1722,9 @@ class AmountOfMoney(Asset):
         currency_object = self.tool._get_instance(currency_uri)
         if currency_object is None:
             currency_object = ClassOfElement(tool=self.tool, uri=currency_uri, classes=[IES_BASE + "Currency"])
-            currency_object.add_identifier(iso_4217_currency_code_alpha3)
+            currency_object.add_identifier(iso_4217_currency_code_alpha3,uri = currency_uri + "_ISO4217_alpha3")
             if currency:
-                currency_object.add_name(currency.name)
+                currency_object.add_name(currency.name, uri = currency_uri + "_NAME")
 
         self.tool.add_triple(self.uri, f"{IES_BASE}currencyDenomination", currency_uri)
         self.tool.add_triple(self.uri, f"{IES_BASE}currencyAmount", str(amount),
