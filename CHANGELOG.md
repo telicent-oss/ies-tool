@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.0.5](https://github.com/telicent-oss/ies-tool/compare/v1.0.4...v1.0.5) (2025-04-01)
+
+
+### Bug Fixes
+
+* less lenient datetime validator ([#26](https://github.com/telicent-oss/ies-tool/issues/26)) ([7a78206](https://github.com/telicent-oss/ies-tool/commit/7a78206c6a32bcc339482848ff72515b23512ae0))
+* literal type of representations and default Geopoint precision ([#25](https://github.com/telicent-oss/ies-tool/issues/25)) ([f156c32](https://github.com/telicent-oss/ies-tool/commit/f156c326e993aaa49f03d55cd849cafc563c110e))
+
+
+### Miscellaneous
+
+* update dependency of pycountry to 24.6.1 ([#24](https://github.com/telicent-oss/ies-tool/issues/24)) ([5fda223](https://github.com/telicent-oss/ies-tool/commit/5fda22389e08e5c72f82ee5d27fffd67667da163))
+
 ## [1.0.4](https://github.com/telicent-oss/ies-tool/compare/v1.0.3...v1.0.4) (2024-10-18)
 
 
