@@ -103,7 +103,6 @@ DEFAULT_PREFIXES = {
     "rdfs:": "http://www.w3.org/2000/01/rdf-schema#",
     "owl:": "http://www.w3.org/2002/07/owl#",
     "iso8601:": "http://iso.org/iso8601#",
-    "iso3166:": "http://iso.org/iso3166#",
     "iso3166c:": "http://iso.org/iso3166/country#",
     "iso4217:": "http://iso.org/iso4217#",
     "tont:": "http://telicent.io/ontology/",
