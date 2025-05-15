@@ -52,7 +52,7 @@ RDFS_CLASS = "http://www.w3.org/2000/01/rdf-schema#Class"
 
 TELICENT_PRIMARY_NAME = "http://telicent.io/ontology/primaryName"
 
-EXCHANGED_ITEM = f"{IES_BASE}ExchangedItem"
+THING = f"{IES_BASE}Thing"
 ELEMENT = f"{IES_BASE}Element"
 CLASS_OF_ELEMENT = f"{IES_BASE}ClassOfElement"
 CLASS_OF_CLASS_OF_ELEMENT = f"{IES_BASE}ClassOfClassOfElement"
@@ -1234,26 +1234,26 @@ class RdfsClass(RdfsResource):
         return self.tool.add_triple(sub_class, f"{RDFS}subClassOf", self.uri)
 
 
-class ExchangedItem(RdfsResource):
+class Thing(RdfsResource):
     """
-        A Python wrapper class for IES ExchangedItem
+        A Python wrapper class for IES Thing (Replaced IES ExchangedItem)
     """
 
     def __init__(
             self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None):
         """
-            Instantiate the IES ExchangedItem
+            Instantiate the IES Thing
 
             Args:
                 tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES ExchangedItem
+                uri (str): the URI of the IES Thing
                 classes (list): the IES types to instantiate
 
             Returns:
-                ExchangedItem:
+                Thing:
         """
         if classes is None:
-            classes = [EXCHANGED_ITEM]
+            classes = [THING]
         super().__init__(tool=tool, uri=uri, classes=classes)
 
     def add_representation(
@@ -1343,7 +1343,7 @@ class ExchangedItem(RdfsResource):
         return representation
 
 
-class Element(ExchangedItem):
+class Element(Thing):
     """
         A Python wrapper class for IES Element
     """
@@ -2381,7 +2381,7 @@ class Organisation(ResponsibleActor):
         return post
 
 
-class ClassOfElement(RdfsClass, ExchangedItem):
+class ClassOfElement(RdfsClass, Thing):
     """
     Python wrapper class for IES ClassOfElement
     """
@@ -2421,7 +2421,7 @@ class ClassOfElement(RdfsClass, ExchangedItem):
                              obj=measure._uri)
 
 
-class ClassOfClassOfElement(RdfsClass, ExchangedItem):
+class ClassOfClassOfElement(RdfsClass, Thing):
     """
     Python wrapper class for IES ClassOfClassOfElement
     """
