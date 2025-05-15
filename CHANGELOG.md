@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.6](https://github.com/telicent-oss/ies-tool/compare/v1.0.5...v1.0.6) (2025-05-15)
+
+
+### Bug Fixes
+
+* update to iso3166 country namespace ([#31](https://github.com/telicent-oss/ies-tool/issues/31)) ([b24a50f](https://github.com/telicent-oss/ies-tool/commit/b24a50feba04098429127070fde9e5715360ef4c))
+* updated shacl from 4.2.0 to 4.3.0 ([#22](https://github.com/telicent-oss/ies-tool/issues/22)) ([45f966f](https://github.com/telicent-oss/ies-tool/commit/45f966f8f129849ac705cf340b20e738e05aa0da))
+
 ## [1.0.5](https://github.com/telicent-oss/ies-tool/compare/v1.0.4...v1.0.5) (2025-04-01)
 
 
