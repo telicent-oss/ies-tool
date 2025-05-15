@@ -29,11 +29,18 @@ IES_BASE = "http://ies.data.gov.uk/ontology/ies4#"
 
 
 class Ontology:
-    def __init__(self, filename: str | None = "./ies4.ttl"):
+    def __init__(self, filename: str | None = "./ies4.ttl", additional_classes: dict = None):
         """
         IES Tools stores a copy of the IES ontology as an RDFlib graph.
         It also caches properties and classes into simple Python lists
         This section loads the ontology, then gets all the rdfs:Classes and makes a dictionary of them (self.classes)
+
+        filename (str):
+            The filename of the ontology to load. This should be a turtle file.
+
+        additional_classes (dict):
+                A dictionary of additional classes to add to the ontology. The key is the URI of the class,
+                and the value is a list of superclasses of the class (i.e. a list of URIs)
         """
         self.graph = Graph()
         self.classes = set()
@@ -42,6 +49,14 @@ class Ontology:
         self.object_properties = set()
         self.graph.parse(filename)
         self.ies_uri_stub = IES_BASE
+
+        if additional_classes is not None:
+            for cls, superclasses in additional_classes.items():
+                if superclasses is not None and len(superclasses) > 0:
+                    for superclass in superclasses:
+                        self.graph.add((cls, "http://www.w3.org/2000/01/rdf-schema#subClassOf", superclass))
+                else:
+                    self.graph.add((cls, "http://www.w3.org/2000/01/rdf-schema#subClassOf", "http://www.w3.org/2000/01/rdf-schema#Class"))
 
         logger.info("caching IES ontology")
         # Now create some caches of IES and related stuff we can use to warn the user

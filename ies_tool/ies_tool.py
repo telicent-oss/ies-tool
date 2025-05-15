@@ -133,7 +133,7 @@ class IESTool:
     def __init__(
             self, default_data_namespace: str = "http://example.com/rdf/testdata#", mode: str = "rdflib",
             plug_in: IESPlugin | None = None, validate: bool = False, server_host: str = "http://localhost:3030/",
-            server_dataset: str = "ds", default_security_label: str | None = None
+            server_dataset: str = "ds", default_security_label: str | None = None, additional_classes: dict = None
     ):
         """
 
@@ -154,6 +154,11 @@ class IESTool:
                 For use in sparql_server mode, the host URI of the triplestore
             server_dataset (str):
                 For use in sparql_server mode, the name of the triplestore dataset you want to work on
+            default_security_label (str):
+                For use in sparql_server mode, the default ABAC security label to apply to data being created
+            additional_classes (dict):
+                A dictionary of additional classes to add to the ontology. The key is the URI of the class,
+                and the value is a list of superclasses of the class (i.e. a list of URIs)
         """
 
         # Instances dict is used as a local cache for all instances created. It's a bit wasteful, but it does
@@ -215,7 +220,7 @@ class IESTool:
 
         local_folder = os.path.dirname(os.path.realpath(__file__))
         ont_file = os.path.join(local_folder, "ies4.ttl")
-        self.ontology = Ontology(ont_file)
+        self.ontology = Ontology(ont_file,additional_classes=additional_classes)
 
         self.__mode = mode
         if mode not in ["rdflib", "sparql_server"]:
@@ -325,22 +330,31 @@ class IESTool:
 
     def _all_python_subclasses(self, hierarchy: dict, cls: Unique, level: int) -> dict:
         """_summary_
-
+        This function recursively builds a dictionary of all the ontology subclasses (URIs) of a each Python class
         Args:
-            hierarchy (dict): _description_
-            cls (Unique): _description_
-            level (int): _description_
+            hierarchy (dict): An existing hierarchy dictionary if one exists
+            cls (Unique): the Python class to check subclasses of
+            level (int): starting at 0 for RDFS:Class, this integer key is used to stratify the hierarchy
 
         Returns:
-            dict: _description_
+            dict: a dictionary of all subclasses (and their subclasses) stratified by a level number
+                (an integer key of the dictionary)
         """
+
+        if hierarchy is None:
+            hierarchy = {}
+
+        #levels are used because this function is called recursively and we want to stratify the dictionary of
+        # subclasses by level
         if level not in hierarchy:
             hierarchy[level] = {}
         uri = ''
+        #first check to see if this is an RDFS class instead of an IES one, then a quick text fix to get the URI
         if "Rdfs" in cls.__name__:
             uri = cls.__name__.replace("Rdfs", RDFS)
         else:
             uri = IES_BASE + cls.__name__
+        #get the RDFS subclasses of this class
         ies_subs = self.ontology.make_results_set_from_query(
             "SELECT ?p WHERE {?p <http://www.w3.org/2000/01/rdf-schema#subClassOf>* <" + uri + ">}", "p")
         hierarchy[level][uri] = {'python_class': cls, 'ies_subclasses': list(ies_subs)}
@@ -350,9 +364,14 @@ class IESTool:
                 self._all_python_subclasses(hierarchy, sub, level + 1)
         return hierarchy
 
-    # Given an IES or RDFS class, this function will attempt to return the most appropriate base class
-    # (and its level identifier)
+
     def _determine_base_class(self, classes):
+        """ Given a list of IES or RDFS classes, this function will attempt to return the most appropriate Python base
+        class (and its level identifier)
+
+        Args:
+            classes (list): A list of IES or RDFS classes (plain text URIs)
+        """
         keys = reversed(self.base_classes.keys())
         for level_number in keys:
             level = self.base_classes[level_number]
