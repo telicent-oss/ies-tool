@@ -214,7 +214,7 @@ class IESTool:
         self.current_dir = pathlib.Path(__file__).parent.resolve()
 
         local_folder = os.path.dirname(os.path.realpath(__file__))
-        ont_file = os.path.join(local_folder, "ies4.ttl")
+        ont_file = os.path.join(local_folder, "ies4-3.ttl")
         self.ontology = Ontology(ont_file)
 
         self.__mode = mode
@@ -230,7 +230,7 @@ class IESTool:
             if not validate:
                 logger.warning('Enabling validation for rdflib mode')
             self.__validate = True
-            self._init_shacl(os.path.join(self.current_dir, "ies_r4_3_0.shacl"))
+            self._init_shacl(os.path.join(self.current_dir, "ies4_r4_3_0.shacl"))
             logger.info("IES Tool set to validate all messages. This might get a bit slow")
         elif mode == "sparql_server":
             self.server_host = server_host
