@@ -4,8 +4,9 @@ import logging
 
 def validate_datetime_string(func):
     """Decorator to validate ISO8601 datetime or date strings using the class's logger.
-    Accepts full datetime with Z suffix for UTC, full date (YYYY-MM-DD), year-month (YYYY-MM), or year (YYYY).
-    Explicit timezone specifications are not allowed - use Z for UTC.
+    Accepts full datetime with or without Z suffix for UTC,
+    full date (YYYY-MM-DD), year-month (YYYY-MM), or year (YYYY).
+    Explicit timezone specifications are not allowed.
 
     Args:
         func (Callable): Function that receives a datetime or date string.
