@@ -76,6 +76,8 @@ class TestDateTimeValidation(unittest.TestCase):
         test_cases = [
             {"time_string": "2023-05-15", "expected_uri": "http://iso.org/iso8601#20230515"},
             {"time_string": "2024-01-01T12:00:00", "expected_uri": "http://iso.org/iso8601#20240101T120000Z"},
+            {"time_string": "2024-01-01T12:00:00Z", "expected_uri": "http://iso.org/iso8601#20240101T120000Z"},
+            {"time_string": "2007-01-18 15:30:00", "expected_uri": "http://iso.org/iso8601#20070118T153000Z"},
             {"time_string": "2007-01-18T15:30:00Z", "expected_uri": "http://iso.org/iso8601#20070118T153000Z"},
             {"time_string": "2021", "expected_uri": "http://iso.org/iso8601#2021"},
             {"time_string": "2020-06", "expected_uri": "http://iso.org/iso8601#202006"}
