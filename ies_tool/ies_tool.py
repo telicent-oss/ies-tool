@@ -2464,13 +2464,16 @@ class ParticularPeriod(Element):
         if not time_string:
             raise Exception("No time_string provided for ParticularPeriod")
 
-        iso8601_time_string = time_string.replace(" ", "T")
-        uri = f"http://iso.org/iso8601#{str(iso8601_time_string)}"
+        if 'T' in time_string and not time_string.endswith('Z'):
+            time_string = time_string + 'Z'
+        iso_representation_time_string = time_string.replace(" ", "T")
+        iso8601_time_string = str(iso_representation_time_string).replace("-", "").replace(":", "")
+        uri = f"http://iso.org/iso8601#{iso8601_time_string}"
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
         self.add_literal(predicate=f"{IES_BASE}iso8601PeriodRepresentation",
-                         literal=str(iso8601_time_string))
+                         literal=str(iso_representation_time_string))
 
 
 class BoundingState(State):
