@@ -43,21 +43,20 @@ class Ontology:
                 and the value is a list of superclasses of the class (i.e. a list of URIs)
         """
         self.graph = Graph()
-        self.classes = set()
-        self.properties = set()
-        self.datatype_properties = set()
-        self.object_properties = set()
         self.graph.parse(filename)
         self.ies_uri_stub = IES_BASE
 
         if additional_classes is not None:
-            for cls, superclasses in additional_classes.items():
-                if superclasses is not None and len(superclasses) > 0:
-                    for superclass in superclasses:
-                        self.graph.add((cls, "http://www.w3.org/2000/01/rdf-schema#subClassOf", superclass))
-                else:
-                    self.graph.add((cls, "http://www.w3.org/2000/01/rdf-schema#subClassOf", "http://www.w3.org/2000/01/rdf-schema#Class"))
+            self.add_classes(additional_classes)
+        else:
+            self.__cache_classes()
 
+
+    def __cache_classes(self):
+        self.classes = set()
+        self.properties = set()
+        self.datatype_properties = set()
+        self.object_properties = set()
         logger.info("caching IES ontology")
         # Now create some caches of IES and related stuff we can use to warn the user
         # if they stray off the straight and narrow
@@ -138,6 +137,16 @@ class Ontology:
         with io.StringIO() as f:
             JSONResultSerializer(results).serialize(f)
             return json.loads(f.getvalue())
+
+    def add_classes(self, additional_classes: dict):
+        if additional_classes is not None:
+            for cls, superclasses in additional_classes.items():
+                if superclasses is not None and len(superclasses) > 0:
+                    for superclass in superclasses:
+                        self.graph.add((cls, "http://www.w3.org/2000/01/rdf-schema#subClassOf", superclass))
+                else:
+                    self.graph.add((cls, "http://www.w3.org/2000/01/rdf-schema#subClassOf", "http://www.w3.org/2000/01/rdf-schema#Class"))
+        self.__cache_classes()
 
     # pulls out individual variable from each row returned from sparql query. This is a bit niche, I know.
     def make_results_set_from_query(self, query: str, sparql_var_name: str):

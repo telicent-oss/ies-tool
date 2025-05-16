@@ -41,6 +41,8 @@ limitations under the License.
 
 logger = logging.getLogger(__name__)
 
+ADDITIONAL_CLASSES = {}
+
 IES_TOOL = None
 
 RdfsClassType = TypeVar('RdfsClassType', bound='RdfsClass')
@@ -371,6 +373,9 @@ class IESTool:
 
         Args:
             classes (list): A list of IES or RDFS classes (plain text URIs)
+
+        Retuns:
+            tuple: A tuple of the Python base class and its level number in the subclass hierarchy
         """
         keys = reversed(self.base_classes.keys())
         for level_number in keys:
@@ -381,7 +386,7 @@ class IESTool:
                     if cls in base_class['ies_subclasses']:
                         return base_class["python_class"], level_number
 
-        return self.base_classes[0]["python_class"], 0
+        return RdfsResource, 0 #if we can't find a match, return the top level class
 
     def _get_instance(self, uri: str) -> RdfsResource | None:
         """
