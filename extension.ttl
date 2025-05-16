@@ -1,0 +1,5 @@
+@prefix : <http://example.com/rdf/testdata#> .
+@prefix ies: <http://ies.data.gov.uk/ontology/ies4#> .
+
+:85f69e08a5e74317baa47c6dc429d4e9_000000 a ies:ExchangePayload .
+
