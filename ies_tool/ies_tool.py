@@ -156,6 +156,7 @@ class IESTool:
                 For use in sparql_server mode, the name of the triplestore dataset you want to work on
         """
 
+
         # Instances dict is used as a local cache for all instances created. It's a bit wasteful, but it does
         # allow quick access to IES Tool instances
         self.instances: dict = {}
@@ -208,7 +209,7 @@ class IESTool:
 
         # Property initialisations
 
-        self.session_instance_count = None
+
         self.session_uuid_str = None
         self.session_uuid = None
         self.current_dir = pathlib.Path(__file__).parent.resolve()
@@ -251,6 +252,11 @@ class IESTool:
         self.prefixes: dict[str, str] = {}
         self.default_data_namespace = default_data_namespace
 
+        #Test that the default data stub generates valid URIs
+        self.session_instance_count = 0
+        self.check_valid_uri_production()
+        self.session_instance_count = None
+
         # Establish a set of useful prefixes
         for k, v in DEFAULT_PREFIXES.items():
             self.add_prefix(k, v)
@@ -273,12 +279,25 @@ class IESTool:
         # the class definitions and didn't want to create a circular dependency...again
         self.base_classes = self._all_python_subclasses({}, RdfsResource, 0)
 
+    def check_valid_uri_production(self):
+        test_uri1 = self.generate_data_uri()
+        if not validators.url(test_uri1):
+            logger.error(f"Default data namespace is not generating valid URIs: {self.default_data_namespace}")
+        test_uri2 = self.generate_data_uri(context="test")
+        if not validators.url(test_uri2):
+            logger.error(
+                "Default data namespace is not generating valid URIs "
+                f"when context is set: {self.default_data_namespace}"
+            )
+
+
     @property
     def default_data_namespace(self):
         return self.prefixes[":"]
 
     @default_data_namespace.setter
     def default_data_namespace(self, value):
+        self.check_valid_uri_production()
         self.add_prefix(":", value)
 
     def add_prefix(self, prefix: str, uri: str):
@@ -593,8 +612,7 @@ class IESTool:
         ret_dict: dict[str, str | list] = {
             "session_uuid": self.session_uuid,
             "triples": "",
-            "validation_errors": "",
-            "warnings": [],
+            "validation_errors": ""
         }
         if self.__mode == "sparql_server":
             logger.warning("Export RDF not supported in sparql server mode")
@@ -605,7 +623,6 @@ class IESTool:
                     f" - you tried to export as {rdf_format}"
                 )
             ret_dict["triples"] = self.plug_in.get_rdf()
-            ret_dict["warnings"].extend(self.plug_in.get_warnings())
             if clear:
                 self.clear_graph()
         else:
@@ -1021,8 +1038,9 @@ class Unique(type):
             uri = kwargs["uri"]
             if not uri:
                 uri = tool.generate_data_uri()
-        if not validators.url(uri):
-            logger.error(f"Invalid URI: {uri}")
+            else:
+                if not validators.url(uri):
+                    logger.error(f"Invalid URI: {uri}")
         if uri not in cache:
             self = cls.__new__(cls, args, kwargs)
             cls.__init__(self, *args, **kwargs)
