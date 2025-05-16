@@ -17,9 +17,10 @@ def validate_datetime_string(func):
             if '+' in time_string:
                 raise ValueError("Explicit timezone specifications are not allowed - use Z for UTC")
 
+            time_string = time_string.replace(" ", "T").rstrip("Z")
             #  Handle time formats
             if 'T' in time_string:
-                dt.datetime.fromisoformat(time_string[:-1])
+                dt.datetime.fromisoformat(time_string)
             else:
                 # Try different date formats (no time component)
                 if len(time_string) == 4:  # YYYY

@@ -2464,18 +2464,9 @@ class ParticularPeriod(Element):
         if not time_string:
             raise Exception("No time_string provided for ParticularPeriod")
 
-        time_string = time_string.replace(" ", "T")
-
-        if 'T' in time_string and not time_string.endswith('Z'):
-            iso8601_time_string_punctuated = time_string + 'Z'
-        else:
-            iso8601_time_string_punctuated = time_string
-
+        iso8601_time_string_punctuated = time_string.replace(" ", "T").rstrip("Z")
         iso8601_time_string_non_punctuated = (iso8601_time_string_punctuated.replace("-", "")
-                                                                            .replace(":", "")
-                                                                            .replace("Z", ""))
-
-
+                                                                            .replace(":", ""))
         uri = f"http://iso.org/iso8601#{iso8601_time_string_non_punctuated}"
 
         super().__init__(tool=tool, uri=uri, classes=classes)
