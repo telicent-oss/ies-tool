@@ -2466,17 +2466,23 @@ class ParticularPeriod(Element):
 
         time_string = time_string.replace(" ", "T")
 
+
         if 'T' in time_string and not time_string.endswith('Z'):
-            time_string = time_string + 'Z'
+            iso8601_time_string_punctuated = time_string + 'Z'
+        else:
+            iso8601_time_string_punctuated = time_string
+
+        iso8601_time_string_non_punctuated = (iso8601_time_string_punctuated.replace("-", "")
+                                                                            .replace(":", "")
+                                                                            .replace("Z", ""))
 
 
-        iso8601_time_string = str(time_string).replace("-", "").replace(":", "")
-        uri = f"http://iso.org/iso8601#{iso8601_time_string}"
+        uri = f"http://iso.org/iso8601#{iso8601_time_string_non_punctuated}"
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
         self.add_literal(predicate=f"{IES_BASE}iso8601PeriodRepresentation",
-                         literal=str(time_string))
+                         literal=str(iso8601_time_string_punctuated))
 
 
 class BoundingState(State):

@@ -75,10 +75,10 @@ class TestDateTimeValidation(unittest.TestCase):
     def test_particular_period_uri(self):
         test_cases = [
             {"time_string": "2023-05-15", "expected_uri": "http://iso.org/iso8601#20230515"},
-            {"time_string": "2024-01-01T12:00:00", "expected_uri": "http://iso.org/iso8601#20240101T120000Z"},
-            {"time_string": "2024-01-01T12:00:00Z", "expected_uri": "http://iso.org/iso8601#20240101T120000Z"},
-            {"time_string": "2007-01-18 15:30:00", "expected_uri": "http://iso.org/iso8601#20070118T153000Z"},
-            {"time_string": "2007-01-18T15:30:00Z", "expected_uri": "http://iso.org/iso8601#20070118T153000Z"},
+            {"time_string": "2024-01-01T12:00:00", "expected_uri": "http://iso.org/iso8601#20240101T120000"},
+            {"time_string": "2024-01-01T12:00:00Z", "expected_uri": "http://iso.org/iso8601#20240101T120000"},
+            {"time_string": "2007-01-18 15:30:00", "expected_uri": "http://iso.org/iso8601#20070118T153000"},
+            {"time_string": "2007-01-18T15:30:00Z", "expected_uri": "http://iso.org/iso8601#20070118T153000"},
             {"time_string": "2021", "expected_uri": "http://iso.org/iso8601#2021"},
             {"time_string": "2020-06", "expected_uri": "http://iso.org/iso8601#202006"}
         ]
@@ -89,8 +89,10 @@ class TestDateTimeValidation(unittest.TestCase):
                     tool=self.tool,
                     time_string=case["time_string"]
                 )
+
                 self.assertEqual(particular_period.uri, case["expected_uri"],
                                 f"URI mismatch for time string {case['time_string']}")
+
 
 if __name__ == '__main__':
     unittest.main()
