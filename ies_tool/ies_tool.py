@@ -2466,7 +2466,6 @@ class ParticularPeriod(Element):
 
         time_string = time_string.replace(" ", "T")
 
-
         if 'T' in time_string and not time_string.endswith('Z'):
             iso8601_time_string_punctuated = time_string + 'Z'
         else:

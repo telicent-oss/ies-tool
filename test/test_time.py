@@ -89,10 +89,8 @@ class TestDateTimeValidation(unittest.TestCase):
                     tool=self.tool,
                     time_string=case["time_string"]
                 )
-
                 self.assertEqual(particular_period.uri, case["expected_uri"],
                                 f"URI mismatch for time string {case['time_string']}")
-
 
 if __name__ == '__main__':
     unittest.main()
