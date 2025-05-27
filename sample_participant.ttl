@@ -1,0 +1,8 @@
+@prefix : <http://example.com/rdf/testdata#> .
+@prefix data: <http://telicent.io/data#> .
+@prefix ies: <http://ies.data.gov.uk/ontology/ies4#> .
+
+:ce37bf856b454fdd938bb65308b3fc04_000000 a ies:EventParticipant ;
+    ies:isParticipantIn data:my_event ;
+    ies:isParticipationOf data:event_participant_A .
+

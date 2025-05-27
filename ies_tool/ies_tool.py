@@ -1077,10 +1077,8 @@ class RdfsResource(metaclass=Unique):
                 RdfsResource:
         """
 
-        if classes is None or classes == []:
-            classes = [RDFS_RESOURCE]
-        elif not isinstance(classes, list):
-            raise Exception("classes parameter must be a list")
+        self._default_class(classes,RDFS_RESOURCE)
+
         if tool is None:
             self._tool = IES_TOOL
         else:
@@ -1089,12 +1087,19 @@ class RdfsResource(metaclass=Unique):
             self._uri = self.tool.generate_data_uri()
         else:
             self._uri = uri
-
-        for cls in classes:
-            self.tool.add_triple(subject=self._uri, predicate=RDF_TYPE, obj=cls)
-        self._classes = classes
+        if classes is not None:
+            for cls in classes:
+                self.tool.add_triple(subject=self._uri, predicate=RDF_TYPE, obj=cls)
 
         self.tool.instances[self._uri] = self
+
+    def _default_class(self,classes,default_class):
+        if not hasattr(self, "_classes"):
+            self._classes = []
+        if classes is None or classes == []:
+            if self._classes == []:
+                self._classes = [default_class]
+
 
     @property
     def tool(self):
@@ -1198,13 +1203,14 @@ class RdfsResource(metaclass=Unique):
             if inst is not None:
                 return inst
             else:
+                if base_type is None:
+                    base_type = RdfsResource
                 logger.warning(
                     f'''String passed instead of object in {context}
                     - assumed URI is defined elsewhere: {reference}
                     - base class {base_type.__name__} has been inferred'''
                 )
-                if base_type is None:
-                    base_type = RdfsResource
+
                 return base_type(tool=self.tool, uri=reference, classes=[])
         elif isinstance(reference, RdfsResource):
             return reference
@@ -1231,8 +1237,7 @@ class RdfsClass(RdfsResource):
             Returns:
                 RdfsClass:
         """
-        if classes is None:
-            classes = [RDFS_CLASS]
+        self._default_class(classes,RDFS_CLASS)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
     def instantiate(self, uri=None) -> RdfsResource:
@@ -1276,8 +1281,7 @@ class ExchangedItem(RdfsResource):
             Returns:
                 ExchangedItem:
         """
-        if classes is None:
-            classes = [EXCHANGED_ITEM]
+        self._default_class(classes,EXCHANGED_ITEM)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
     def add_representation(
@@ -1386,8 +1390,7 @@ class Element(ExchangedItem):
             Returns:
                 Element:
         """
-        if classes is None:
-            classes = [ELEMENT]
+        self._default_class(classes,ELEMENT)
 
         super().__init__(tool=tool, uri=uri, classes=classes)
         self._default_state_type = STATE
@@ -1575,8 +1578,7 @@ class Entity(Element):
             Returns:
                 Entity:
         """
-        if classes is None:
-            classes = [ENTITY]
+        self._default_class(classes,ENTITY)
         super().__init__(
             tool=tool, uri=uri, classes=classes, start=start, end=end
         )
@@ -1601,8 +1603,7 @@ class State(Element):
             Returns:
                 State:
         """
-        if classes is None:
-            classes = [STATE]
+        self._default_class(classes,STATE)
         super().__init__(
             tool=tool, uri=uri, classes=classes, start=start, end=end
         )
@@ -1628,8 +1629,7 @@ class DeviceState(State):
             Returns:
                 DeviceState:
         """
-        if classes is None:
-            classes = [DEVICE_STATE]
+        self._default_class(classes,DEVICE_STATE)
         super().__init__(
             tool=tool, uri=uri, classes=classes, start=start, end=end
         )
@@ -1713,8 +1713,7 @@ class Asset(Entity):
             Returns:
                 Device:
         """
-        if classes is None:
-            classes = [ASSET]
+        self._default_class(classes,ASSET)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         self._default_state_type = ASSET_STATE
@@ -1738,8 +1737,7 @@ class AmountOfMoney(Asset):
             Returns:
                 AmountOfMoney:
         """
-        if classes is None:
-            classes = [AMOUNT_OF_MONEY]
+        self._default_class(classes,AMOUNT_OF_MONEY)
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
@@ -1783,8 +1781,7 @@ class Device(Asset, DeviceState):
             Returns:
                 Device:
         """
-        if classes is None:
-            classes = [DEVICE]
+        self._default_class(classes,DEVICE)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         self._default_state_type = DEVICE_STATE
@@ -1810,8 +1807,7 @@ class Account(Entity):
             Returns:
                 Account:
         """
-        if classes is None:
-            classes = [ACCOUNT]
+        self._default_class(classes,ACCOUNT)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         self._default_state_type = ACCOUNT_STATE
@@ -1934,8 +1930,7 @@ class CommunicationsAccount(Account):
             Returns:
                 CommunicationsAccount:
         """
-        if classes is None:
-            classes = [COMMUNICATIONS_ACCOUNT]
+        self._default_class(classes,COMMUNICATIONS_ACCOUNT)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         self._default_state_type = COMMUNICATIONS_ACCOUNT_STATE
@@ -1961,8 +1956,7 @@ class Location(Entity):
             Returns:
                 Location:
         """
-        if classes is None:
-            classes = [LOCATION]
+        self._default_class(classes,LOCATION)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         self._default_state_type = LOCATION_STATE
@@ -1987,8 +1981,7 @@ class Country(Location):
 
         uri = f"http://iso.org/iso3166/country#{country_alpha_3_code}"
 
-        if not classes:
-            classes = [COUNTRY]
+        self._default_class(classes,COUNTRY)
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
@@ -2045,8 +2038,7 @@ class GeoPoint(Location):
             Returns:
                 GeoPoint:
         """
-        if classes is None:
-            classes = [GEOPOINT]
+        self._default_class(classes,GEOPOINT)
 
         uri = "http://geohash.org/" + str(encode(float(lat), float(lon), precision=precision))
         super().__init__(tool=tool, uri=uri, classes=classes)
@@ -2081,8 +2073,7 @@ class ResponsibleActor(Entity):
             Returns:
                 ResponsibleActor:
         """
-        if classes is None:
-            classes = [RESPONSIBLE_ACTOR]
+        self._default_class(classes,RESPONSIBLE_ACTOR)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         self._default_state_type = f"{IES_BASE}ResponsibleActorState"
@@ -2211,8 +2202,7 @@ class Post(ResponsibleActor):
             Returns:
                 Post:
         """
-        if classes is None:
-            classes = [POST]
+        self._default_class(classes,POST)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         if start is not None:
@@ -2249,8 +2239,7 @@ class Person(ResponsibleActor):
             Returns:
                 Person:
         """
-        if classes is None:
-            classes = [PERSON]
+        self._default_class(classes,PERSON)
 
         super().__init__(tool=tool, uri=uri, classes=classes, start=None, end=None)
 
@@ -2374,8 +2363,7 @@ class Organisation(ResponsibleActor):
             Returns:
                 Organisation:
         """
-        if classes is None:
-            classes = [ORGANISATION]
+        self._default_class(classes,ORGANISATION)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         self._default_state_type = f"{IES_BASE}OrganisationState"
@@ -2422,8 +2410,7 @@ class ClassOfElement(RdfsClass, ExchangedItem):
             Returns:
                 ClassOfElement:
         """
-        if classes is None:
-            classes = [CLASS_OF_ELEMENT]
+        self._default_class(classes,CLASS_OF_ELEMENT)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
     def add_measure(self, value: str, measure_class: str | None = None,
@@ -2462,8 +2449,7 @@ class ClassOfClassOfElement(RdfsClass, ExchangedItem):
             Returns:
                 ClassOfClassOfElement:
         """
-        if classes is None:
-            classes = [CLASS_OF_CLASS_OF_ELEMENT]
+        self._default_class(classes,CLASS_OF_CLASS_OF_ELEMENT)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
 
@@ -2483,8 +2469,7 @@ class ParticularPeriod(Element):
             Returns:
                 ParticularPeriod:
         """
-        if classes is None:
-            classes = [PARTICULAR_PERIOD]
+        self._default_class(classes,PARTICULAR_PERIOD)
         if not time_string:
             raise Exception("No time_string provided for ParticularPeriod")
 
@@ -2515,8 +2500,7 @@ class BoundingState(State):
                 BoundingState:
         """
 
-        if classes is None:
-            classes = [BOUNDING_STATE]
+        self._default_class(classes,BOUNDING_STATE)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
 
@@ -2538,8 +2522,7 @@ class BirthState(BoundingState):
                 BirthState:
         """
 
-        if classes is None:
-            classes = [BIRTH_STATE]
+        self._default_class(classes,BIRTH_STATE)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
 
@@ -2561,8 +2544,7 @@ class DeathState(BoundingState):
                 DeathState:
         """
 
-        if classes is None:
-            classes = [DEATH_STATE]
+        self._default_class(classes,DEATH_STATE)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
 
@@ -2584,8 +2566,7 @@ class UnitOfMeasure(ClassOfClassOfElement):
                 UnitOfMeasure:
         """
 
-        if classes is None:
-            classes = [UNIT_OF_MEASURE]
+        self._default_class(classes,UNIT_OF_MEASURE)
         super().__init__(tool=tool, classes=classes, uri=uri)
 
 
@@ -2611,8 +2592,7 @@ class Representation(ClassOfElement):
                 Representation:
         """
 
-        if classes is None:
-            classes = [REPRESENTATION]
+        self._default_class(classes,REPRESENTATION)
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
@@ -2643,8 +2623,7 @@ class WorkOfDocumentation(Representation):
                 WorkOfDocumentation:
         """
 
-        if classes is None:
-            classes = [WORK_OF_DOCUMENTATION]
+        self._default_class(classes,WORK_OF_DOCUMENTATION)
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
@@ -2672,8 +2651,7 @@ class MeasureValue(Representation):
                 MeasureValue:
         """
 
-        if classes is None:
-            classes = [MEASURE_VALUE]
+        self._default_class(classes,MEASURE_VALUE)
         if not value:
             raise Exception("MeasureValue must have a valid value")
         super().__init__(tool=tool, representation_text=value, uri=uri, classes=classes,
@@ -2716,8 +2694,7 @@ class Measure(ClassOfElement):
             "LuminousIntensity": "ValueInCandela"
         }
 
-        if classes is None:
-            classes = [MEASURE]
+        self._default_class(classes,MEASURE)
         if len(classes) != 1:
             logger.warning("Measure must be just one class, using the first one")
         _class = classes[0]
@@ -2756,8 +2733,7 @@ class Identifier(Representation):
                 Identifier:
         """
 
-        if classes is None:
-            classes = [IDENTIFIER]
+        self._default_class(classes,IDENTIFIER)
         super().__init__(tool=tool, uri=uri, classes=classes, representation_text=id_text,
                         naming_scheme=naming_scheme, literal_type=literal_type)
 
@@ -2783,8 +2759,7 @@ class Name(Representation):
                 Name:
         """
 
-        if classes is None:
-            classes = [NAME]
+        self._default_class(classes,NAME)
 
         super().__init__(
             tool=tool, uri=uri, classes=classes, representation_text=name_text,
@@ -2810,8 +2785,7 @@ class NamingScheme(ClassOfClassOfElement):
             Returns:
                 NamingScheme:
         """
-        if classes is None:
-            classes = [NAMING_SCHEME]
+        self._default_class(classes,NAMING_SCHEME)
         super().__init__(tool=tool, uri=uri, classes=classes)
         if owner is not None:
             self.tool.add_triple(
@@ -2846,8 +2820,7 @@ class Event(Element):
                 Event:
         """
 
-        if classes is None:
-            classes = [EVENT]
+        self._default_class(classes,EVENT)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
     def add_participant(self,
@@ -2910,8 +2883,7 @@ class EventParticipant(State):
                 EventParticipant:
         """
 
-        if classes is None:
-            classes = [EVENT_PARTICIPANT]
+        self._default_class(classes,EVENT_PARTICIPANT)
         super().__init__(tool=tool, start=start, end=end, uri=uri, classes=classes)
 
 
@@ -2937,8 +2909,7 @@ class Communication(Event):
                 Communication:
         """
 
-        if classes is None:
-            classes = [COMMUNICATION]
+        self._default_class(classes,COMMUNICATION)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         if message_content:
@@ -3006,8 +2977,7 @@ class PartyInCommunication(Event):
                 PartyInCommunication:
         """
 
-        if classes is None:
-            classes = [PARTY_IN_COMMUNICATION]
+        self._default_class(classes,PARTY_IN_COMMUNICATION)
 
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
         if communication is not None:
