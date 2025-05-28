@@ -1,26 +1,47 @@
-# test with python -m test.test_validate_referenced
-from ies_tool.ies_tool import Event, IESTool
+import unittest
 
-IES_BASE = "http://ies.data.gov.uk/ontology/ies4#"
-file_name = "sample_participant.ttl"
-data_ns = "http://telicent.io/data#"
-participant_uri = data_ns + "event_participant_A"
-
-tool = IESTool(mode="rdflib")
+import ies_tool.ies_tool as ies
 
 
-tool.add_prefix("data:", data_ns)
+class TestInferredClasses(unittest.TestCase):
+    def setUp(self):
+        self.tool = ies.IESTool(mode="rdflib")
+        self.clear_graph()
+        self.save_rdf = True
+        self.file_name = "test/test_inferred_classes.ttl"
+        self.IES_BASE = "http://ies.data.gov.uk/ontology/ies4#"
+        self.file_name = "sample_participant.ttl"
+        self.data_ns = "http://telicent.io/data#"
+        self.participating_entity_uri = self.data_ns + "participating_person_A"
+        self.participant_uri = self.data_ns + "event_participant_A"
 
-# create event
-my_event =Event(tool=tool,uri =data_ns +"my_event" )
-print(my_event._classes)
+    def clear_graph(self):
+        self.tool.clear_graph()
 
-# add participant to event
-    # expected inferred class: Entity
-    # actual inferred class: RdfsResource
-my_event.add_participant(participating_entity = participant_uri)
+    def test_inferred_classes(self):
+        # Create event with a participating entity
+        my_event =ies.Event(tool=self.tool,uri =self.data_ns +"my_event" )
+        my_event.add_participant(participating_entity = self.participating_entity_uri,
+                                 uri = self.participant_uri)
 
-# save rdf
-tool.graph.serialize(destination=file_name, format='turtle')
+        participant_query = """
+        PREFIX ies: <http://ies.data.gov.uk/ontology/ies4#>
+        ASK {
+            ?participant a ies:EventParticipant ;
+                        ies:isParticipationOf ?participating_entity ;
+                        ies:isParticipantIn ?event .
 
-print(f"RDF graph saved to {file_name}")
+            ?event a ies:Event .
+            ?participating_entity a ies:Entity .
+        }
+        """
+
+        result = self.tool.graph.query(participant_query)
+        self.assertTrue(result, "Participation pattern not found or incorrect")
+
+
+        if self.save_rdf:
+            self.tool.graph.serialize(destination=self.file_name, format='turtle')
+            print(f"RDF graph saved to {self.file_name}")
+
+
