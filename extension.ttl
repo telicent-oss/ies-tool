@@ -1,13 +1,7 @@
 @prefix : <http://example.com/rdf/testdata#> .
 @prefix ies: <http://ies.data.gov.uk/ontology/ies4#> .
 
-<<<<<<< Updated upstream
-:f150833dc1134a7a9d59adeb03ea3d0f_000000 a ies:ExchangePayload .
+:da61417e224c4b9cb1ec618a98fee8b8_0 a ies:ExchangePayload .
 
-:f150833dc1134a7a9d59adeb03ea3d0f_000001 a ies:Widget .
-=======
-:5a99e6c961c4420a83e69c439ef238e8_000000 a ies:ExchangePayload .
-
-:5a99e6c961c4420a83e69c439ef238e8_000001 a ies:Widget .
->>>>>>> Stashed changes
+:da61417e224c4b9cb1ec618a98fee8b8_1 a ies:Widget .
 

@@ -1114,8 +1114,8 @@ class RdfsResource(metaclass=Unique):
             self._uri = self.tool.generate_data_uri()
         else:
             self._uri = uri
-        if classes is not None:
-            for cls in classes:
+        if self._classes is not None:
+            for cls in self._classes:
                 self.tool.add_triple(subject=self._uri, predicate=RDF_TYPE, obj=cls)
 
         self.tool.instances[self._uri] = self

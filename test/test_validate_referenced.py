@@ -11,6 +11,7 @@ tool.add_prefix("data:", data_ns)
 
 # create event
 my_event =ies.Event(tool=tool,uri =data_ns +"my_event" )
+print(my_event._classes)
 
 # add participant to event
     # expected inferred class: Entity
