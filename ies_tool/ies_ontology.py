@@ -4,7 +4,7 @@ import io
 import json
 import logging
 
-from rdflib import Graph
+from rdflib import Graph, URIRef
 from rdflib.plugins.sparql.results.jsonresults import JSONResultSerializer
 
 __license__ = """
@@ -29,20 +29,35 @@ IES_BASE = "http://ies.data.gov.uk/ontology/ies4#"
 
 
 class Ontology:
-    def __init__(self, filename: str | None = "./ies4-3.ttl"):
+    def __init__(self, filename: str | None = "./ies4-3.ttl", additional_classes: dict = None):
+
         """
         IES Tools stores a copy of the IES ontology as an RDFlib graph.
         It also caches properties and classes into simple Python lists
         This section loads the ontology, then gets all the rdfs:Classes and makes a dictionary of them (self.classes)
+
+        filename (str):
+            The filename of the ontology to load. This should be a turtle file.
+
+        additional_classes (dict):
+                A dictionary of additional classes to add to the ontology. The key is the URI of the class,
+                and the value is a list of superclasses of the class (i.e. a list of URIs)
         """
         self.graph = Graph()
+        self.graph.parse(filename)
+        self.ies_uri_stub = IES_BASE
+
+        if additional_classes is not None:
+            self.add_classes(additional_classes)
+        else:
+            self.__cache_classes()
+
+
+    def __cache_classes(self):
         self.classes = set()
         self.properties = set()
         self.datatype_properties = set()
         self.object_properties = set()
-        self.graph.parse(filename)
-        self.ies_uri_stub = IES_BASE
-
         logger.info("caching IES ontology")
         # Now create some caches of IES and related stuff we can use to warn the user
         # if they stray off the straight and narrow
@@ -123,6 +138,18 @@ class Ontology:
         with io.StringIO() as f:
             JSONResultSerializer(results).serialize(f)
             return json.loads(f.getvalue())
+
+    def add_classes(self, additional_classes: dict):
+        if additional_classes is not None:
+            for cls, superclasses in additional_classes.items():
+                if superclasses is not None and len(superclasses) > 0:
+                    for superclass in superclasses:
+                        self.graph.add((URIRef(cls),
+                                       URIRef("http://www.w3.org/2000/01/rdf-schema#subClassOf"),
+                                       URIRef(superclass)))
+                else:
+                    self.graph.add((cls, "http://www.w3.org/2000/01/rdf-schema#subClassOf", "http://www.w3.org/2000/01/rdf-schema#Class"))
+        self.__cache_classes()
 
     # pulls out individual variable from each row returned from sparql query. This is a bit niche, I know.
     def make_results_set_from_query(self, query: str, sparql_var_name: str):

@@ -169,6 +169,18 @@ iso8601:1985-08-21 a ies:ParticularPeriod ;
 
 Note that the URIs are generated automatically (UUIDs appended to the default data namespace) unless the uri parameter is used to manually set them.
 
+### Extending the IES Ontology
+If you plan to use new subclasses in your data, it helps to register those new classes (and their supertypes) with IES Tool. This will enable the tool to make better inference of base Python classes. The extensions are added as a dictionary where the key is the URI of the new class, and the value is a list of the new class's superclasses:
+
+```python
+ADDITONAL_CLASSES = {
+    "http://ies.data.gov.uk/ontology/ies4#Widget": ['http://ies.data.gov.uk/ontology/ies4#Device'],
+    "http://ies.data.gov.uk/ontology/ies4#Gizmo": ['http://ies.data.gov.uk/ontology/ies4#Device']
+}
+
+tool = IESTool()
+tool.add_classes(ADDITONAL_CLASSES)
+```
 
 ### Low-level operations (RDF / RDFS)
 The base classes provide some simple methods for creating predicates:
@@ -212,7 +224,6 @@ As a default `http://example.com/rdf/testdata#` is used as a default data namesp
 IES_TOOL.uri_stub = 'http://mydomain.org/rdf-data#'
 ```
 Note this will also set the blank prefix `:` to `http://mydomain.org/rdf-data#`
-
 
 ### Saving/creating RDF
 

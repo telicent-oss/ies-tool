@@ -29,6 +29,9 @@ class IESPlugin:
     def get_rdf(self, format: str = None) -> str:
         raise NotImplementedError
 
+    def save_rdf(self,filename,rdf_format = None):
+        raise NotImplementedError
+
     def get_reporting(self) -> str:
         raise NotImplementedError
 
@@ -45,6 +48,9 @@ class IESPlugin:
         raise NotImplementedError
 
     def get_warnings(self):
+        raise NotImplementedError
+
+    def get_triple_count(self) -> int:
         raise NotImplementedError
 
     @property

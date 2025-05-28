@@ -41,6 +41,8 @@ limitations under the License.
 
 logger = logging.getLogger(__name__)
 
+ADDITIONAL_CLASSES = {}
+
 IES_TOOL = None
 
 RdfsClassType = TypeVar('RdfsClassType', bound='RdfsClass')
@@ -133,7 +135,7 @@ class IESTool:
     def __init__(
             self, default_data_namespace: str = "http://example.com/rdf/testdata#", mode: str = "rdflib",
             plug_in: IESPlugin | None = None, validate: bool = False, server_host: str = "http://localhost:3030/",
-            server_dataset: str = "ds", default_security_label: str | None = None
+            server_dataset: str = "ds", default_security_label: str | None = None, additional_classes: dict = None
     ):
         """
 
@@ -154,11 +156,17 @@ class IESTool:
                 For use in sparql_server mode, the host URI of the triplestore
             server_dataset (str):
                 For use in sparql_server mode, the name of the triplestore dataset you want to work on
+            default_security_label (str):
+                For use in sparql_server mode, the default ABAC security label to apply to data being created
+            additional_classes (dict):
+                A dictionary of additional classes to add to the ontology. The key is the URI of the class,
+                and the value is a list of superclasses of the class (i.e. a list of URIs)
         """
 
         # Instances dict is used as a local cache for all instances created. It's a bit wasteful, but it does
         # allow quick access to IES Tool instances
         self.instances: dict = {}
+        self.session_instance_count = 0
 
         # Initiate the storage plugins dictionary
         self.plug_in: IESPlugin | None = None
@@ -208,14 +216,16 @@ class IESTool:
 
         # Property initialisations
 
-        self.session_instance_count = None
+
         self.session_uuid_str = None
         self.session_uuid = None
         self.current_dir = pathlib.Path(__file__).parent.resolve()
 
         local_folder = os.path.dirname(os.path.realpath(__file__))
+
         ont_file = os.path.join(local_folder, "ies4-3.ttl")
-        self.ontology = Ontology(ont_file)
+
+        self.ontology = Ontology(ont_file,additional_classes=additional_classes)
 
         self.__mode = mode
         if mode not in ["rdflib", "sparql_server"]:
@@ -230,7 +240,7 @@ class IESTool:
             if not validate:
                 logger.warning('Enabling validation for rdflib mode')
             self.__validate = True
-            self._init_shacl(os.path.join(self.current_dir, "ies4_r4_3_0.shacl"))
+            self._init_shacl(os.path.join(self.current_dir, "ies_r4_3_0.shacl"))
             logger.info("IES Tool set to validate all messages. This might get a bit slow")
         elif mode == "sparql_server":
             self.server_host = server_host
@@ -249,8 +259,13 @@ class IESTool:
         self.graph = Graph()
 
         self.prefixes: dict[str, str] = {}
+        self.add_prefix(":",IES_BASE)
         self.default_data_namespace = default_data_namespace
 
+
+        #Test that the default data stub generates valid URIs
+
+        self.check_valid_uri_production()
         # Establish a set of useful prefixes
         for k, v in DEFAULT_PREFIXES.items():
             self.add_prefix(k, v)
@@ -273,12 +288,32 @@ class IESTool:
         # the class definitions and didn't want to create a circular dependency...again
         self.base_classes = self._all_python_subclasses({}, RdfsResource, 0)
 
+    def check_valid_uri_production(self):
+        test_uri1 = self.generate_data_uri()
+        if not validators.url(test_uri1):
+            logger.error(f"Default data namespace is not generating valid URIs: {self.default_data_namespace}")
+        test_uri2 = self.generate_data_uri(context="test")
+        if not validators.url(test_uri2):
+            logger.error(
+                f"Default data namespace is not generating valid URIs when context is: {self.default_data_namespace}")
+
+    def add_classes(self, additional_classes: dict):
+        """
+        Args:
+            additional_classes (dict):
+                A dictionary of additional classes to add to the ontology. The key is the URI of the class,
+                and the value is a list of superclasses of the class (i.e. a list of URIs)
+        """
+        self.ontology.add_classes(additional_classes)
+        self.base_classes = self._all_python_subclasses({}, RdfsResource, 0)
+
     @property
     def default_data_namespace(self):
         return self.prefixes[":"]
 
     @default_data_namespace.setter
     def default_data_namespace(self, value):
+        self.check_valid_uri_production()
         self.add_prefix(":", value)
 
     def add_prefix(self, prefix: str, uri: str):
@@ -325,22 +360,31 @@ class IESTool:
 
     def _all_python_subclasses(self, hierarchy: dict, cls: Unique, level: int) -> dict:
         """_summary_
-
+        This function recursively builds a dictionary of all the ontology subclasses (URIs) of a each Python class
         Args:
-            hierarchy (dict): _description_
-            cls (Unique): _description_
-            level (int): _description_
+            hierarchy (dict): An existing hierarchy dictionary if one exists
+            cls (Unique): the Python class to check subclasses of
+            level (int): starting at 0 for RDFS:Class, this integer key is used to stratify the hierarchy
 
         Returns:
-            dict: _description_
+            dict: a dictionary of all subclasses (and their subclasses) stratified by a level number
+                (an integer key of the dictionary)
         """
+
+        if hierarchy is None:
+            hierarchy = {}
+
+        #levels are used because this function is called recursively and we want to stratify the dictionary of
+        # subclasses by level
         if level not in hierarchy:
             hierarchy[level] = {}
         uri = ''
+        #first check to see if this is an RDFS class instead of an IES one, then a quick text fix to get the URI
         if "Rdfs" in cls.__name__:
             uri = cls.__name__.replace("Rdfs", RDFS)
         else:
             uri = IES_BASE + cls.__name__
+        #get the RDFS subclasses of this class
         ies_subs = self.ontology.make_results_set_from_query(
             "SELECT ?p WHERE {?p <http://www.w3.org/2000/01/rdf-schema#subClassOf>* <" + uri + ">}", "p")
         hierarchy[level][uri] = {'python_class': cls, 'ies_subclasses': list(ies_subs)}
@@ -350,9 +394,17 @@ class IESTool:
                 self._all_python_subclasses(hierarchy, sub, level + 1)
         return hierarchy
 
-    # Given an IES or RDFS class, this function will attempt to return the most appropriate base class
-    # (and its level identifier)
+
     def _determine_base_class(self, classes):
+        """ Given a list of IES or RDFS classes, this function will attempt to return the most appropriate Python base
+        class (and its level identifier)
+
+        Args:
+            classes (list): A list of IES or RDFS classes (plain text URIs)
+
+        Retuns:
+            tuple: A tuple of the Python base class and its level number in the subclass hierarchy
+        """
         keys = reversed(self.base_classes.keys())
         for level_number in keys:
             level = self.base_classes[level_number]
@@ -362,7 +414,7 @@ class IESTool:
                     if cls in base_class['ies_subclasses']:
                         return base_class["python_class"], level_number
 
-        return self.base_classes[0]["python_class"], 0
+        return RdfsResource, 0 #if we can't find a match, return the top level class
 
     def _get_instance(self, uri: str) -> RdfsResource | None:
         """
@@ -593,8 +645,7 @@ class IESTool:
         ret_dict: dict[str, str | list] = {
             "session_uuid": self.session_uuid,
             "triples": "",
-            "validation_errors": "",
-            "warnings": [],
+            "validation_errors": ""
         }
         if self.__mode == "sparql_server":
             logger.warning("Export RDF not supported in sparql server mode")
@@ -605,7 +656,6 @@ class IESTool:
                     f" - you tried to export as {rdf_format}"
                 )
             ret_dict["triples"] = self.plug_in.get_rdf()
-            ret_dict["warnings"].extend(self.plug_in.get_warnings())
             if clear:
                 self.clear_graph()
         else:
@@ -682,7 +732,7 @@ class IESTool:
         """
         if context is None:
             context = ""
-        uri = f'{self.default_data_namespace}{self.session_uuid_str}{context}_{self.session_instance_count:06d}'
+        uri = f'{self.default_data_namespace}{self.session_uuid_str}{context}_{self.session_instance_count}'
         self.session_instance_count = self.session_instance_count + 1
         return uri
 
@@ -1021,8 +1071,9 @@ class Unique(type):
             uri = kwargs["uri"]
             if not uri:
                 uri = tool.generate_data_uri()
-        if not validators.url(uri):
-            logger.error(f"Invalid URI: {uri}")
+            else:
+                if not validators.url(uri):
+                    logger.error(f"Invalid URI: {uri}")
         if uri not in cache:
             self = cls.__new__(cls, args, kwargs)
             cls.__init__(self, *args, **kwargs)
@@ -1053,10 +1104,8 @@ class RdfsResource(metaclass=Unique):
                 RdfsResource:
         """
 
-        if classes is None or classes == []:
-            classes = [RDFS_RESOURCE]
-        elif not isinstance(classes, list):
-            raise Exception("classes parameter must be a list")
+        self._default_class(classes,RDFS_RESOURCE)
+
         if tool is None:
             self._tool = IES_TOOL
         else:
@@ -1065,12 +1114,21 @@ class RdfsResource(metaclass=Unique):
             self._uri = self.tool.generate_data_uri()
         else:
             self._uri = uri
-
-        for cls in classes:
-            self.tool.add_triple(subject=self._uri, predicate=RDF_TYPE, obj=cls)
-        self._classes = classes
+        if self._classes is not None:
+            for cls in self._classes:
+                self.tool.add_triple(subject=self._uri, predicate=RDF_TYPE, obj=cls)
 
         self.tool.instances[self._uri] = self
+
+    def _default_class(self,classes,default_class):
+        if not hasattr(self, "_classes"):
+            self._classes = []
+        if classes is None or classes == []:
+            if self._classes == []:
+                self._classes = [default_class]
+        else:
+            self._classes = classes
+
 
     @property
     def tool(self):
@@ -1174,13 +1232,14 @@ class RdfsResource(metaclass=Unique):
             if inst is not None:
                 return inst
             else:
+                if base_type is None:
+                    base_type = RdfsResource
                 logger.warning(
                     f'''String passed instead of object in {context}
                     - assumed URI is defined elsewhere: {reference}
                     - base class {base_type.__name__} has been inferred'''
                 )
-                if base_type is None:
-                    base_type = RdfsResource
+
                 return base_type(tool=self.tool, uri=reference, classes=[])
         elif isinstance(reference, RdfsResource):
             return reference
@@ -1207,8 +1266,7 @@ class RdfsClass(RdfsResource):
             Returns:
                 RdfsClass:
         """
-        if classes is None:
-            classes = [RDFS_CLASS]
+        self._default_class(classes,RDFS_CLASS)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
     def instantiate(self, uri=None) -> RdfsResource:
@@ -1252,8 +1310,9 @@ class Thing(RdfsResource):
             Returns:
                 Thing:
         """
-        if classes is None:
-            classes = [THING]
+
+        self._default_class(classes,THING)
+
         super().__init__(tool=tool, uri=uri, classes=classes)
 
     def add_representation(
@@ -1362,8 +1421,7 @@ class Element(Thing):
             Returns:
                 Element:
         """
-        if classes is None:
-            classes = [ELEMENT]
+        self._default_class(classes,ELEMENT)
 
         super().__init__(tool=tool, uri=uri, classes=classes)
         self._default_state_type = STATE
@@ -1551,8 +1609,7 @@ class Entity(Element):
             Returns:
                 Entity:
         """
-        if classes is None:
-            classes = [ENTITY]
+        self._default_class(classes,ENTITY)
         super().__init__(
             tool=tool, uri=uri, classes=classes, start=start, end=end
         )
@@ -1577,8 +1634,7 @@ class State(Element):
             Returns:
                 State:
         """
-        if classes is None:
-            classes = [STATE]
+        self._default_class(classes,STATE)
         super().__init__(
             tool=tool, uri=uri, classes=classes, start=start, end=end
         )
@@ -1604,8 +1660,7 @@ class DeviceState(State):
             Returns:
                 DeviceState:
         """
-        if classes is None:
-            classes = [DEVICE_STATE]
+        self._default_class(classes,DEVICE_STATE)
         super().__init__(
             tool=tool, uri=uri, classes=classes, start=start, end=end
         )
@@ -1689,8 +1744,7 @@ class Asset(Entity):
             Returns:
                 Device:
         """
-        if classes is None:
-            classes = [ASSET]
+        self._default_class(classes,ASSET)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         self._default_state_type = ASSET_STATE
@@ -1714,8 +1768,7 @@ class AmountOfMoney(Asset):
             Returns:
                 AmountOfMoney:
         """
-        if classes is None:
-            classes = [AMOUNT_OF_MONEY]
+        self._default_class(classes,AMOUNT_OF_MONEY)
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
@@ -1759,8 +1812,7 @@ class Device(Asset, DeviceState):
             Returns:
                 Device:
         """
-        if classes is None:
-            classes = [DEVICE]
+        self._default_class(classes,DEVICE)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         self._default_state_type = DEVICE_STATE
@@ -1786,8 +1838,7 @@ class Account(Entity):
             Returns:
                 Account:
         """
-        if classes is None:
-            classes = [ACCOUNT]
+        self._default_class(classes,ACCOUNT)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         self._default_state_type = ACCOUNT_STATE
@@ -1910,8 +1961,7 @@ class CommunicationsAccount(Account):
             Returns:
                 CommunicationsAccount:
         """
-        if classes is None:
-            classes = [COMMUNICATIONS_ACCOUNT]
+        self._default_class(classes,COMMUNICATIONS_ACCOUNT)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         self._default_state_type = COMMUNICATIONS_ACCOUNT_STATE
@@ -1937,8 +1987,7 @@ class Location(Entity):
             Returns:
                 Location:
         """
-        if classes is None:
-            classes = [LOCATION]
+        self._default_class(classes,LOCATION)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         self._default_state_type = LOCATION_STATE
@@ -1963,8 +2012,7 @@ class Country(Location):
 
         uri = f"http://iso.org/iso3166/country#{country_alpha_3_code}"
 
-        if not classes:
-            classes = [COUNTRY]
+        self._default_class(classes,COUNTRY)
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
@@ -2021,8 +2069,7 @@ class GeoPoint(Location):
             Returns:
                 GeoPoint:
         """
-        if classes is None:
-            classes = [GEOPOINT]
+        self._default_class(classes,GEOPOINT)
 
         uri = "http://geohash.org/" + str(encode(float(lat), float(lon), precision=precision))
         super().__init__(tool=tool, uri=uri, classes=classes)
@@ -2057,8 +2104,7 @@ class ResponsibleActor(Entity):
             Returns:
                 ResponsibleActor:
         """
-        if classes is None:
-            classes = [RESPONSIBLE_ACTOR]
+        self._default_class(classes,RESPONSIBLE_ACTOR)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         self._default_state_type = f"{IES_BASE}ResponsibleActorState"
@@ -2187,8 +2233,7 @@ class Post(ResponsibleActor):
             Returns:
                 Post:
         """
-        if classes is None:
-            classes = [POST]
+        self._default_class(classes,POST)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         if start is not None:
@@ -2225,8 +2270,7 @@ class Person(ResponsibleActor):
             Returns:
                 Person:
         """
-        if classes is None:
-            classes = [PERSON]
+        self._default_class(classes,PERSON)
 
         super().__init__(tool=tool, uri=uri, classes=classes, start=None, end=None)
 
@@ -2350,8 +2394,7 @@ class Organisation(ResponsibleActor):
             Returns:
                 Organisation:
         """
-        if classes is None:
-            classes = [ORGANISATION]
+        self._default_class(classes,ORGANISATION)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         self._default_state_type = f"{IES_BASE}OrganisationState"
@@ -2398,8 +2441,7 @@ class ClassOfElement(RdfsClass, Thing):
             Returns:
                 ClassOfElement:
         """
-        if classes is None:
-            classes = [CLASS_OF_ELEMENT]
+        self._default_class(classes,CLASS_OF_ELEMENT)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
     def add_measure(self, value: str, measure_class: str | None = None,
@@ -2438,8 +2480,7 @@ class ClassOfClassOfElement(RdfsClass, Thing):
             Returns:
                 ClassOfClassOfElement:
         """
-        if classes is None:
-            classes = [CLASS_OF_CLASS_OF_ELEMENT]
+        self._default_class(classes,CLASS_OF_CLASS_OF_ELEMENT)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
 
@@ -2459,8 +2500,7 @@ class ParticularPeriod(Element):
             Returns:
                 ParticularPeriod:
         """
-        if classes is None:
-            classes = [PARTICULAR_PERIOD]
+        self._default_class(classes,PARTICULAR_PERIOD)
         if not time_string:
             raise Exception("No time_string provided for ParticularPeriod")
 
@@ -2493,8 +2533,7 @@ class BoundingState(State):
                 BoundingState:
         """
 
-        if classes is None:
-            classes = [BOUNDING_STATE]
+        self._default_class(classes,BOUNDING_STATE)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
 
@@ -2516,8 +2555,7 @@ class BirthState(BoundingState):
                 BirthState:
         """
 
-        if classes is None:
-            classes = [BIRTH_STATE]
+        self._default_class(classes,BIRTH_STATE)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
 
@@ -2539,8 +2577,7 @@ class DeathState(BoundingState):
                 DeathState:
         """
 
-        if classes is None:
-            classes = [DEATH_STATE]
+        self._default_class(classes,DEATH_STATE)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
 
@@ -2562,8 +2599,7 @@ class UnitOfMeasure(ClassOfClassOfElement):
                 UnitOfMeasure:
         """
 
-        if classes is None:
-            classes = [UNIT_OF_MEASURE]
+        self._default_class(classes,UNIT_OF_MEASURE)
         super().__init__(tool=tool, classes=classes, uri=uri)
 
 
@@ -2589,8 +2625,7 @@ class Representation(ClassOfElement):
                 Representation:
         """
 
-        if classes is None:
-            classes = [REPRESENTATION]
+        self._default_class(classes,REPRESENTATION)
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
@@ -2621,8 +2656,7 @@ class WorkOfDocumentation(Representation):
                 WorkOfDocumentation:
         """
 
-        if classes is None:
-            classes = [WORK_OF_DOCUMENTATION]
+        self._default_class(classes,WORK_OF_DOCUMENTATION)
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
@@ -2650,8 +2684,7 @@ class MeasureValue(Representation):
                 MeasureValue:
         """
 
-        if classes is None:
-            classes = [MEASURE_VALUE]
+        self._default_class(classes,MEASURE_VALUE)
         if not value:
             raise Exception("MeasureValue must have a valid value")
         super().__init__(tool=tool, representation_text=value, uri=uri, classes=classes,
@@ -2694,8 +2727,7 @@ class Measure(ClassOfElement):
             "LuminousIntensity": "ValueInCandela"
         }
 
-        if classes is None:
-            classes = [MEASURE]
+        self._default_class(classes,MEASURE)
         if len(classes) != 1:
             logger.warning("Measure must be just one class, using the first one")
         _class = classes[0]
@@ -2734,8 +2766,7 @@ class Identifier(Representation):
                 Identifier:
         """
 
-        if classes is None:
-            classes = [IDENTIFIER]
+        self._default_class(classes,IDENTIFIER)
         super().__init__(tool=tool, uri=uri, classes=classes, representation_text=id_text,
                         naming_scheme=naming_scheme, literal_type=literal_type)
 
@@ -2761,8 +2792,7 @@ class Name(Representation):
                 Name:
         """
 
-        if classes is None:
-            classes = [NAME]
+        self._default_class(classes,NAME)
 
         super().__init__(
             tool=tool, uri=uri, classes=classes, representation_text=name_text,
@@ -2788,8 +2818,7 @@ class NamingScheme(ClassOfClassOfElement):
             Returns:
                 NamingScheme:
         """
-        if classes is None:
-            classes = [NAMING_SCHEME]
+        self._default_class(classes,NAMING_SCHEME)
         super().__init__(tool=tool, uri=uri, classes=classes)
         if owner is not None:
             self.tool.add_triple(
@@ -2824,8 +2853,7 @@ class Event(Element):
                 Event:
         """
 
-        if classes is None:
-            classes = [EVENT]
+        self._default_class(classes,EVENT)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
     def add_participant(self,
@@ -2861,6 +2889,7 @@ class Event(Element):
             participation_type = f"{IES_BASE}EventParticipant"
 
         participant = EventParticipant(tool=self.tool, uri=uri, start=start, end=end, classes=[participation_type])
+        print(participant)
 
         self.tool.add_triple(participant._uri, f"{IES_BASE}isParticipantIn", self._uri)
         self.tool.add_triple(participant._uri, f"{IES_BASE}isParticipationOf", pe_object._uri)
@@ -2887,9 +2916,8 @@ class EventParticipant(State):
             Returns:
                 EventParticipant:
         """
-
-        if classes is None:
-            classes = [EVENT_PARTICIPANT]
+        print("CLASSES",classes,uri)
+        self._default_class(classes,EVENT_PARTICIPANT)
         super().__init__(tool=tool, start=start, end=end, uri=uri, classes=classes)
 
 
@@ -2915,8 +2943,7 @@ class Communication(Event):
                 Communication:
         """
 
-        if classes is None:
-            classes = [COMMUNICATION]
+        self._default_class(classes,COMMUNICATION)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         if message_content:
@@ -2984,8 +3011,7 @@ class PartyInCommunication(Event):
                 PartyInCommunication:
         """
 
-        if classes is None:
-            classes = [PARTY_IN_COMMUNICATION]
+        self._default_class(classes,PARTY_IN_COMMUNICATION)
 
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
         if communication is not None:
