@@ -295,7 +295,7 @@ class IESTool:
         test_uri2 = self.generate_data_uri(context="test")
         if not validators.url(test_uri2):
             logger.error(
-                f"Default data namespace is not generating valid URIs when context is set: {self.default_data_namespace}")
+                f"Default data namespace is not generating valid URIs when context is: {self.default_data_namespace}")
 
     def add_classes(self, additional_classes: dict):
         """

@@ -1,16 +1,15 @@
-import ies_tool.ies_tool as ies
-
+from ies_tool.ies_tool import Event, IESTool
 
 file_name = "sample_participant.ttl"
 data_ns = "http://telicent.io/data#"
 participant_uri = data_ns + "event_participant_A"
 
-tool = ies.IESTool(mode="rdflib")
+tool = IESTool(mode="rdflib")
 
 tool.add_prefix("data:", data_ns)
 
 # create event
-my_event =ies.Event(tool=tool,uri =data_ns +"my_event" )
+my_event =Event(tool=tool,uri =data_ns +"my_event" )
 print(my_event._classes)
 
 # add participant to event
