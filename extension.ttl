@@ -1,7 +1,14 @@
 @prefix : <http://example.com/rdf/testdata#> .
 @prefix ies: <http://ies.data.gov.uk/ontology/ies4#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-:da61417e224c4b9cb1ec618a98fee8b8_0 a ies:ExchangePayload .
+:819d9c57c85746c3a4c84d4cc915368a_3 a ies:Device .
 
-:da61417e224c4b9cb1ec618a98fee8b8_1 a ies:Widget .
+<http://geohash.org/sk0v2y> a ies:GeoPoint ;
+    ies:isIdentifiedBy <http://geohash.org/sk0v2y_LAT>,
+        <http://geohash.org/sk0v2y_LON> .
+
+<http://geohash.org/sk0v2y_LAT> ies:representationValue 23.4567891234 .
+
+<http://geohash.org/sk0v2y_LON> ies:representationValue 12.3456891234 .
 
