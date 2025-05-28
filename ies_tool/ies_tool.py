@@ -280,6 +280,15 @@ class IESTool:
         # the class definitions and didn't want to create a circular dependency...again
         self.base_classes = self._all_python_subclasses({}, RdfsResource, 0)
 
+    def add_classes(self, additional_classes: dict):
+        """
+        Args:
+            additional_classes (dict):
+                A dictionary of additional classes to add to the ontology. The key is the URI of the class,
+                and the value is a list of superclasses of the class (i.e. a list of URIs)
+        """
+        self.ontology.add_classes(additional_classes)
+
     @property
     def default_data_namespace(self):
         return self.prefixes[":"]
