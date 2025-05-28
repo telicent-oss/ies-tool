@@ -1,9 +1,7 @@
 @prefix : <http://example.com/rdf/testdata#> .
 @prefix ies: <http://ies.data.gov.uk/ontology/ies4#> .
 
-:da2f087c113a43dca4d48c3454a9a908_000000 a ies:ExchangePayload .
+:2e9ae7047caf48a58f15d71e3b86822c_000000 a ies:ExchangePayload .
 
-:da2f087c113a43dca4d48c3454a9a908_000001 a ies:Device .
-
-:da2f087c113a43dca4d48c3454a9a908_000003 a ies:Device .
+:2e9ae7047caf48a58f15d71e3b86822c_000001 a ies:Widget .
 

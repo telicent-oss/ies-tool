@@ -4,7 +4,7 @@ import io
 import json
 import logging
 
-from rdflib import Graph
+from rdflib import Graph, URIRef
 from rdflib.plugins.sparql.results.jsonresults import JSONResultSerializer
 
 __license__ = """
@@ -143,7 +143,9 @@ class Ontology:
             for cls, superclasses in additional_classes.items():
                 if superclasses is not None and len(superclasses) > 0:
                     for superclass in superclasses:
-                        self.graph.add((cls, "http://www.w3.org/2000/01/rdf-schema#subClassOf", superclass))
+                        self.graph.add((URIRef(cls),
+                                       URIRef("http://www.w3.org/2000/01/rdf-schema#subClassOf"),
+                                       URIRef(superclass)))
                 else:
                     self.graph.add((cls, "http://www.w3.org/2000/01/rdf-schema#subClassOf", "http://www.w3.org/2000/01/rdf-schema#Class"))
         self.__cache_classes()

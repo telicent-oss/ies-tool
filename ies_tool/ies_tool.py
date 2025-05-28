@@ -288,6 +288,7 @@ class IESTool:
                 and the value is a list of superclasses of the class (i.e. a list of URIs)
         """
         self.ontology.add_classes(additional_classes)
+        self.base_classes = self._all_python_subclasses({}, RdfsResource, 0)
 
     @property
     def default_data_namespace(self):
