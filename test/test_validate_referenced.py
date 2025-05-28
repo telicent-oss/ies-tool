@@ -7,7 +7,7 @@ class TestInferredClasses(unittest.TestCase):
     def setUp(self):
         self.tool = ies.IESTool(mode="rdflib")
         self.clear_graph()
-        self.save_rdf = False
+        self.save_rdf = True
         self.file_name = "test/test_inferred_classes.ttl"
         self.IES_BASE = "http://ies.data.gov.uk/ontology/ies4#"
         self.file_name = "sample_participant.ttl"
@@ -24,16 +24,16 @@ class TestInferredClasses(unittest.TestCase):
         my_event.add_participant(participating_entity = self.participating_entity_uri,
                                  uri = self.participant_uri)
 
-        participant_query = """
+        participant_query = f"""
         PREFIX ies: <http://ies.data.gov.uk/ontology/ies4#>
-        ASK {
-            ?participant a ies:EventParticipant ;
-                        ies:isParticipationOf ?participating_entity ;
-                        ies:isParticipantIn ?event .
+        ASK {{
+            <{self.participant_uri}> a ies:EventParticipant ;
+                        ies:isParticipationOf <{self.participating_entity_uri}> ;
+                        ies:isParticipantIn <{self.data_ns}my_event> .
 
-            ?event a ies:Event .
-            ?participating_entity a ies:Entity .
-        }
+            <{self.data_ns}my_event> a ies:Event .
+            <{self.participating_entity_uri}> a ies:Entity .
+        }}
         """
 
         result = self.tool.graph.query(participant_query)
@@ -43,5 +43,4 @@ class TestInferredClasses(unittest.TestCase):
         if self.save_rdf:
             self.tool.graph.serialize(destination=self.file_name, format='turtle')
             print(f"RDF graph saved to {self.file_name}")
-
 
