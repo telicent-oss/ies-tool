@@ -1,10 +1,11 @@
-from ies_tool.ies_tool import Event, IESTool
-
+from ies_tool.ies_tool import Event, EventParticipant, IESTool
+IES_BASE = "http://ies.data.gov.uk/ontology/ies4#"
 file_name = "sample_participant.ttl"
 data_ns = "http://telicent.io/data#"
 participant_uri = data_ns + "event_participant_A"
 
 tool = IESTool(mode="rdflib")
+
 
 tool.add_prefix("data:", data_ns)
 
