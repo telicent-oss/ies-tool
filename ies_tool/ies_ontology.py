@@ -30,6 +30,7 @@ IES_BASE = "http://ies.data.gov.uk/ontology/ies4#"
 
 class Ontology:
     def __init__(self, filename: str | None = "./ies4-3.ttl", additional_classes: dict = None):
+
         """
         IES Tools stores a copy of the IES ontology as an RDFlib graph.
         It also caches properties and classes into simple Python lists

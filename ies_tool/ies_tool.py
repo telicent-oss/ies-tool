@@ -54,7 +54,7 @@ RDFS_CLASS = "http://www.w3.org/2000/01/rdf-schema#Class"
 
 TELICENT_PRIMARY_NAME = "http://telicent.io/ontology/primaryName"
 
-EXCHANGED_ITEM = f"{IES_BASE}ExchangedItem"
+THING = f"{IES_BASE}Thing"
 ELEMENT = f"{IES_BASE}Element"
 CLASS_OF_ELEMENT = f"{IES_BASE}ClassOfElement"
 CLASS_OF_CLASS_OF_ELEMENT = f"{IES_BASE}ClassOfClassOfElement"
@@ -221,7 +221,9 @@ class IESTool:
         self.current_dir = pathlib.Path(__file__).parent.resolve()
 
         local_folder = os.path.dirname(os.path.realpath(__file__))
+
         ont_file = os.path.join(local_folder, "ies4-3.ttl")
+
         self.ontology = Ontology(ont_file,additional_classes=additional_classes)
 
         self.__mode = mode
@@ -1273,25 +1275,27 @@ class RdfsClass(RdfsResource):
         return self.tool.add_triple(sub_class, f"{RDFS}subClassOf", self.uri)
 
 
-class ExchangedItem(RdfsResource):
+class Thing(RdfsResource):
     """
-        A Python wrapper class for IES ExchangedItem
+        A Python wrapper class for IES Thing (Replaced IES ExchangedItem)
     """
 
     def __init__(
             self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None):
         """
-            Instantiate the IES ExchangedItem
+            Instantiate the IES Thing
 
             Args:
                 tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES ExchangedItem
+                uri (str): the URI of the IES Thing
                 classes (list): the IES types to instantiate
 
             Returns:
-                ExchangedItem:
+                Thing:
         """
-        self._default_class(classes,EXCHANGED_ITEM)
+
+        self._default_class(classes,THING)
+
         super().__init__(tool=tool, uri=uri, classes=classes)
 
     def add_representation(
@@ -1381,7 +1385,7 @@ class ExchangedItem(RdfsResource):
         return representation
 
 
-class Element(ExchangedItem):
+class Element(Thing):
     """
         A Python wrapper class for IES Element
     """
@@ -2403,7 +2407,7 @@ class Organisation(ResponsibleActor):
         return post
 
 
-class ClassOfElement(RdfsClass, ExchangedItem):
+class ClassOfElement(RdfsClass, Thing):
     """
     Python wrapper class for IES ClassOfElement
     """
@@ -2442,7 +2446,7 @@ class ClassOfElement(RdfsClass, ExchangedItem):
                              obj=measure._uri)
 
 
-class ClassOfClassOfElement(RdfsClass, ExchangedItem):
+class ClassOfClassOfElement(RdfsClass, Thing):
     """
     Python wrapper class for IES ClassOfClassOfElement
     """
@@ -2483,13 +2487,15 @@ class ParticularPeriod(Element):
         if not time_string:
             raise Exception("No time_string provided for ParticularPeriod")
 
-        iso8601_time_string = time_string.replace(" ", "T")
-        uri = f"http://iso.org/iso8601#{str(iso8601_time_string)}"
+        iso8601_time_string_punctuated = time_string.replace(" ", "T").rstrip("Z")
+        iso8601_time_string_non_punctuated = (iso8601_time_string_punctuated.replace("-", "")
+                                                                            .replace(":", ""))
+        uri = f"http://iso.org/iso8601#{iso8601_time_string_non_punctuated}"
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
         self.add_literal(predicate=f"{IES_BASE}iso8601PeriodRepresentation",
-                         literal=str(iso8601_time_string))
+                         literal=str(iso8601_time_string_punctuated))
 
 
 class BoundingState(State):
