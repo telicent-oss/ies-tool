@@ -1,3 +1,4 @@
+# test with python -m test.test_validate_referenced
 from ies_tool.ies_tool import Event, IESTool
 
 IES_BASE = "http://ies.data.gov.uk/ontology/ies4#"

@@ -1,1 +1,0 @@
-python -m test.test_validate_referenced

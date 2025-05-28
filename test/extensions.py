@@ -1,3 +1,4 @@
+# test with python -m test.extensions
 from geohash_tools import encode
 
 from ies_tool.ies_tool import Device, GeoPoint, IESTool
