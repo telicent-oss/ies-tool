@@ -1,4 +1,5 @@
-from ies_tool.ies_tool import Event, EventParticipant, IESTool
+from ies_tool.ies_tool import Event, IESTool
+
 IES_BASE = "http://ies.data.gov.uk/ontology/ies4#"
 file_name = "sample_participant.ttl"
 data_ns = "http://telicent.io/data#"
