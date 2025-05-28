@@ -166,6 +166,7 @@ class IESTool:
         # Instances dict is used as a local cache for all instances created. It's a bit wasteful, but it does
         # allow quick access to IES Tool instances
         self.instances: dict = {}
+        self.session_instance_count = 0
 
         # Initiate the storage plugins dictionary
         self.plug_in: IESPlugin | None = None
@@ -258,11 +259,12 @@ class IESTool:
         self.graph = Graph()
 
         self.prefixes: dict[str, str] = {}
+        self.add_prefix(":",IES_BASE)
         self.default_data_namespace = default_data_namespace
 
 
         #Test that the default data stub generates valid URIs
-        self.session_instance_count = 0
+
         self.check_valid_uri_production()
         # Establish a set of useful prefixes
         for k, v in DEFAULT_PREFIXES.items():
@@ -730,7 +732,7 @@ class IESTool:
         """
         if context is None:
             context = ""
-        uri = f'{self.default_data_namespace}{self.session_uuid_str}{context}_{self.session_instance_count:06d}'
+        uri = f'{self.default_data_namespace}{self.session_uuid_str}{context}_{self.session_instance_count}'
         self.session_instance_count = self.session_instance_count + 1
         return uri
 
