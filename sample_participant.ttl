@@ -2,7 +2,7 @@
 @prefix data: <http://telicent.io/data#> .
 @prefix ies: <http://ies.data.gov.uk/ontology/ies4#> .
 
-:ce37bf856b454fdd938bb65308b3fc04_000000 a ies:EventParticipant ;
+:0eb7295b51bb4fc88323c458344b08a7_000000 a ies:EventParticipant ;
     ies:isParticipantIn data:my_event ;
     ies:isParticipationOf data:event_participant_A .
 
