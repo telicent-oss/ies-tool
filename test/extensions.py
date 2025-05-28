@@ -1,5 +1,7 @@
-from ies_tool.ies_tool import Device, GeoPoint, IESTool
 from geohash_tools import encode
+
+from ies_tool.ies_tool import Device, GeoPoint, IESTool
+
 ADDITONAL_CLASSES = {
     "http://ies.data.gov.uk/ontology/ies4#Widget": ['http://ies.data.gov.uk/ontology/ies4#Device'],
     "http://ies.data.gov.uk/ontology/ies4#Gizmo": ['http://ies.data.gov.uk/ontology/ies4#Device']
