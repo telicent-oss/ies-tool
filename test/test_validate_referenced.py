@@ -7,7 +7,7 @@ class TestInferredClasses(unittest.TestCase):
     def setUp(self):
         self.tool = ies.IESTool(mode="rdflib")
         self.clear_graph()
-        self.save_rdf = True
+        self.save_rdf = False
         self.file_name = "test/test_inferred_classes.ttl"
         self.IES_BASE = "http://ies.data.gov.uk/ontology/ies4#"
         self.file_name = "sample_participant.ttl"
