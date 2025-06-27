@@ -240,6 +240,7 @@ class IESTool:
                 else:
                     logger.warning("IES Tool cannot validate RDF using this plugin, validation will be disabled")
                     self.__validate = False
+
         elif mode == "rdflib" and validate:
             if not validate:
                 logger.warning('Enabling validation for rdflib mode')
