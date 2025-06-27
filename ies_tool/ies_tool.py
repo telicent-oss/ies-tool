@@ -234,8 +234,12 @@ class IESTool:
         if self.__mode == "plugin":
             logger.info("Using a user-defined storage plugin")
             if validate:
-                logger.warning("IES Tool cannot validate unless in 'rdflib' mode")
-                self.__validate = False
+                if self.plug_in.can_validate():
+                    logger.info("Plugin supports validation")
+                    self.__validate = True
+                else:
+                    logger.warning("IES Tool cannot validate RDF using this plugin, validation will be disabled")
+                    self.__validate = False
         elif mode == "rdflib" and validate:
             if not validate:
                 logger.warning('Enabling validation for rdflib mode')
