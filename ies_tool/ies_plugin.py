@@ -47,7 +47,7 @@ class IESPlugin:
     def can_validate(self) -> bool:
         raise NotImplementedError
 
-    def get_warnings(self) -> list:
+    def get_warnings(self) -> list[str]:
         raise NotImplementedError
 
     def get_triple_count(self) -> int:
