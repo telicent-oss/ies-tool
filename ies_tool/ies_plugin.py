@@ -44,7 +44,7 @@ class IESPlugin:
     def can_validate(self) -> bool:
         raise NotImplementedError
 
-    def get_warnings(self):
+    def get_warnings(self) -> list[str]:
         raise NotImplementedError
 
     @property
