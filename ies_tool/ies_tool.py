@@ -661,6 +661,8 @@ class IESTool:
                     f" - you tried to export as {rdf_format}"
                 )
             ret_dict["triples"] = self.plug_in.get_rdf()
+            if self.plug_in.can_validate():
+                ret_dict["validation_errors"] = self.plug_in.get_warnings().join("\n")
             if clear:
                 self.clear_graph()
         else:
