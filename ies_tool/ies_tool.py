@@ -341,6 +341,11 @@ class IESTool:
         if self.__mode == "rdflib":
             ns = Namespace(uri)
             self.graph.bind(prefix.replace(":", ""), ns)
+        elif self.__mode == "plugin":
+            if self.plug_in.can_suppport_prefixes():
+                self.plug_in.add_prefix(prefix, uri)
+            else:
+                logger.warning("Current plugin does not support prefixes, so this will be ignored")
 
     def _mint_dependent_uri(self, parent_uri: str, postfix: str) -> str:
         new_uri = f'{parent_uri}_{postfix}_001'
@@ -660,7 +665,7 @@ class IESTool:
                     f"Current plugin only supports {str(self.plug_in.supported_rdf_serialisations)}"
                     f" - you tried to export as {rdf_format}"
                 )
-            ret_dict["triples"] = self.plug_in.get_rdf()
+            ret_dict["triples"] = self.plug_in.get_rdf(rdf_format=rdf_format)
             if self.plug_in.can_validate():
                 ret_dict["validation_errors"] = self.plug_in.get_warnings().join("\n")
             if clear:
