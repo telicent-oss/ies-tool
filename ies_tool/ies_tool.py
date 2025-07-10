@@ -2901,7 +2901,6 @@ class Event(Element):
             participation_type = f"{IES_BASE}EventParticipant"
 
         participant = EventParticipant(tool=self.tool, uri=uri, start=start, end=end, classes=[participation_type])
-        print(participant)
 
         self.tool.add_triple(participant._uri, f"{IES_BASE}isParticipantIn", self._uri)
         self.tool.add_triple(participant._uri, f"{IES_BASE}isParticipationOf", pe_object._uri)
@@ -2928,7 +2927,6 @@ class EventParticipant(State):
             Returns:
                 EventParticipant:
         """
-        print("CLASSES",classes,uri)
         self._default_class(classes,EVENT_PARTICIPANT)
         super().__init__(tool=tool, start=start, end=end, uri=uri, classes=classes)
 
