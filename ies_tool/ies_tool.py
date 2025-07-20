@@ -113,6 +113,7 @@ DEFAULT_PREFIXES = {
     "rfc5322:": "https://ietf.org/rfc5322#",
     "ieee802:": "https://www.ieee802.org#",
     "ies:": IES_BASE,
+    ":": "http://example.com/rdf/testdata#"
 }
 
 
