@@ -5,7 +5,7 @@ import json
 import logging
 import os
 import pathlib
-import uuid
+import shortuuid
 import warnings
 from typing import TypeVar
 
@@ -218,7 +218,7 @@ class IESTool:
 
 
         self.session_uuid_str = None
-        self.session_uuid = None
+
         self.current_dir = pathlib.Path(__file__).parent.resolve()
 
         local_folder = os.path.dirname(os.path.realpath(__file__))
@@ -264,7 +264,7 @@ class IESTool:
         self.graph = Graph()
 
         self.prefixes: dict[str, str] = {}
-        self.add_prefix(":",IES_BASE)
+        self.add_prefix("ies:",IES_BASE)
         self.default_data_namespace = default_data_namespace
 
 
@@ -475,7 +475,7 @@ class IESTool:
         self.shacl.parse(shacl_filename)
         logger.info("SHACL ready")
 
-    def clear_graph(self) -> uuid.UUID:
+    def clear_graph(self) -> str:
         """
         Clears the graph currently in use. This is the quickest way to run repeated IES data runs - far quicker
         than constantly initiating new IESTool objects
@@ -494,11 +494,11 @@ class IESTool:
             self.graph = Graph()
             for prefix in self.prefixes:
                 self.graph.bind(prefix.replace(":", ""), self.prefixes[prefix])
-        self.session_uuid = uuid.uuid4()
-        self.session_uuid_str = self.session_uuid.hex
+        self.session_uuid_str = shortuuid.uuid()
+
         self.session_instance_count = 0
         self.instances = {}
-        return self.session_uuid
+        return self.session_uuid_str
 
     def run_sparql_update(self, query: str, security_label: str | None = None):
         """
@@ -653,7 +653,7 @@ class IESTool:
         """
 
         ret_dict: dict[str, str | list] = {
-            "session_uuid": self.session_uuid,
+            "session_uuid": self.session_uuid_str,
             "triples": "",
             "validation_errors": ""
         }
