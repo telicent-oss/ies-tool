@@ -5,7 +5,6 @@ import json
 import logging
 import os
 import pathlib
-import shortuuid
 import warnings
 from typing import TypeVar
 
@@ -13,6 +12,7 @@ import iso4217parse
 import phonenumbers
 import pycountry
 import requests
+import shortuuid
 import validators
 import validators.uri
 from geohash_tools import encode
@@ -45,7 +45,7 @@ ADDITIONAL_CLASSES = {}
 
 IES_TOOL = None
 
-RdfsClassType = TypeVar('RdfsClassType', bound='RdfsClass')
+RdfsClassType = TypeVar("RdfsClassType", bound="RdfsClass")
 
 RDFS = "http://www.w3.org/2000/01/rdf-schema#"
 RDFS_RESOURCE = "http://www.w3.org/2000/01/rdf-schema#Resource"
@@ -112,7 +112,7 @@ DEFAULT_PREFIXES = {
     "IMSI:": "https://www.itu.int/e212#",
     "rfc5322:": "https://ietf.org/rfc5322#",
     "ieee802:": "https://www.ieee802.org#",
-    "ies:": IES_BASE
+    "ies:": IES_BASE,
 }
 
 
@@ -133,9 +133,15 @@ class IESTool:
     """
 
     def __init__(
-            self, default_data_namespace: str = "http://example.com/rdf/testdata#", mode: str = "rdflib",
-            plug_in: IESPlugin | None = None, validate: bool = False, server_host: str = "http://localhost:3030/",
-            server_dataset: str = "ds", default_security_label: str | None = None, additional_classes: dict = None
+        self,
+        default_data_namespace: str = "http://example.com/rdf/testdata#",
+        mode: str = "rdflib",
+        plug_in: IESPlugin | None = None,
+        validate: bool = False,
+        server_host: str = "http://localhost:3030/",
+        server_dataset: str = "ds",
+        default_security_label: str | None = None,
+        additional_classes: dict = None,
     ):
         """
 
@@ -211,11 +217,10 @@ class IESTool:
             "token",  # Tokenized strings
             "NMTOKEN",  # XML NMTOKENs
             "Name",  # XML Names
-            "NCName"
+            "NCName",
         ]
 
         # Property initialisations
-
 
         self.session_uuid_str = None
 
@@ -225,7 +230,7 @@ class IESTool:
 
         ont_file = os.path.join(local_folder, "ies4-3.ttl")
 
-        self.ontology = Ontology(ont_file,additional_classes=additional_classes)
+        self.ontology = Ontology(ont_file, additional_classes=additional_classes)
 
         self.__mode = mode
         if mode not in ["rdflib", "sparql_server"]:
@@ -238,25 +243,33 @@ class IESTool:
                     logger.info("Plugin supports validation")
                     self.__validate = True
                 else:
-                    logger.warning("IES Tool cannot validate RDF using this plugin, validation will be disabled")
+                    logger.warning(
+                        "IES Tool cannot validate RDF using this plugin, validation will be disabled"
+                    )
                     self.__validate = False
 
         elif mode == "rdflib" and validate:
             if not validate:
-                logger.warning('Enabling validation for rdflib mode')
+                logger.warning("Enabling validation for rdflib mode")
             self.__validate = True
             self._init_shacl(os.path.join(self.current_dir, "ies_r4_3_0.shacl"))
-            logger.info("IES Tool set to validate all messages. This might get a bit slow")
+            logger.info(
+                "IES Tool set to validate all messages. This might get a bit slow"
+            )
         elif mode == "sparql_server":
             self.server_host = server_host
             self.server_dataset = server_dataset
             self.default_security_label = default_security_label or ""
             try:
                 query = "SELECT * WHERE { ?s ?p ?o } LIMIT 2"
-                get_uri = self.server_host + self.server_dataset + "/query?query=" + query
+                get_uri = (
+                    self.server_host + self.server_dataset + "/query?query=" + query
+                )
                 requests.get(get_uri)
             except ConnectionError as e:
-                raise RuntimeError(f"Could not connect to SPARQL endpoint at {self.server_host}") from e
+                raise RuntimeError(
+                    f"Could not connect to SPARQL endpoint at {self.server_host}"
+                ) from e
 
         logger.debug("initialising data graph")
 
@@ -264,11 +277,10 @@ class IESTool:
         self.graph = Graph()
 
         self.prefixes: dict[str, str] = {}
-        self.add_prefix("ies:",IES_BASE)
+        self.add_prefix("ies:", IES_BASE)
         self.default_data_namespace = default_data_namespace
 
-
-        #Test that the default data stub generates valid URIs
+        # Test that the default data stub generates valid URIs
 
         self.check_valid_uri_production()
         # Establish a set of useful prefixes
@@ -296,11 +308,14 @@ class IESTool:
     def check_valid_uri_production(self):
         test_uri1 = self.generate_data_uri()
         if not validators.url(test_uri1):
-            logger.error(f"Default data namespace is not generating valid URIs: {self.default_data_namespace}")
+            logger.error(
+                f"Default data namespace is not generating valid URIs: {self.default_data_namespace}"
+            )
         test_uri2 = self.generate_data_uri(context="test")
         if not validators.url(test_uri2):
             logger.error(
-                f"Default data namespace is not generating valid URIs when context is: {self.default_data_namespace}")
+                f"Default data namespace is not generating valid URIs when context is: {self.default_data_namespace}"
+            )
 
     def add_classes(self, additional_classes: dict):
         """
@@ -345,14 +360,16 @@ class IESTool:
             if self.plug_in.can_suppport_prefixes():
                 self.plug_in.add_prefix(prefix, uri)
             else:
-                logger.warning("Current plugin does not support prefixes, so this will be ignored")
+                logger.warning(
+                    "Current plugin does not support prefixes, so this will be ignored"
+                )
 
     def _mint_dependent_uri(self, parent_uri: str, postfix: str) -> str:
-        new_uri = f'{parent_uri}_{postfix}_001'
+        new_uri = f"{parent_uri}_{postfix}_001"
         counter = 1
         while new_uri in self.instances:
             counter += 1
-            new_uri = f'{parent_uri}_{postfix}_{counter:03d}'
+            new_uri = f"{parent_uri}_{postfix}_{counter:03d}"
         return new_uri
 
     def format_prefixes(self) -> str:
@@ -363,7 +380,7 @@ class IESTool:
             str: The formatted prefixes
         """
 
-        prefix_str = ''
+        prefix_str = ""
         for prefix in self.prefixes:
             prefix_str = f"{prefix_str}PREFIX {prefix} <{self.prefixes[prefix]}> "
         return prefix_str
@@ -384,29 +401,32 @@ class IESTool:
         if hierarchy is None:
             hierarchy = {}
 
-        #levels are used because this function is called recursively and we want to stratify the dictionary of
+        # levels are used because this function is called recursively and we want to stratify the dictionary of
         # subclasses by level
         if level not in hierarchy:
             hierarchy[level] = {}
-        uri = ''
-        #first check to see if this is an RDFS class instead of an IES one, then a quick text fix to get the URI
+        uri = ""
+        # first check to see if this is an RDFS class instead of an IES one, then a quick text fix to get the URI
         if "Rdfs" in cls.__name__:
             uri = cls.__name__.replace("Rdfs", RDFS)
         else:
             uri = IES_BASE + cls.__name__
-        #get the RDFS subclasses of this class
+        # get the RDFS subclasses of this class
         ies_subs = self.ontology.make_results_set_from_query(
-            "SELECT ?p WHERE {?p <http://www.w3.org/2000/01/rdf-schema#subClassOf>* <" + uri + ">}", "p")
-        hierarchy[level][uri] = {'python_class': cls, 'ies_subclasses': list(ies_subs)}
+            "SELECT ?p WHERE {?p <http://www.w3.org/2000/01/rdf-schema#subClassOf>* <"
+            + uri
+            + ">}",
+            "p",
+        )
+        hierarchy[level][uri] = {"python_class": cls, "ies_subclasses": list(ies_subs)}
         subclasses = cls.__subclasses__()
         if len(subclasses) > 0:
             for sub in subclasses:
                 self._all_python_subclasses(hierarchy, sub, level + 1)
         return hierarchy
 
-
     def _determine_base_class(self, classes):
-        """ Given a list of IES or RDFS classes, this function will attempt to return the most appropriate Python base
+        """Given a list of IES or RDFS classes, this function will attempt to return the most appropriate Python base
         class (and its level identifier)
 
         Args:
@@ -421,10 +441,10 @@ class IESTool:
             for bc in level:
                 base_class = level[bc]
                 for cls in classes:
-                    if cls in base_class['ies_subclasses']:
+                    if cls in base_class["ies_subclasses"]:
                         return base_class["python_class"], level_number
 
-        return RdfsResource, 0 #if we can't find a match, return the top level class
+        return RdfsResource, 0  # if we can't find a match, return the top level class
 
     def _get_instance(self, uri: str) -> RdfsResource | None:
         """
@@ -515,11 +535,13 @@ class IESTool:
                 security_label = self.default_security_label
             post_uri = f"{self.server_host}{self.server_dataset}/update"
             headers = {
-                'Accept': '*/*',
-                'Security-Label': security_label,
-                'Content-Type': 'application/sparql-update'
+                "Accept": "*/*",
+                "Security-Label": security_label,
+                "Content-Type": "application/sparql-update",
             }
-            requests.post(post_uri, headers=headers, data=f"{self.format_prefixes()}{query}")
+            requests.post(
+                post_uri, headers=headers, data=f"{self.format_prefixes()}{query}"
+            )
         elif self.__mode == "rdflib":
             self.graph.update(f"{self.format_prefixes()}{query}")
         else:
@@ -538,9 +560,12 @@ class IESTool:
 
         result_object = self.run_sparql_query(query)
         return_set = set()
-        if "results" in result_object.keys() and "bindings" in result_object["results"].keys():
-            for binding in result_object["results"]['bindings']:
-                return_set.add(binding[sparql_var_name]['value'])
+        if (
+            "results" in result_object.keys()
+            and "bindings" in result_object["results"].keys()
+        ):
+            for binding in result_object["results"]["bindings"]:
+                return_set.add(binding[sparql_var_name]["value"])
         return list(return_set)
 
     def run_sparql_query(self, query: str) -> dict:
@@ -553,7 +578,9 @@ class IESTool:
 
         if self.__mode == "sparql_server":
             get_uri = f"{self.server_host}{self.server_dataset}/query"
-            response = requests.get(get_uri, params={'query': f"{self.format_prefixes()}{query}"})
+            response = requests.get(
+                get_uri, params={"query": f"{self.format_prefixes()}{query}"}
+            )
             return response.json()
         elif self.__mode == "rdflib":
             self.graph.query(f"{self.format_prefixes()}{query}")
@@ -563,7 +590,6 @@ class IESTool:
 
             raise RuntimeError(
                 f"Cannot issue SPARQL Query unless using rdflib or remote sparql. You are using {self.__mode}"
-
             )
 
     @staticmethod
@@ -586,11 +612,13 @@ class IESTool:
                 warnings.warn(
                     f"Triple component {output} is not a string, use of rdflib types is deprecated, please use strings",
                     DeprecationWarning,
-                    stacklevel=2
+                    stacklevel=2,
                 )
                 return output
             except Exception as e:
-                raise RuntimeError(f"Cannot create a triple where one place is of type {str(_input)}") from e
+                raise RuntimeError(
+                    f"Cannot create a triple where one place is of type {str(_input)}"
+                ) from e
 
     @staticmethod
     def _prep_object(obj: str, is_literal: bool, literal_type: str) -> str:
@@ -609,13 +637,19 @@ class IESTool:
         if is_literal:
             o = f'"{obj}"'
             if literal_type:
-                o = f'{o}^^{literal_type}'
+                o = f"{o}^^{literal_type}"
         else:
-            o = f'<{obj}>'
+            o = f"<{obj}>"
         return o
 
-    def _prep_spo(self, subject: str, predicate: str, obj: str, is_literal: bool = True,
-                  literal_type: str | None = None) -> str:
+    def _prep_spo(
+        self,
+        subject: str,
+        predicate: str,
+        obj: str,
+        is_literal: bool = True,
+        literal_type: str | None = None,
+    ) -> str:
         """
         Formats an RDF triple, so it can be used in a SPARQL query or update
 
@@ -655,7 +689,7 @@ class IESTool:
         ret_dict: dict[str, str | list] = {
             "session_uuid": self.session_uuid_str,
             "triples": "",
-            "validation_errors": ""
+            "validation_errors": "",
         }
         if self.__mode == "sparql_server":
             logger.warning("Export RDF not supported in sparql server mode")
@@ -676,14 +710,14 @@ class IESTool:
                     self.graph,
                     shacl_graph=self.shacl,
                     ont_graph=self.ontology.graph,
-                    inference='rdfs',
+                    inference="rdfs",
                     abort_on_first=True,
                     allow_infos=False,
                     allow_warnings=False,
                     meta_shacl=False,
                     advanced=False,
                     js=False,
-                    debug=False
+                    debug=False,
                 )
                 conforms, results_graph, results_text = r
                 if not conforms:
@@ -709,7 +743,12 @@ class IESTool:
             logger.info(f"File written: {filename}")
 
     def in_graph(
-            self, subject: str, predicate: str, obj: str, is_literal: bool = False, literal_type: str = "string"
+        self,
+        subject: str,
+        predicate: str,
+        obj: str,
+        is_literal: bool = False,
+        literal_type: str = "string",
     ) -> bool:
         """
         Checks to see if we already have a triple in the current graph
@@ -728,7 +767,7 @@ class IESTool:
         if self.__mode == "plugin":
             return self.plug_in.in_graph(subject, predicate, obj, is_literal=is_literal)
         elif self.__mode == "sparql_server":
-            f'ASK {{ <> <>  {self._prep_object(obj, is_literal, literal_type)}}}'
+            f"ASK {{ <> <>  {self._prep_object(obj, is_literal, literal_type)}}}"
         else:
             if is_literal:
                 return (URIRef(subject), URIRef(predicate), Literal(obj)) in self.graph
@@ -744,11 +783,13 @@ class IESTool:
         """
         if context is None:
             context = ""
-        uri = f'{self.default_data_namespace}{self.session_uuid_str}{context}_{self.session_instance_count}'
+        uri = f"{self.default_data_namespace}{self.session_uuid_str}{context}_{self.session_instance_count}"
         self.session_instance_count = self.session_instance_count + 1
         return uri
 
-    def delete_triple(self, subject: str, predicate: str, obj: str, is_literal: bool = False) -> bool:
+    def delete_triple(
+        self, subject: str, predicate: str, obj: str, is_literal: bool = False
+    ) -> bool:
         """
         Removes a triple from a graph when provided with subject, predicate and object as strings
         If removing a literal triple, set the is_literal to True
@@ -768,12 +809,21 @@ class IESTool:
         if self.__mode == "plugin" and not self.plug_in.deletion_supported:
             logger.warning("Triple deletion not currently supported in plugin")
         else:
-            update = f'DELETE DATA {{{self._prep_spo(subject, predicate, obj, is_literal)}}}'
+            update = (
+                f"DELETE DATA {{{self._prep_spo(subject, predicate, obj, is_literal)}}}"
+            )
             self.run_sparql_update(update)
         return True
 
-    def add_to_graph(self, subject: str, predicate: str, obj: str, is_literal: bool = False,
-                     literal_type: str = "string", security_label: str | None = None) -> bool:
+    def add_to_graph(
+        self,
+        subject: str,
+        predicate: str,
+        obj: str,
+        is_literal: bool = False,
+        literal_type: str = "string",
+        security_label: str | None = None,
+    ) -> bool:
         """DEPRECATED - use add_triple()
 
         Args:
@@ -787,13 +837,29 @@ class IESTool:
         Returns:
             bool: _description_
         """
-        warnings.warn("add_to_graph() is deprecated - please use add_triple()",
-                      DeprecationWarning, stacklevel=2)
-        return self.add_triple(subject=subject, predicate=predicate, obj=obj, is_literal=is_literal,
-                               literal_type=literal_type, security_label=security_label)
+        warnings.warn(
+            "add_to_graph() is deprecated - please use add_triple()",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.add_triple(
+            subject=subject,
+            predicate=predicate,
+            obj=obj,
+            is_literal=is_literal,
+            literal_type=literal_type,
+            security_label=security_label,
+        )
 
-    def add_triple(self, subject: str, predicate: str, obj: str, is_literal: bool = False,
-                   literal_type: str = "string", security_label: str | None = None) -> bool:
+    def add_triple(
+        self,
+        subject: str,
+        predicate: str,
+        obj: str,
+        is_literal: bool = False,
+        literal_type: str = "string",
+        security_label: str | None = None,
+    ) -> bool:
         """
         Adds a triple to a graph when provided with subject, predicate and object as strings
         If setting a literal triple, set the is_literal to True
@@ -817,15 +883,23 @@ class IESTool:
 
         if self.__mode == "plugin":
             self.plug_in.add_triple(
-                subject=subject, predicate=predicate, obj=obj, is_literal=is_literal, literal_type=literal_type
+                subject=subject,
+                predicate=predicate,
+                obj=obj,
+                is_literal=is_literal,
+                literal_type=literal_type,
             )
             return True
         elif self.__mode == "sparql_server":
             triple = self._prep_spo(subject, predicate, obj, is_literal, literal_type)
-            query = f'INSERT DATA {{{triple}}}'
+            query = f"INSERT DATA {{{triple}}}"
             self.run_sparql_update(query=query, security_label=security_label)
         elif not self.in_graph(
-                subject=subject, predicate=predicate, obj=obj, is_literal=is_literal, literal_type=literal_type
+            subject=subject,
+            predicate=predicate,
+            obj=obj,
+            is_literal=is_literal,
+            literal_type=literal_type,
         ):
             # See is someone has passed a rdflib type and fix it
             subject = self._str(subject)
@@ -850,7 +924,9 @@ class IESTool:
                 obj = URIRef(obj)
             self.graph.add((URIRef(subject), URIRef(predicate), obj))
 
-    def add_literal_property(self, subject: str, predicate: str, obj: str, literal_type: str = "string") -> bool:
+    def add_literal_property(
+        self, subject: str, predicate: str, obj: str, literal_type: str = "string"
+    ) -> bool:
         """
         Adds a triple where the object is a literal
 
@@ -860,10 +936,17 @@ class IESTool:
             obj (str): The object of the triple to add
             literal_type: the XML datatype to use (default is "string")
         """
-        return self.add_triple(subject, predicate, obj, is_literal=True, literal_type=literal_type)
+        return self.add_triple(
+            subject, predicate, obj, is_literal=True, literal_type=literal_type
+        )
 
-    def instantiate(self, classes: list | None = None, uri: str = None, instance_uri_context: str | None = None,
-                    base_class: RdfsResource | None = None) -> RdfsResource:
+    def instantiate(
+        self,
+        classes: list | None = None,
+        uri: str = None,
+        instance_uri_context: str | None = None,
+        base_class: RdfsResource | None = None,
+    ) -> RdfsResource:
         """
         Instantiates a list of classes
 
@@ -903,9 +986,13 @@ class IESTool:
 
         return base_class(uri=uri, tool=self, classes=classes)
 
-    def create_event(self, uri: str | None = None, classes: list | None = None,
-                     event_start: str | None = None, event_end: str | None = None,
-                     ) -> Event:
+    def create_event(
+        self,
+        uri: str | None = None,
+        classes: list | None = None,
+        event_start: str | None = None,
+        event_end: str | None = None,
+    ) -> Event:
         """
         DEPRECATED - use Event() to instantiate an IES Event.
 
@@ -918,16 +1005,29 @@ class IESTool:
         Returns:
             Event: The created Event wrapped as an IES Event class
         """
-        warnings.warn("IESTool.create_event is deprecated - please initiate Event Python class directly",
-                      DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "IESTool.create_event is deprecated - please initiate Event Python class directly",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if classes is None:
             classes = [EVENT]
 
-        return Event(tool=self, start=event_start, end=event_end, uri=uri, classes=classes)
+        return Event(
+            tool=self, start=event_start, end=event_end, uri=uri, classes=classes
+        )
 
-    def create_person(self, uri: str | None = None, classes: list | None = None,
-                      given_name: str | None = None, surname: str | None = None, dob: str | None = None,
-                      pob: Location | None = None, dod: str | None = None, pod: Location | None = None) -> Person:
+    def create_person(
+        self,
+        uri: str | None = None,
+        classes: list | None = None,
+        given_name: str | None = None,
+        surname: str | None = None,
+        dob: str | None = None,
+        pob: Location | None = None,
+        dod: str | None = None,
+        pod: Location | None = None,
+    ) -> Person:
         """
         DEPRECATED - use Person() to instantiate an IES Person
 
@@ -945,21 +1045,36 @@ class IESTool:
             Person: a Python Person object that wraps the IES Person data
         """
 
-        warnings.warn("IESTool.create_person is deprecated - please initiate Person Python class directly",
-                      DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "IESTool.create_person is deprecated - please initiate Person Python class directly",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         if classes is None:
             classes = [PERSON]
 
         person = Person(
-            tool=self, surname=surname, given_name=given_name, start=dob, place_of_birth=pob,
-            uri=uri, end=dod, place_of_death=pod, classes=classes
+            tool=self,
+            surname=surname,
+            given_name=given_name,
+            start=dob,
+            place_of_birth=pob,
+            uri=uri,
+            end=dod,
+            place_of_death=pod,
+            classes=classes,
         )
 
         return person
 
-    def create_measure(self, uri: str | None = None, classes: list | None = None,
-                       value: str | None = None, uom: UnitOfMeasure | None = None) -> Measure:
+    def create_measure(
+        self,
+        uri: str | None = None,
+        classes: list | None = None,
+        value: str | None = None,
+        uom: UnitOfMeasure | None = None,
+    ) -> Measure:
         """
         DEPRECATED - Use Measure() to instantiate a measure.
 
@@ -972,17 +1087,25 @@ class IESTool:
         Returns:
             Measure - the instance created wrapped as a Python object
         """
-        warnings.warn("IESTool.create_measure is deprecated - please initiate Measure Python class directly",
-                      DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "IESTool.create_measure is deprecated - please initiate Measure Python class directly",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         if classes is None:
             classes = [MEASURE]
 
         return Measure(tool=self, value=value, uom=uom, uri=uri, classes=classes)
 
-    def create_communication(self, uri: str | None = None, classes: list | None = None,
-                             starts_in: str | None = None, ends_in: str | None = None,
-                             message_content: str | None = None) -> Communication:
+    def create_communication(
+        self,
+        uri: str | None = None,
+        classes: list | None = None,
+        starts_in: str | None = None,
+        ends_in: str | None = None,
+        message_content: str | None = None,
+    ) -> Communication:
         """
         DEPRECATED - Use Communication() to Instantiate an IES Communication class
 
@@ -998,18 +1121,31 @@ class IESTool:
         Returns:
             Communication - instance wrapped as a Python Communication object
         """
-        logger.warning("IESTool.create_communication deprecated - please initiate Communication Python class directly")
+        logger.warning(
+            "IESTool.create_communication deprecated - please initiate Communication Python class directly"
+        )
 
         if classes is None:
             classes = [COMMUNICATION]
 
-        communication = Communication(tool=self, uri=uri, classes=classes, start=starts_in, end=ends_in,
-                                      message_content=message_content)
+        communication = Communication(
+            tool=self,
+            uri=uri,
+            classes=classes,
+            start=starts_in,
+            end=ends_in,
+            message_content=message_content,
+        )
         return communication
 
     def create_geopoint(
-            self, uri: str | None = None, classes: list | None = None,
-            lat: float | None = None, lon: float | None = None, precision: int | None = 6, literal_type: str = "decimal"
+        self,
+        uri: str | None = None,
+        classes: list | None = None,
+        lat: float | None = None,
+        lon: float | None = None,
+        precision: int | None = 6,
+        literal_type: str = "decimal",
     ) -> GeoPoint:
         """
         DEPRECATED - use GeoPoint() to create an instance of the IES GeoPoint class.
@@ -1024,9 +1160,11 @@ class IESTool:
         Returns:
             GeoPoint - instance wrapped as a Python GeoPoint object
         """
-        warnings.warn("IESTool.create_geopoint is deprecated - please initiate GeoPoint Python class directly",
-                      DeprecationWarning,
-                      stacklevel=2)
+        warnings.warn(
+            "IESTool.create_geopoint is deprecated - please initiate GeoPoint Python class directly",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         if classes is None:
             classes = [GEOPOINT]
@@ -1035,11 +1173,21 @@ class IESTool:
             if _class not in self.ontology.geopoint_subtypes:
                 logger.warning(f"{_class} is not a subtype of ies:GeoPoint")
         return GeoPoint(
-            tool=self, uri=uri, lat=lat, lon=lon, precision=precision, classes=classes, literal_type=literal_type
+            tool=self,
+            uri=uri,
+            lat=lat,
+            lon=lon,
+            precision=precision,
+            classes=classes,
+            literal_type=literal_type,
         )
 
-    def create_organisation(self, uri: str | None = None, classes: list | None = None,
-                            name: str | None = None) -> Organisation:
+    def create_organisation(
+        self,
+        uri: str | None = None,
+        classes: list | None = None,
+        name: str | None = None,
+    ) -> Organisation:
         """
         DEPRECATED - use Organisation() to create an instance of the IES Organisation class.
 
@@ -1051,14 +1199,15 @@ class IESTool:
         Returns:
             Organisation:
         """
-        warnings.warn("IESTool.create_organisation is deprecated - please initiate Organisation Python class directly",
-                      DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            "IESTool.create_organisation is deprecated - please initiate Organisation Python class directly",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         if classes is None:
             classes = [ORGANISATION]
-        return Organisation(
-            tool=self, name=name, uri=uri, classes=classes
-        )
+        return Organisation(tool=self, name=name, uri=uri, classes=classes)
 
 
 class Unique(type):
@@ -1102,21 +1251,24 @@ class RdfsResource(metaclass=Unique):
     """
 
     def __init__(
-            self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
     ):
         """
-            Instantiate the RDFS Resource
+        Instantiate the RDFS Resource
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the RDFS Resource
-                classes (list): the RDFS classes to instantiate
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the RDFS Resource
+            classes (list): the RDFS classes to instantiate
 
-            Returns:
-                RdfsResource:
+        Returns:
+            RdfsResource:
         """
 
-        self._default_class(classes,RDFS_RESOURCE)
+        self._default_class(classes, RDFS_RESOURCE)
 
         if tool is None:
             self._tool = IES_TOOL
@@ -1132,7 +1284,7 @@ class RdfsResource(metaclass=Unique):
 
         self.tool.instances[self._uri] = self
 
-    def _default_class(self,classes,default_class):
+    def _default_class(self, classes, default_class):
         if not hasattr(self, "_classes"):
             self._classes = []
         if classes is None or classes == []:
@@ -1140,7 +1292,6 @@ class RdfsResource(metaclass=Unique):
                 self._classes = [default_class]
         else:
             self._classes = classes
-
 
     @property
     def tool(self):
@@ -1153,12 +1304,20 @@ class RdfsResource(metaclass=Unique):
     @property
     def labels(self):
         return self.tool.make_results_list_from_query(
-            "SELECT ?l WHERE {<" + self._uri + "> <http://www.w3.org/2000/01/rdf-schema#label> ?l }", "l")
+            "SELECT ?l WHERE {<"
+            + self._uri
+            + "> <http://www.w3.org/2000/01/rdf-schema#label> ?l }",
+            "l",
+        )
 
     @property
     def comments(self):
         return self.tool.make_results_list_from_query(
-            "SELECT ?c WHERE {<" + self._uri + "> <http://www.w3.org/2000/01/rdf-schema#comment> ?c }", "c")
+            "SELECT ?c WHERE {<"
+            + self._uri
+            + "> <http://www.w3.org/2000/01/rdf-schema#comment> ?c }",
+            "c",
+        )
 
     def add_type(self, class_uri) -> None:
         """Adds a rdf:type predicate from this object to a rdfs:Class referenced by the class_uri
@@ -1168,7 +1327,9 @@ class RdfsResource(metaclass=Unique):
         """
         self.tool.add_triple(self.uri, predicate=RDF_TYPE, obj=class_uri)
 
-    def add_literal(self, predicate: str, literal: str, literal_type: str = "string") -> None:
+    def add_literal(
+        self, predicate: str, literal: str, literal_type: str = "string"
+    ) -> None:
         """Adds a triple where the object is a literal
 
         Args:
@@ -1179,7 +1340,9 @@ class RdfsResource(metaclass=Unique):
         Returns:
             _type_: _description_
         """
-        self.tool.add_triple(self._uri, predicate, literal, is_literal=True, literal_type=literal_type)
+        self.tool.add_triple(
+            self._uri, predicate, literal, is_literal=True, literal_type=literal_type
+        )
 
     def add_label(self, label: str):
         """Adds a rdfs label to the node
@@ -1215,11 +1378,16 @@ class RdfsResource(metaclass=Unique):
         Returns:
             bool:
         """
-        related_object = self._validate_referenced_object(related_object, context="add_relation")
-        return self.tool.add_triple(self._uri, predicate=predicate, obj=related_object, is_literal=False)
+        related_object = self._validate_referenced_object(
+            related_object, context="add_relation"
+        )
+        return self.tool.add_triple(
+            self._uri, predicate=predicate, obj=related_object, is_literal=False
+        )
 
-    def _validate_referenced_object(self, reference, base_type: Unique | None = None,
-                                    context: str | None = None) -> RdfsResource:
+    def _validate_referenced_object(
+        self, reference, base_type: Unique | None = None, context: str | None = None
+    ) -> RdfsResource:
         """
         An internal method for ascertaining the best base class of a given URI.
         If you pass it an object, it just returns the object you gave it
@@ -1247,9 +1415,9 @@ class RdfsResource(metaclass=Unique):
                 if base_type is None:
                     base_type = RdfsResource
                 logger.warning(
-                    f'''String passed instead of object in {context}
+                    f"""String passed instead of object in {context}
                     - assumed URI is defined elsewhere: {reference}
-                    - base class {base_type.__name__} has been inferred'''
+                    - base class {base_type.__name__} has been inferred"""
                 )
 
                 return base_type(tool=self.tool, uri=reference, classes=[])
@@ -1261,24 +1429,27 @@ class RdfsResource(metaclass=Unique):
 
 class RdfsClass(RdfsResource):
     """
-        A Python wrapper class for RDFS Class
+    A Python wrapper class for RDFS Class
     """
 
     def __init__(
-            self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
     ):
         """
-            Instantiate the RDFS Class
+        Instantiate the RDFS Class
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the RDFS Class
-                classes (list): the IES types to instantiate (default is rdfs:Class)
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the RDFS Class
+            classes (list): the IES types to instantiate (default is rdfs:Class)
 
-            Returns:
-                RdfsClass:
+        Returns:
+            RdfsClass:
         """
-        self._default_class(classes,RDFS_CLASS)
+        self._default_class(classes, RDFS_CLASS)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
     def instantiate(self, uri=None) -> RdfsResource:
@@ -1306,31 +1477,40 @@ class RdfsClass(RdfsResource):
 
 class Thing(RdfsResource):
     """
-        A Python wrapper class for IES Thing (Replaced IES ExchangedItem)
+    A Python wrapper class for IES Thing (Replaced IES ExchangedItem)
     """
 
     def __init__(
-            self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None):
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+    ):
         """
-            Instantiate the IES Thing
+        Instantiate the IES Thing
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES Thing
-                classes (list): the IES types to instantiate
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES Thing
+            classes (list): the IES types to instantiate
 
-            Returns:
-                Thing:
+        Returns:
+            Thing:
         """
 
-        self._default_class(classes,THING)
+        self._default_class(classes, THING)
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
     def add_representation(
-            self, representation_text: str, representation_class: str | None = REPRESENTATION,
-            uri: str | None = None, rep_rel_type: str | None = None,
-            naming_scheme=None, literal_type = "string") -> Representation:
+        self,
+        representation_text: str,
+        representation_class: str | None = REPRESENTATION,
+        uri: str | None = None,
+        rep_rel_type: str | None = None,
+        naming_scheme=None,
+        literal_type="string",
+    ) -> Representation:
         """Adds a new IES representation to this node
 
         Args:
@@ -1347,15 +1527,26 @@ class Thing(RdfsResource):
         if not rep_rel_type:
             rep_rel_type = f"{IES_BASE}isRepresentedAs"
         representation = Representation(
-            tool=self.tool, representation_text=representation_text, uri=uri,
-            classes=[representation_class], naming_scheme=naming_scheme,literal_type=literal_type
+            tool=self.tool,
+            representation_text=representation_text,
+            uri=uri,
+            classes=[representation_class],
+            naming_scheme=naming_scheme,
+            literal_type=literal_type,
         )
-        self.tool.add_triple(subject=self._uri, predicate=rep_rel_type, obj=representation._uri)
+        self.tool.add_triple(
+            subject=self._uri, predicate=rep_rel_type, obj=representation._uri
+        )
         return representation
 
     def add_name(
-            self, name, name_class: str | None = None, uri=None, name_rel_type=None,
-            naming_scheme=None) -> Name:
+        self,
+        name,
+        name_class: str | None = None,
+        uri=None,
+        name_rel_type=None,
+        naming_scheme=None,
+    ) -> Name:
         """
         Adds an IES name to the node
 
@@ -1376,15 +1567,26 @@ class Thing(RdfsResource):
             name_class = NAME
 
         representation = Name(
-            tool=self.tool, name_text=name, uri=uri,
-            classes=[name_class], naming_scheme=naming_scheme
+            tool=self.tool,
+            name_text=name,
+            uri=uri,
+            classes=[name_class],
+            naming_scheme=naming_scheme,
         )
-        self.tool.add_triple(subject=self._uri, predicate=name_rel_type, obj=representation._uri)
+        self.tool.add_triple(
+            subject=self._uri, predicate=name_rel_type, obj=representation._uri
+        )
         return representation
 
     def add_identifier(
-            self, identifier, id_class: str | None = None, uri=None, id_rel_type=None,
-            naming_scheme=None, literal_type: str = "string") -> Identifier:
+        self,
+        identifier,
+        id_class: str | None = None,
+        uri=None,
+        id_rel_type=None,
+        naming_scheme=None,
+        literal_type: str = "string",
+    ) -> Identifier:
         """
         Adds an IES identifier to the node
 
@@ -1407,33 +1609,45 @@ class Thing(RdfsResource):
             id_class = IDENTIFIER
 
         representation = Identifier(
-            tool=self.tool, id_text=identifier, uri=uri, classes=[id_class],
-            naming_scheme=naming_scheme, literal_type=literal_type
+            tool=self.tool,
+            id_text=identifier,
+            uri=uri,
+            classes=[id_class],
+            naming_scheme=naming_scheme,
+            literal_type=literal_type,
         )
-        self.tool.add_triple(subject=self._uri, predicate=id_rel_type, obj=representation._uri)
+        self.tool.add_triple(
+            subject=self._uri, predicate=id_rel_type, obj=representation._uri
+        )
         return representation
 
 
 class Element(Thing):
     """
-        A Python wrapper class for IES Element
+    A Python wrapper class for IES Element
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
-                 start: str | None = None, end: str | None = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+        start: str | None = None,
+        end: str | None = None,
+    ):
         """
-            Instantiate the IES Element
+        Instantiate the IES Element
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES Element
-                classes (list): the IES types to instantiate (default is ies:Element)
-                start (str): an ISO8601 datetime string that marks the start of the Element
-                end (str): an ISO8601 datetime string that marks the end of the Element
-            Returns:
-                Element:
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES Element
+            classes (list): the IES types to instantiate (default is ies:Element)
+            start (str): an ISO8601 datetime string that marks the start of the Element
+            end (str): an ISO8601 datetime string that marks the end of the Element
+        Returns:
+            Element:
         """
-        self._default_class(classes,ELEMENT)
+        self._default_class(classes, ELEMENT)
 
         super().__init__(tool=tool, uri=uri, classes=classes)
         self._default_state_type = STATE
@@ -1460,9 +1674,13 @@ class Element(Thing):
         return part_object
 
     def create_state(
-            self, state_type: str | None = None, uri: str | None = None,
-            state_rel: str | None = None, start: str | None = None, end: str | None = None,
-            in_location: Location | None = None
+        self,
+        state_type: str | None = None,
+        uri: str | None = None,
+        state_rel: str | None = None,
+        start: str | None = None,
+        end: str | None = None,
+        in_location: Location | None = None,
     ) -> State:
         """Creates a state of this node
 
@@ -1481,7 +1699,9 @@ class Element(Thing):
         if not state_type:
             state_type = self._default_state_type
 
-        state = State(tool=self.tool, start=start, end=end, uri=uri, classes=[state_type])
+        state = State(
+            tool=self.tool, start=start, end=end, uri=uri, classes=[state_type]
+        )
 
         if not state_rel:
             state_rel = f"{IES_BASE}isStateOf"
@@ -1493,16 +1713,26 @@ class Element(Thing):
         return state
 
     def add_state(
-            self, state_type: str | None = None, uri: str | None = None,
-            state_rel: str | None = None, start: str | None = None, end: str | None = None,
-            in_location: Location | None = None
+        self,
+        state_type: str | None = None,
+        uri: str | None = None,
+        state_rel: str | None = None,
+        start: str | None = None,
+        end: str | None = None,
+        in_location: Location | None = None,
     ) -> State:
         """
         DEPRECATED - use create_state()
         """
         logger.warning("add_state() is deprecated - use create_state()")
-        return self.create_state(state_type=state_type, uri=uri, state_rel=state_rel,
-                                 start=start, end=end, in_location=in_location)
+        return self.create_state(
+            state_type=state_type,
+            uri=uri,
+            state_rel=state_rel,
+            start=start,
+            end=end,
+            in_location=in_location,
+        )
 
     def in_location(self, location: Location | str) -> Location:
         """Places the Element in a Location
@@ -1513,10 +1743,12 @@ class Element(Thing):
         Returns:
             Location:
         """
-        location_object = self._validate_referenced_object(location, Location, "in_location")
+        location_object = self._validate_referenced_object(
+            location, Location, "in_location"
+        )
         self.tool.add_triple(
-            subject=self.uri, predicate=f"{IES_BASE}inLocation",
-            obj=location_object.uri)
+            subject=self.uri, predicate=f"{IES_BASE}inLocation", obj=location_object.uri
+        )
         return location_object
 
     @validate_datetime_string
@@ -1535,8 +1767,12 @@ class Element(Thing):
         return pp_instance
 
     @validate_datetime_string
-    def starts_in(self, time_string: str, bounding_state_class: str | None = None,
-                  uri: str | None = None) -> BoundingState:
+    def starts_in(
+        self,
+        time_string: str,
+        bounding_state_class: str | None = None,
+        uri: str | None = None,
+    ) -> BoundingState:
         """
         Asserts an item started in a particular period
 
@@ -1553,15 +1789,20 @@ class Element(Thing):
             bounding_state_class = f"{IES_BASE}BoundingState"
 
         bs = BoundingState(tool=self.tool, classes=[bounding_state_class], uri=uri)
-        self.tool.add_triple(subject=bs._uri, predicate=f"{IES_BASE}isStartOf",
-                             obj=self._uri)
+        self.tool.add_triple(
+            subject=bs._uri, predicate=f"{IES_BASE}isStartOf", obj=self._uri
+        )
         if time_string:
             bs.put_in_period(time_string=time_string)
         return bs
 
     @validate_datetime_string
-    def ends_in(self, time_string: str, bounding_state_class: str | None = None,
-                uri: str | None = None) -> BoundingState:
+    def ends_in(
+        self,
+        time_string: str,
+        bounding_state_class: str | None = None,
+        uri: str | None = None,
+    ) -> BoundingState:
         """Asserts an item ended in a particular period.
 
         Args:
@@ -1576,13 +1817,21 @@ class Element(Thing):
             bounding_state_class = BOUNDING_STATE
 
         bs = BoundingState(tool=self.tool, classes=[bounding_state_class], uri=uri)
-        self.tool.add_triple(subject=bs._uri, predicate=f"{IES_BASE}isEndOf",
-                             obj=self._uri)
+        self.tool.add_triple(
+            subject=bs._uri, predicate=f"{IES_BASE}isEndOf", obj=self._uri
+        )
         if time_string:
             bs.put_in_period(time_string=time_string)
         return bs
 
-    def add_measure(self, value, measure_class=None, uom=None, uri: str = None, literal_type: str = "string"):
+    def add_measure(
+        self,
+        value,
+        measure_class=None,
+        uom=None,
+        uri: str = None,
+        literal_type: str = "string",
+    ):
         """
         Creates a new Measure and applies it to the node
 
@@ -1594,88 +1843,106 @@ class Element(Thing):
             literal_type (str, optional): The XSD datatype for the measure value. Defaults to "string".
         """
         measure = Measure(
-            tool=self.tool, uri=uri, classes=[measure_class], value=value, uom=uom,
-            literal_type=literal_type
+            tool=self.tool,
+            uri=uri,
+            classes=[measure_class],
+            value=value,
+            uom=uom,
+            literal_type=literal_type,
         )
         self.tool.add_triple(
-            subject=self._uri, predicate=f"{IES_BASE}hasCharacteristic", obj=measure._uri
+            subject=self._uri,
+            predicate=f"{IES_BASE}hasCharacteristic",
+            obj=measure._uri,
         )
 
 
 class Entity(Element):
     """
-        A Python wrapper class for IES Entity
+    A Python wrapper class for IES Entity
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
-                 start: str | None = None, end: str | None = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+        start: str | None = None,
+        end: str | None = None,
+    ):
         """
-            Instantiate the IES Entity
+        Instantiate the IES Entity
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES Entity
-                classes (list): the IES types to instantiate
-                start (str): an ISO8601 datetime string that marks the start of the Entity
-                end (str): an ISO8601 datetime string that marks the end of the Entity
-            Returns:
-                Entity:
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES Entity
+            classes (list): the IES types to instantiate
+            start (str): an ISO8601 datetime string that marks the start of the Entity
+            end (str): an ISO8601 datetime string that marks the end of the Entity
+        Returns:
+            Entity:
         """
-        self._default_class(classes,ENTITY)
-        super().__init__(
-            tool=tool, uri=uri, classes=classes, start=start, end=end
-        )
+        self._default_class(classes, ENTITY)
+        super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
 
 class State(Element):
     """
-        A Python wrapper class for IES State
+    A Python wrapper class for IES State
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
-                 start: str | None = None, end: str | None = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+        start: str | None = None,
+        end: str | None = None,
+    ):
         """
-            Instantiate the IES State
+        Instantiate the IES State
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES State
-                classes (list): the IES types to instantiate
-                start (str): an ISO8601 datetime string that marks the start of the State
-                end (str): an ISO8601 datetime string that marks the end of the State
-            Returns:
-                State:
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES State
+            classes (list): the IES types to instantiate
+            start (str): an ISO8601 datetime string that marks the start of the State
+            end (str): an ISO8601 datetime string that marks the end of the State
+        Returns:
+            State:
         """
-        self._default_class(classes,STATE)
-        super().__init__(
-            tool=tool, uri=uri, classes=classes, start=start, end=end
-        )
+        self._default_class(classes, STATE)
+        super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
 
 class DeviceState(State):
     """
-        A Python wrapper class for IES DeviceState
+    A Python wrapper class for IES DeviceState
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
-                 start: str | None = None, end: str | None = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+        start: str | None = None,
+        end: str | None = None,
+    ):
         """
-            Instantiate the IES DeviceState
+        Instantiate the IES DeviceState
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES DeviceState
-                classes (list): the IES types to instantiate
-                start (str): an ISO8601 datetime string that marks the start of the DeviceState
-                end (str): an ISO8601 datetime string that marks the end of the DeviceState
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES DeviceState
+            classes (list): the IES types to instantiate
+            start (str): an ISO8601 datetime string that marks the start of the DeviceState
+            end (str): an ISO8601 datetime string that marks the end of the DeviceState
 
-            Returns:
-                DeviceState:
+        Returns:
+            DeviceState:
         """
-        self._default_class(classes,DEVICE_STATE)
-        super().__init__(
-            tool=tool, uri=uri, classes=classes, start=start, end=end
-        )
+        self._default_class(classes, DEVICE_STATE)
+        super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
     def add_imsi(self, imsi: str) -> Identifier:
         """
@@ -1688,8 +1955,10 @@ class DeviceState(State):
         """
         if not len(imsi.replace("IMSI", "")) not in (14, 15):
             logger.warning(f"IMSI: {imsi} does not appear to be valid")
-        uri = f"{self.tool.prefixes['IMSI:']}{imsi.replace(' ', '').replace('IMSI:', '')}"
-        return self.add_identifier(imsi, id_class=f'{IES_BASE}IMSI', uri=uri)
+        uri = (
+            f"{self.tool.prefixes['IMSI:']}{imsi.replace(' ', '').replace('IMSI:', '')}"
+        )
+        return self.add_identifier(imsi, id_class=f"{IES_BASE}IMSI", uri=uri)
 
     def add_mac_address(self, mac_address: str) -> Identifier:
         """
@@ -1702,8 +1971,12 @@ class DeviceState(State):
         """
         if not validators.mac_address(mac_address):
             logger.warning(f"MAC address {mac_address} does not appear to be valid")
-        uri = self.tool.prefixes["ieee802:"] + mac_address.replace(" ", "").replace(":", "")
-        return self.add_identifier(mac_address, id_class=f'{IES_BASE}MACAddress', uri=uri)
+        uri = self.tool.prefixes["ieee802:"] + mac_address.replace(" ", "").replace(
+            ":", ""
+        )
+        return self.add_identifier(
+            mac_address, id_class=f"{IES_BASE}MACAddress", uri=uri
+        )
 
     def add_ip_address(self, ip_address: str) -> Identifier:
         """
@@ -1733,30 +2006,36 @@ class DeviceState(State):
         Returns:
             Identifier:
         """
-        return self.add_identifier(callsign, id_class=f'{IES_BASE}Callsign')
+        return self.add_identifier(callsign, id_class=f"{IES_BASE}Callsign")
 
 
 class Asset(Entity):
     """
-        A Python wrapper class for IES Asset
+    A Python wrapper class for IES Asset
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
-                 start: str | None = None, end: str | None = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+        start: str | None = None,
+        end: str | None = None,
+    ):
         """
-            Instantiate the IES Device
+        Instantiate the IES Device
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES Asset
-                classes (list): the IES types to instantiate
-                start (str): an ISO8601 datetime string that marks the start of the Asset
-                end (str): an ISO8601 datetime string that marks the end of the Asset
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES Asset
+            classes (list): the IES types to instantiate
+            start (str): an ISO8601 datetime string that marks the start of the Asset
+            end (str): an ISO8601 datetime string that marks the end of the Asset
 
-            Returns:
-                Device:
+        Returns:
+            Device:
         """
-        self._default_class(classes,ASSET)
+        self._default_class(classes, ASSET)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         self._default_state_type = ASSET_STATE
@@ -1764,67 +2043,92 @@ class Asset(Entity):
 
 class AmountOfMoney(Asset):
     """
-        A Python wrapper class for IES AmountOfMoney
+    A Python wrapper class for IES AmountOfMoney
     """
 
-    def __init__(self, /, tool: IESTool = IES_TOOL, *, amount: float, iso_4217_currency_code_alpha3: str,
-                 uri: str | None = None, classes: list[str] | None = None):
+    def __init__(
+        self,
+        /,
+        tool: IESTool = IES_TOOL,
+        *,
+        amount: float,
+        iso_4217_currency_code_alpha3: str,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+    ):
         """
-            Instantiate the IES AmountOfMoney
+        Instantiate the IES AmountOfMoney
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES Device
-                classes (list): the IES types to instantiate
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES Device
+            classes (list): the IES types to instantiate
 
-            Returns:
-                AmountOfMoney:
+        Returns:
+            AmountOfMoney:
         """
-        self._default_class(classes,AMOUNT_OF_MONEY)
+        self._default_class(classes, AMOUNT_OF_MONEY)
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
         currency = iso4217parse.by_alpha3(iso_4217_currency_code_alpha3)
         if currency is None:
-            logger.error(f"Unrecognised ISO4217 alpha3 currency code {iso_4217_currency_code_alpha3}")
+            logger.error(
+                f"Unrecognised ISO4217 alpha3 currency code {iso_4217_currency_code_alpha3}"
+            )
 
         currency_uri = self.tool.prefixes["iso4217:"] + iso_4217_currency_code_alpha3
 
         currency_object = self.tool._get_instance(currency_uri)
         if currency_object is None:
-            currency_object = ClassOfElement(tool=self.tool, uri=currency_uri, classes=[IES_BASE + "Currency"])
-            currency_object.add_identifier(iso_4217_currency_code_alpha3,uri = currency_uri + "_ISO4217_alpha3")
+            currency_object = ClassOfElement(
+                tool=self.tool, uri=currency_uri, classes=[IES_BASE + "Currency"]
+            )
+            currency_object.add_identifier(
+                iso_4217_currency_code_alpha3, uri=currency_uri + "_ISO4217_alpha3"
+            )
             if currency:
-                currency_object.add_name(currency.name, uri = currency_uri + "_NAME")
+                currency_object.add_name(currency.name, uri=currency_uri + "_NAME")
 
         self.tool.add_triple(self.uri, f"{IES_BASE}currencyDenomination", currency_uri)
-        self.tool.add_triple(self.uri, f"{IES_BASE}currencyAmount", str(amount),
-                             is_literal=True, literal_type="decimal")
+        self.tool.add_triple(
+            self.uri,
+            f"{IES_BASE}currencyAmount",
+            str(amount),
+            is_literal=True,
+            literal_type="decimal",
+        )
 
         self._default_state_type = ASSET_STATE
 
 
 class Device(Asset, DeviceState):
     """
-        A Python wrapper class for IES Device
+    A Python wrapper class for IES Device
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
-                 start: str | None = None, end: str | None = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+        start: str | None = None,
+        end: str | None = None,
+    ):
         """
-            Instantiate the IES Device
+        Instantiate the IES Device
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES Device
-                classes (list): the IES types to instantiate
-                start (str): an ISO8601 datetime string that marks the start of the Device
-                end (str): an ISO8601 datetime string that marks the end of the Device
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES Device
+            classes (list): the IES types to instantiate
+            start (str): an ISO8601 datetime string that marks the start of the Device
+            end (str): an ISO8601 datetime string that marks the end of the Device
 
-            Returns:
-                Device:
+        Returns:
+            Device:
         """
-        self._default_class(classes,DEVICE)
+        self._default_class(classes, DEVICE)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         self._default_state_type = DEVICE_STATE
@@ -1832,25 +2136,31 @@ class Device(Asset, DeviceState):
 
 class Account(Entity):
     """
-        A Python wrapper class for IES Account
+    A Python wrapper class for IES Account
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
-                 start: str | None = None, end: str | None = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+        start: str | None = None,
+        end: str | None = None,
+    ):
         """
-            Instantiate an IES Account
+        Instantiate an IES Account
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES Account instance
-                classes (list): the IES types to instantiate
-                start (str): an ISO8601 datetime string that marks the start of the Account
-                end (str): an ISO8601 datetime string that marks the end of the Account
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES Account instance
+            classes (list): the IES types to instantiate
+            start (str): an ISO8601 datetime string that marks the start of the Account
+            end (str): an ISO8601 datetime string that marks the end of the Account
 
-            Returns:
-                Account:
+        Returns:
+            Account:
         """
-        self._default_class(classes,ACCOUNT)
+        self._default_class(classes, ACCOUNT)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         self._default_state_type = ACCOUNT_STATE
@@ -1866,42 +2176,58 @@ class Account(Entity):
             Identifier:
         """
         id_uri_acc_no = self.tool._mint_dependent_uri(self.uri, "ACC_NO")
-        return self.add_identifier(identifier=account_number, uri=id_uri_acc_no, id_class=f"{IES_BASE}AccountNumber")
+        return self.add_identifier(
+            identifier=account_number,
+            uri=id_uri_acc_no,
+            id_class=f"{IES_BASE}AccountNumber",
+        )
 
-    def add_account_holder(self, holder, start: str | None = None, end: str | None = None,
-                           state_uri: str | None = None) -> State:
+    def add_account_holder(
+        self,
+        holder,
+        start: str | None = None,
+        end: str | None = None,
+        state_uri: str | None = None,
+    ) -> State:
         """
-            add an AccountHolder to the Account
+        add an AccountHolder to the Account
 
-            Args:
-                holder: an instance of a ReponsibleActor (or subclass) or a URI string (not recommended)
-                start (str): an ISO8601 datetime string that marks the start of the AccountHolder state
-                end (str): an ISO8601 datetime string that marks the end of the AccountHolder state
-                state_uri (str): used to override the URI of the created state (optional)
+        Args:
+            holder: an instance of a ReponsibleActor (or subclass) or a URI string (not recommended)
+            start (str): an ISO8601 datetime string that marks the start of the AccountHolder state
+            end (str): an ISO8601 datetime string that marks the end of the AccountHolder state
+            state_uri (str): used to override the URI of the created state (optional)
 
-            Returns:
-                State:
+        Returns:
+            State:
         """
-        holder_object = self._validate_referenced_object(holder, ResponsibleActor, "add_account_holder")
-        holder_state = holder_object.create_state(state_type=ACCOUNT_HOLDER, uri=state_uri, start=start, end=end)
+        holder_object = self._validate_referenced_object(
+            holder, ResponsibleActor, "add_account_holder"
+        )
+        holder_state = holder_object.create_state(
+            state_type=ACCOUNT_HOLDER, uri=state_uri, start=start, end=end
+        )
         self.tool.add_triple(holder_state.uri, HOLDS_ACCOUNT, self.uri)
         return holder_state
 
     def add_account_provider(self, provider) -> bool:
         """
-            link the Account to its provider
+        link the Account to its provider
 
-            Args:
-                provider: an instance of a ReponsibleActor (or subclass) or a URI string (not recommended)
+        Args:
+            provider: an instance of a ReponsibleActor (or subclass) or a URI string (not recommended)
 
-            Returns:
-                bool:
+        Returns:
+            bool:
         """
-        provider_object = self._validate_referenced_object(provider, ResponsibleActor, "add_account_provider")
+        provider_object = self._validate_referenced_object(
+            provider, ResponsibleActor, "add_account_provider"
+        )
         return self.tool.add_triple(provider_object.uri, PROVIDES_ACCOUNT, self.uri)
 
-    def add_registered_telephone_number(self, telephone_number: str, start: str | None = None,
-                                        end: str | None = None) -> Identifier:
+    def add_registered_telephone_number(
+        self, telephone_number: str, start: str | None = None, end: str | None = None
+    ) -> Identifier:
         """
         Adds the registered telephone number for the account
 
@@ -1915,20 +2241,34 @@ class Account(Entity):
         """
         try:
             tel = phonenumbers.parse(telephone_number, None)
-            normalised = phonenumbers.format_number(tel, phonenumbers.PhoneNumberFormat.E164)
+            normalised = phonenumbers.format_number(
+                tel, phonenumbers.PhoneNumberFormat.E164
+            )
             ph_uri = self.tool.prefixes["e164:"] + normalised.replace("+", "")
         except Exception as e:
-            logger.warning(f"telephone number: {telephone_number} could not be parsed {str(e)}")
+            logger.warning(
+                f"telephone number: {telephone_number} could not be parsed {str(e)}"
+            )
             normalised = telephone_number
             ph_uri = None
         state_uri = self.tool._mint_dependent_uri(self.uri, "REG_PHONE")
         state = self.create_state(uri=state_uri, start=start, end=end)
-        tel_no = Identifier(self.tool, id_text=normalised, uri=ph_uri, classes=[f"{IES_BASE}TelephoneNumber"])
-        self.tool.add_triple(subject=state.uri, predicate=f"{IES_BASE}hasRegisteredCommsID", obj=tel_no.uri)
+        tel_no = Identifier(
+            self.tool,
+            id_text=normalised,
+            uri=ph_uri,
+            classes=[f"{IES_BASE}TelephoneNumber"],
+        )
+        self.tool.add_triple(
+            subject=state.uri,
+            predicate=f"{IES_BASE}hasRegisteredCommsID",
+            obj=tel_no.uri,
+        )
         return tel_no
 
-    def add_registered_email_address(self, email_address: str, start: str | None = None,
-                                     end: str | None = None) -> Identifier:
+    def add_registered_email_address(
+        self, email_address: str, start: str | None = None, end: str | None = None
+    ) -> Identifier:
         """
         Adds the registered email address for the account
 
@@ -1948,32 +2288,47 @@ class Account(Entity):
 
         state_uri = self.tool._mint_dependent_uri(self.uri, "REG_EMAIL")
         state = self.create_state(uri=state_uri, start=start, end=end)
-        email_obj = Identifier(self.tool, id_text=email_address, uri=em_uri, classes=[f"{IES_BASE}EmailAddress"])
-        self.tool.add_triple(subject=state.uri, predicate=f"{IES_BASE}hasRegisteredCommsID", obj=email_obj.uri)
+        email_obj = Identifier(
+            self.tool,
+            id_text=email_address,
+            uri=em_uri,
+            classes=[f"{IES_BASE}EmailAddress"],
+        )
+        self.tool.add_triple(
+            subject=state.uri,
+            predicate=f"{IES_BASE}hasRegisteredCommsID",
+            obj=email_obj.uri,
+        )
         return email_obj
 
 
 class CommunicationsAccount(Account):
     """
-        A Python wrapper class for IES Account
+    A Python wrapper class for IES Account
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
-                 start: str | None = None, end: str | None = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+        start: str | None = None,
+        end: str | None = None,
+    ):
         """
-            Instantiate an IES CommunicationsAccount
+        Instantiate an IES CommunicationsAccount
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES CommunicationsAccount
-                classes (list): the IES types to instantiate
-                start (str): an ISO8601 datetime string that marks the start of the CommunicationsAccount
-                end (str): an ISO8601 datetime string that marks the end of the CommunicationsAccount
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES CommunicationsAccount
+            classes (list): the IES types to instantiate
+            start (str): an ISO8601 datetime string that marks the start of the CommunicationsAccount
+            end (str): an ISO8601 datetime string that marks the end of the CommunicationsAccount
 
-            Returns:
-                CommunicationsAccount:
+        Returns:
+            CommunicationsAccount:
         """
-        self._default_class(classes,COMMUNICATIONS_ACCOUNT)
+        self._default_class(classes, COMMUNICATIONS_ACCOUNT)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         self._default_state_type = COMMUNICATIONS_ACCOUNT_STATE
@@ -1981,25 +2336,31 @@ class CommunicationsAccount(Account):
 
 class Location(Entity):
     """
-        A Python wrapper class for IES Location
+    A Python wrapper class for IES Location
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
-                 start: str | None = None, end: str | None = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+        start: str | None = None,
+        end: str | None = None,
+    ):
         """
-            Instantiate the IES Location
+        Instantiate the IES Location
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES Location
-                classes (list): the IES types to instantiate
-                start (str): an ISO8601 datetime string that marks the start of the Location
-                end (str): an ISO8601 datetime string that marks the end of the Location
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES Location
+            classes (list): the IES types to instantiate
+            start (str): an ISO8601 datetime string that marks the start of the Location
+            end (str): an ISO8601 datetime string that marks the end of the Location
 
-            Returns:
-                Location:
+        Returns:
+            Location:
         """
-        self._default_class(classes,LOCATION)
+        self._default_class(classes, LOCATION)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         self._default_state_type = LOCATION_STATE
@@ -2010,21 +2371,30 @@ class Country(Location):
     Python wrapper class for IES Country, where ISO country code forms the URI
     """
 
-    def __init__(self, /,tool: IESTool = IES_TOOL, *,country_alpha_3_code: str, country_name: str = None,
-                 classes: list[str] | None = None, uri: str = None, validate: bool = True):
+    def __init__(
+        self,
+        /,
+        tool: IESTool = IES_TOOL,
+        *,
+        country_alpha_3_code: str,
+        country_name: str = None,
+        classes: list[str] | None = None,
+        uri: str = None,
+        validate: bool = True,
+    ):
         """
-            Instantiate the IES Country
+        Instantiate the IES Country
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                country_alpha_3_code: ISO3166 alpha3 code
-            Returns:
-                Country:
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            country_alpha_3_code: ISO3166 alpha3 code
+        Returns:
+            Country:
         """
 
         uri = f"http://iso.org/iso3166/country#{country_alpha_3_code}"
 
-        self._default_class(classes,COUNTRY)
+        self._default_class(classes, COUNTRY)
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
@@ -2032,17 +2402,27 @@ class Country(Location):
             try:
                 pycountry_obj = pycountry.countries.get(alpha_3=country_alpha_3_code)
                 if pycountry_obj is None:
-                    logger.error(f"country code: {country_alpha_3_code} could not be validated")
+                    logger.error(
+                        f"country code: {country_alpha_3_code} could not be validated"
+                    )
                 if country_name:
                     if country_name != pycountry_obj.name:
-                        logger.warning(f"Country name '{country_name}' doesn't match '{pycountry_obj.name}'")
+                        logger.warning(
+                            f"Country name '{country_name}' doesn't match '{pycountry_obj.name}'"
+                        )
                         self.add_country_name(pycountry_obj.name)
                 else:
                     country_name = pycountry_obj.name
             except Exception as e:
-                logger.error(f"country code: {country_alpha_3_code} could not be validated {str(e)}")
+                logger.error(
+                    f"country code: {country_alpha_3_code} could not be validated {str(e)}"
+                )
 
-        self.add_identifier(country_alpha_3_code, id_class=IES_BASE + "ISO3166_1Alpha_3", uri=uri + "_ISO3166_1Alpha_3")
+        self.add_identifier(
+            country_alpha_3_code,
+            id_class=IES_BASE + "ISO3166_1Alpha_3",
+            uri=uri + "_ISO3166_1Alpha_3",
+        )
         if country_name:
             self.add_country_name(country_name)
 
@@ -2065,35 +2445,52 @@ class GeoPoint(Location):
     Python wrapper class for IES GeoPoint, with geo-hashes used to make the URI
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, classes: list[str] | None = None,
-                 lat: float = None, lon: float = None, precision: int = 6, literal_type: str = "decimal"):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        classes: list[str] | None = None,
+        lat: float = None,
+        lon: float = None,
+        precision: int = 6,
+        literal_type: str = "decimal",
+    ):
         """
-            Instantiate the IES GeoPoint
+        Instantiate the IES GeoPoint
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                classes (list): the IES types to instantiate
-                lat (float): the latitude of the GeoPoint as a decimal
-                lon (float): the longitude of the GeoPOint as a decimal
-                precision (int): number of decimal places for lat and lon (defaults to 6)
-                start (str): an ISO8601 datetime string that marks the start of the GeoPoint
-                end (str): an ISO8601 datetime string that marks the end of the GeoPoint
-            Returns:
-                GeoPoint:
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            classes (list): the IES types to instantiate
+            lat (float): the latitude of the GeoPoint as a decimal
+            lon (float): the longitude of the GeoPOint as a decimal
+            precision (int): number of decimal places for lat and lon (defaults to 6)
+            start (str): an ISO8601 datetime string that marks the start of the GeoPoint
+            end (str): an ISO8601 datetime string that marks the end of the GeoPoint
+        Returns:
+            GeoPoint:
         """
-        self._default_class(classes,GEOPOINT)
+        self._default_class(classes, GEOPOINT)
 
-        uri = "http://geohash.org/" + str(encode(float(lat), float(lon), precision=precision))
+        uri = "http://geohash.org/" + str(
+            encode(float(lat), float(lon), precision=precision)
+        )
         super().__init__(tool=tool, uri=uri, classes=classes)
 
         lat_uri = f"{uri}_LAT"
         lon_uri = f"{uri}_LON"
 
-        self.add_identifier(identifier=str(lat), uri=lat_uri,
-                            id_class=f"{IES_BASE}Latitude", literal_type=literal_type)
+        self.add_identifier(
+            identifier=str(lat),
+            uri=lat_uri,
+            id_class=f"{IES_BASE}Latitude",
+            literal_type=literal_type,
+        )
 
-        self.add_identifier(identifier=str(lon), uri=lon_uri,
-                            id_class=f"{IES_BASE}Longitude", literal_type=literal_type)
+        self.add_identifier(
+            identifier=str(lon),
+            uri=lon_uri,
+            id_class=f"{IES_BASE}Longitude",
+            literal_type=literal_type,
+        )
 
 
 class ResponsibleActor(Entity):
@@ -2101,27 +2498,38 @@ class ResponsibleActor(Entity):
     Python wrapper class for IES ResponsibleActor
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
-                 start: str | None = None, end: str | None = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+        start: str | None = None,
+        end: str | None = None,
+    ):
         """
-            Instantiate the IES ResponsibleActor
+        Instantiate the IES ResponsibleActor
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES ResponsibleActor
-                classes (list): the IES types to instantiate
-                start (str): an ISO8601 datetime string that marks the start of the ResponsibleActor
-                end (str): an ISO8601 datetime string that marks the end of the ResponsibleActor
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES ResponsibleActor
+            classes (list): the IES types to instantiate
+            start (str): an ISO8601 datetime string that marks the start of the ResponsibleActor
+            end (str): an ISO8601 datetime string that marks the end of the ResponsibleActor
 
-            Returns:
-                ResponsibleActor:
+        Returns:
+            ResponsibleActor:
         """
-        self._default_class(classes,RESPONSIBLE_ACTOR)
+        self._default_class(classes, RESPONSIBLE_ACTOR)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         self._default_state_type = f"{IES_BASE}ResponsibleActorState"
 
-    def works_for(self, employer: ResponsibleActor | str, start: str | None = None, end: str | None = None) -> State:
+    def works_for(
+        self,
+        employer: ResponsibleActor | str,
+        start: str | None = None,
+        end: str | None = None,
+    ) -> State:
         """
         Asserts the responsible actor works for another responsible actor
 
@@ -2133,13 +2541,20 @@ class ResponsibleActor(Entity):
         Returns:
             State:
         """
-        employer_object = self._validate_referenced_object(employer, ResponsibleActor, "works_for")
+        employer_object = self._validate_referenced_object(
+            employer, ResponsibleActor, "works_for"
+        )
         state = self.create_state(start=start, end=end)
-        self.tool.add_triple(subject=state._uri, predicate=f"{IES_BASE}worksFor",
-                             obj=employer_object._uri)
+        self.tool.add_triple(
+            subject=state._uri,
+            predicate=f"{IES_BASE}worksFor",
+            obj=employer_object._uri,
+        )
         return state
 
-    def in_post(self, post: Post | str, start: str | None = None, end: str | None = None) -> State:
+    def in_post(
+        self, post: Post | str, start: str | None = None, end: str | None = None
+    ) -> State:
         """
         Asserts the ReponsibleActor is in a Post
 
@@ -2152,11 +2567,18 @@ class ResponsibleActor(Entity):
             Post:
         """
         post_object = self._validate_referenced_object(post, Post, "in_post")
-        in_post = self.create_state(state_type=f"{IES_BASE}InPost", start=start, end=end)
+        in_post = self.create_state(
+            state_type=f"{IES_BASE}InPost", start=start, end=end
+        )
         post_object.add_part(in_post)
         return in_post
 
-    def has_access_to(self, accessed_item: Entity | str, start: str | None = None, end: str | None = None) -> State:
+    def has_access_to(
+        self,
+        accessed_item: Entity | str,
+        start: str | None = None,
+        end: str | None = None,
+    ) -> State:
         """
         Asserts the ResponsibleActor has access to an Entity
 
@@ -2168,12 +2590,19 @@ class ResponsibleActor(Entity):
         Returns:
             State:
         """
-        accessed_object = self._validate_referenced_object(accessed_item, Entity, "has_access_to")
+        accessed_object = self._validate_referenced_object(
+            accessed_item, Entity, "has_access_to"
+        )
         access = self.create_state(start=start, end=end)
         self.tool.add_triple(access.uri, f"{IES_BASE}hasAccessTo", accessed_object.uri)
         return access
 
-    def in_possession_of(self, accessed_item: Entity | str, start: str | None = None, end: str | None = None) -> State:
+    def in_possession_of(
+        self,
+        accessed_item: Entity | str,
+        start: str | None = None,
+        end: str | None = None,
+    ) -> State:
         """
         Asserts the ResponsibleActor has possession of an Entity (not legal ownership)
 
@@ -2185,12 +2614,21 @@ class ResponsibleActor(Entity):
         Returns:
             State: _description_
         """
-        accessed_object = self._validate_referenced_object(accessed_item, Entity, "in_possession_of")
+        accessed_object = self._validate_referenced_object(
+            accessed_item, Entity, "in_possession_of"
+        )
         access = self.create_state(start=start, end=end)
-        self.tool.add_triple(access.uri, f"{IES_BASE}inPossessionOf", accessed_object.uri)
+        self.tool.add_triple(
+            access.uri, f"{IES_BASE}inPossessionOf", accessed_object.uri
+        )
         return access
 
-    def user_of(self, accessed_item: Entity | str, start: str | None = None, end: str | None = None) -> State:
+    def user_of(
+        self,
+        accessed_item: Entity | str,
+        start: str | None = None,
+        end: str | None = None,
+    ) -> State:
         """
         Asserts the ResponsibleActor has use of an Entity (not legal ownership)
 
@@ -2202,12 +2640,16 @@ class ResponsibleActor(Entity):
         Returns:
             State:
         """
-        accessed_object = self._validate_referenced_object(accessed_item, Entity, "user_of")
+        accessed_object = self._validate_referenced_object(
+            accessed_item, Entity, "user_of"
+        )
         access = self.create_state(start=start, end=end)
         self.tool.add_triple(access.uri, f"{IES_BASE}userOf", accessed_object.uri)
         return access
 
-    def owns(self, owned_item: Entity | str, start: str | None = None, end: str | None = None) -> State:
+    def owns(
+        self, owned_item: Entity | str, start: str | None = None, end: str | None = None
+    ) -> State:
         """
         Asserts the ResponsibleActor has legal ownership of an Entity
 
@@ -2230,22 +2672,28 @@ class Post(ResponsibleActor):
     Python wrapper class for IES Post
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
-                 start: str | None = None, end: str | None = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+        start: str | None = None,
+        end: str | None = None,
+    ):
         """
-            Instantiate the IES Post
+        Instantiate the IES Post
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES Post
-                classes (list): the IES types to instantiate
-                start (str): an ISO8601 datetime string that marks the start of the Post
-                end (str): an ISO8601 datetime string that marks the end of the Post
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES Post
+            classes (list): the IES types to instantiate
+            start (str): an ISO8601 datetime string that marks the start of the Post
+            end (str): an ISO8601 datetime string that marks the end of the Post
 
-            Returns:
-                Post:
+        Returns:
+            Post:
         """
-        self._default_class(classes,POST)
+        self._default_class(classes, POST)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         if start is not None:
@@ -2259,30 +2707,40 @@ class Person(ResponsibleActor):
     Python wrapper class for IES Person
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
-                 start: str | None = None, end: str | None = None, surname: str | None = None,
-                 given_name: str | None = None, date_of_birth: str | None = None, date_of_death: str | None = None,
-                 place_of_birth: Location | None = None, place_of_death: Location | None = None,
-                 family_name: str | None = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+        start: str | None = None,
+        end: str | None = None,
+        surname: str | None = None,
+        given_name: str | None = None,
+        date_of_birth: str | None = None,
+        date_of_death: str | None = None,
+        place_of_birth: Location | None = None,
+        place_of_death: Location | None = None,
+        family_name: str | None = None,
+    ):
         """
-            Instantiate an IES Person Class
+        Instantiate an IES Person Class
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES Person
-                classes (list): the IES types to instantiate (default is ies:Person)
-                start (str): an ISO8601 datetime string that marks the birth of the Person
-                end (str): an ISO8601 datetime string that marks the death of the Person
-                surname (str): surname of the person
-                given_name (str): the first name of the Person
-                date_of_birth (str): an ISO8601 datetime string that marks the birth - use in preference to start
-                date_of_death (str): an ISO8601 datetime string that marks the death - use in preference to end
-                place_of_birth (Location): the place of birth of the Person
-                place_of_dearh (Location): the place of death of the Person
-            Returns:
-                Person:
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES Person
+            classes (list): the IES types to instantiate (default is ies:Person)
+            start (str): an ISO8601 datetime string that marks the birth of the Person
+            end (str): an ISO8601 datetime string that marks the death of the Person
+            surname (str): surname of the person
+            given_name (str): the first name of the Person
+            date_of_birth (str): an ISO8601 datetime string that marks the birth - use in preference to start
+            date_of_death (str): an ISO8601 datetime string that marks the death - use in preference to end
+            place_of_birth (Location): the place of birth of the Person
+            place_of_dearh (Location): the place of death of the Person
+        Returns:
+            Person:
         """
-        self._default_class(classes,PERSON)
+        self._default_class(classes, PERSON)
 
         super().__init__(tool=tool, uri=uri, classes=classes, start=None, end=None)
 
@@ -2304,11 +2762,15 @@ class Person(ResponsibleActor):
         if surname:
             self.add_surname(surname=surname)
             if family_name:
-                logger.error("family_name parameter is deprecated equivalent of surname - do not set both")
+                logger.error(
+                    "family_name parameter is deprecated equivalent of surname - do not set both"
+                )
         else:
             if family_name:
                 self.add_surname(surname=surname)
-                logger.warning("family_name parameter is deprecated - please use surname")
+                logger.warning(
+                    "family_name parameter is deprecated - please use surname"
+                )
 
         if start is not None:
             self.add_birth(start, place_of_birth)
@@ -2327,8 +2789,9 @@ class Person(ResponsibleActor):
             Name:
         """
         name_uri_firstname = self.tool._mint_dependent_uri(self.uri, "GIVENNAME")
-        return self.add_name(given_name, uri=name_uri_firstname,
-                             name_class=f"{IES_BASE}GivenName")
+        return self.add_name(
+            given_name, uri=name_uri_firstname, name_class=f"{IES_BASE}GivenName"
+        )
 
     def add_surname(self, surname: str) -> Name:
         """
@@ -2341,10 +2804,13 @@ class Person(ResponsibleActor):
             Name:
         """
         name_uri_surname = self.tool._mint_dependent_uri(self.uri, "SURNAME")
-        return self.add_name(surname, uri=name_uri_surname,
-                             name_class=f"{IES_BASE}Surname")
+        return self.add_name(
+            surname, uri=name_uri_surname, name_class=f"{IES_BASE}Surname"
+        )
 
-    def add_birth(self, date_of_birth: str, place_of_birth: Location | str = None) -> BoundingState:
+    def add_birth(
+        self, date_of_birth: str, place_of_birth: Location | str = None
+    ) -> BoundingState:
         """
         Adds birth state to a Person
 
@@ -2356,14 +2822,21 @@ class Person(ResponsibleActor):
             BoundingState:
         """
         birth_uri = self.tool._mint_dependent_uri(self.uri, "BIRTH")
-        birth = self.starts_in(time_string=date_of_birth, bounding_state_class=f"{IES_BASE}BirthState",
-                               uri=birth_uri)
+        birth = self.starts_in(
+            time_string=date_of_birth,
+            bounding_state_class=f"{IES_BASE}BirthState",
+            uri=birth_uri,
+        )
         if place_of_birth:
-            pob_object = self._validate_referenced_object(place_of_birth, Location, "add_birth")
+            pob_object = self._validate_referenced_object(
+                place_of_birth, Location, "add_birth"
+            )
             self.tool.add_triple(birth._uri, f"{IES_BASE}inLocation", pob_object._uri)
         return birth
 
-    def add_death(self, date_of_death: str, place_of_death: Location | str = None) -> BoundingState:
+    def add_death(
+        self, date_of_death: str, place_of_death: Location | str = None
+    ) -> BoundingState:
         """
         Adds death state to a Person
 
@@ -2380,7 +2853,9 @@ class Person(ResponsibleActor):
             date_of_death, bounding_state_class=f"{IES_BASE}DeathState", uri=uri
         )
         if place_of_death:
-            pod_object = self._validate_referenced_object(place_of_death, Location, "add_death")
+            pod_object = self._validate_referenced_object(
+                place_of_death, Location, "add_death"
+            )
             self.tool.add_triple(death._uri, f"{IES_BASE}inLocation", pod_object._uri)
 
         return death
@@ -2391,22 +2866,29 @@ class Organisation(ResponsibleActor):
     Python wrapper class for IES Organisation
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list | None = None,
-                 start: str | None = None, end: str | None = None, name=None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list | None = None,
+        start: str | None = None,
+        end: str | None = None,
+        name=None,
+    ):
         """
-            Instantiate the IES Organisation
+        Instantiate the IES Organisation
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES Organisation
-                classes (list): the IES types to instantiate
-                start (str): an ISO8601 datetime string that marks the start of the Organisation
-                end (str): an ISO8601 datetime string that marks the end of the Organisation
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES Organisation
+            classes (list): the IES types to instantiate
+            start (str): an ISO8601 datetime string that marks the start of the Organisation
+            end (str): an ISO8601 datetime string that marks the end of the Organisation
 
-            Returns:
-                Organisation:
+        Returns:
+            Organisation:
         """
-        self._default_class(classes,ORGANISATION)
+        self._default_class(classes, ORGANISATION)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         self._default_state_type = f"{IES_BASE}OrganisationState"
@@ -2414,7 +2896,13 @@ class Organisation(ResponsibleActor):
         if name:
             self.add_name(name, name_class=ORGANISATION_NAME)
 
-    def create_post(self, name: str, start: str | None = None, end: str | None = None, uri: str | None = None) -> Post:
+    def create_post(
+        self,
+        name: str,
+        start: str | None = None,
+        end: str | None = None,
+        uri: str | None = None,
+    ) -> Post:
         """
         Creates a new post in the organisation
 
@@ -2441,23 +2929,33 @@ class ClassOfElement(RdfsClass, Thing):
     Python wrapper class for IES ClassOfElement
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+    ):
         """
-            Instantiate the IES ClassOfElement
+        Instantiate the IES ClassOfElement
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES ClassOfElement
-                classes (list): the IES types to instantiate
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES ClassOfElement
+            classes (list): the IES types to instantiate
 
-            Returns:
-                ClassOfElement:
+        Returns:
+            ClassOfElement:
         """
-        self._default_class(classes,CLASS_OF_ELEMENT)
+        self._default_class(classes, CLASS_OF_ELEMENT)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
-    def add_measure(self, value: str, measure_class: str | None = None,
-                    uom: UnitOfMeasure | None = None, uri: str = None):
+    def add_measure(
+        self,
+        value: str,
+        measure_class: str | None = None,
+        uom: UnitOfMeasure | None = None,
+        uri: str = None,
+    ):
         """
         Creates a new Measure and applies it to the class - meaning all members possess this measure
 
@@ -2470,9 +2968,11 @@ class ClassOfElement(RdfsClass, Thing):
         measure = Measure(
             tool=self.tool, value=value, uom=uom, uri=uri, classes=[measure_class]
         )
-        self.tool.add_triple(subject=self._uri,
-                             predicate=f"{IES_BASE}allHaveCharacteristic",
-                             obj=measure._uri)
+        self.tool.add_triple(
+            subject=self._uri,
+            predicate=f"{IES_BASE}allHaveCharacteristic",
+            obj=measure._uri,
+        )
 
 
 class ClassOfClassOfElement(RdfsClass, Thing):
@@ -2480,19 +2980,24 @@ class ClassOfClassOfElement(RdfsClass, Thing):
     Python wrapper class for IES ClassOfClassOfElement
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str = None, classes: list[str] | None = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str = None,
+        classes: list[str] | None = None,
+    ):
         """
-            Instantiate the IES ClassOfClassOfElement
+        Instantiate the IES ClassOfClassOfElement
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES ClassOfClassOfElement
-                classes (list): the IES types to instantiate
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES ClassOfClassOfElement
+            classes (list): the IES types to instantiate
 
-            Returns:
-                ClassOfClassOfElement:
+        Returns:
+            ClassOfClassOfElement:
         """
-        self._default_class(classes,CLASS_OF_CLASS_OF_ELEMENT)
+        self._default_class(classes, CLASS_OF_CLASS_OF_ELEMENT)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
 
@@ -2501,30 +3006,38 @@ class ParticularPeriod(Element):
     Python wrapper class for IES ParticularPeriod
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, classes: list[str] | None = None, time_string: str = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        classes: list[str] | None = None,
+        time_string: str = None,
+    ):
         """
-            Instantiate the IES ParticularPeriod
+        Instantiate the IES ParticularPeriod
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                classes (list): the IES types to instantiate
-                time_string (string): the ISO8601 representation of the period (no spaces - use T, Zulu)
-            Returns:
-                ParticularPeriod:
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            classes (list): the IES types to instantiate
+            time_string (string): the ISO8601 representation of the period (no spaces - use T, Zulu)
+        Returns:
+            ParticularPeriod:
         """
-        self._default_class(classes,PARTICULAR_PERIOD)
+        self._default_class(classes, PARTICULAR_PERIOD)
         if not time_string:
             raise Exception("No time_string provided for ParticularPeriod")
 
         iso8601_time_string_punctuated = time_string.replace(" ", "T").rstrip("Z")
-        iso8601_time_string_non_punctuated = (iso8601_time_string_punctuated.replace("-", "")
-                                                                            .replace(":", ""))
+        iso8601_time_string_non_punctuated = iso8601_time_string_punctuated.replace(
+            "-", ""
+        ).replace(":", "")
         uri = f"http://iso.org/iso8601#{iso8601_time_string_non_punctuated}"
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
-        self.add_literal(predicate=f"{IES_BASE}iso8601PeriodRepresentation",
-                         literal=str(iso8601_time_string_punctuated))
+        self.add_literal(
+            predicate=f"{IES_BASE}iso8601PeriodRepresentation",
+            literal=str(iso8601_time_string_punctuated),
+        )
 
 
 class BoundingState(State):
@@ -2532,20 +3045,25 @@ class BoundingState(State):
     Python wrapper class for IES BoundingState
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+    ):
         """
-            Instantiate the IES BoundingState
+        Instantiate the IES BoundingState
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES BoundingState
-                classes (list): the IES types to instantiate
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES BoundingState
+            classes (list): the IES types to instantiate
 
-            Returns:
-                BoundingState:
+        Returns:
+            BoundingState:
         """
 
-        self._default_class(classes,BOUNDING_STATE)
+        self._default_class(classes, BOUNDING_STATE)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
 
@@ -2554,20 +3072,25 @@ class BirthState(BoundingState):
     Python wrapper class for IES BirthState
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+    ):
         """
-            Instantiate the IES BirthState
+        Instantiate the IES BirthState
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES BirthState
-                classes (list): the IES types to instantiate
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES BirthState
+            classes (list): the IES types to instantiate
 
-            Returns:
-                BirthState:
+        Returns:
+            BirthState:
         """
 
-        self._default_class(classes,BIRTH_STATE)
+        self._default_class(classes, BIRTH_STATE)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
 
@@ -2576,20 +3099,25 @@ class DeathState(BoundingState):
     Python wrapper class for IES DeathState
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+    ):
         """
-            Instantiate the IES DeathState
+        Instantiate the IES DeathState
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES DeathState
-                classes (list): the IES types to instantiate
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES DeathState
+            classes (list): the IES types to instantiate
 
-            Returns:
-                DeathState:
+        Returns:
+            DeathState:
         """
 
-        self._default_class(classes,DEATH_STATE)
+        self._default_class(classes, DEATH_STATE)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
 
@@ -2598,20 +3126,25 @@ class UnitOfMeasure(ClassOfClassOfElement):
     Python wrapper class for IES UnitOfMeasure
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str = None, classes: list[str] | None = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str = None,
+        classes: list[str] | None = None,
+    ):
         """
-            Instantiate the IES UnitOfMeasure
+        Instantiate the IES UnitOfMeasure
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES UnitOfMeasure
-                classes (list): the IES types to instantiate
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES UnitOfMeasure
+            classes (list): the IES types to instantiate
 
-            Returns:
-                UnitOfMeasure:
+        Returns:
+            UnitOfMeasure:
         """
 
-        self._default_class(classes,UNIT_OF_MEASURE)
+        self._default_class(classes, UNIT_OF_MEASURE)
         super().__init__(tool=tool, classes=classes, uri=uri)
 
 
@@ -2620,33 +3153,47 @@ class Representation(ClassOfElement):
     Python wrapper class for IES Representation
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, representation_text: str | None = None, uri: str | None = None,
-                 classes: list[str] | None = None, naming_scheme: NamingScheme | None = None,
-                 literal_type: str = "string"):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        representation_text: str | None = None,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+        naming_scheme: NamingScheme | None = None,
+        literal_type: str = "string",
+    ):
         """
-            Instantiate the IES Representation
+        Instantiate the IES Representation
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                representation_text (str): The exemplar text of the Representation
-                uri (str): the URI of the IES Representation
-                classes (list): the IES types to instantiate
-                naming_scheme (NamingScheme): the IES NamingScheme the representation belongs to
-                literal_type (str): The XSD datatype for the representation value. Defaults to "string".
-            Returns:
-                Representation:
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            representation_text (str): The exemplar text of the Representation
+            uri (str): the URI of the IES Representation
+            classes (list): the IES types to instantiate
+            naming_scheme (NamingScheme): the IES NamingScheme the representation belongs to
+            literal_type (str): The XSD datatype for the representation value. Defaults to "string".
+        Returns:
+            Representation:
         """
 
-        self._default_class(classes,REPRESENTATION)
+        self._default_class(classes, REPRESENTATION)
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
         if representation_text:
-            self.tool.add_triple(subject=self._uri, predicate=f"{IES_BASE}representationValue",
-                                 obj=representation_text, is_literal=True, literal_type=literal_type)
+            self.tool.add_triple(
+                subject=self._uri,
+                predicate=f"{IES_BASE}representationValue",
+                obj=representation_text,
+                is_literal=True,
+                literal_type=literal_type,
+            )
         if naming_scheme:
-            self.tool.add_triple(subject=self._uri, predicate=f"{IES_BASE}inScheme",
-                                 obj=naming_scheme.uri)
+            self.tool.add_triple(
+                subject=self._uri,
+                predicate=f"{IES_BASE}inScheme",
+                obj=naming_scheme.uri,
+            )
 
 
 class WorkOfDocumentation(Representation):
@@ -2654,21 +3201,25 @@ class WorkOfDocumentation(Representation):
     Python wrapper class for IES WorkOfDocumentation
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None,
-                 classes: list[str] | None = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+    ):
         """
-            Instantiate the IES WorkOfDocumentation
+        Instantiate the IES WorkOfDocumentation
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES Representation
-                classes (list): the IES types to instantiate
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES Representation
+            classes (list): the IES types to instantiate
 
-            Returns:
-                WorkOfDocumentation:
+        Returns:
+            WorkOfDocumentation:
         """
 
-        self._default_class(classes,WORK_OF_DOCUMENTATION)
+        self._default_class(classes, WORK_OF_DOCUMENTATION)
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
@@ -2678,36 +3229,50 @@ class MeasureValue(Representation):
     Python wrapper class for IES MeasureValue
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
-                 value: str | None = None, uom: UnitOfMeasure | None = None, measure: Measure | None = None,
-                 literal_type: str = "string"):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+        value: str | None = None,
+        uom: UnitOfMeasure | None = None,
+        measure: Measure | None = None,
+        literal_type: str = "string",
+    ):
         """
-            Instantiate the IES MeasureValue
+        Instantiate the IES MeasureValue
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES MeasureValue
-                classes (list): the IES types to instantiate
-                value (str): the value of the measure as a literal
-                uom (UnitOfMeasure): the unit of measure of this value
-                measure (Measure): the IES measure this is a value for
-                literal_type (str): The XSD datatype for the measure value. Defaults to "string".
-            Returns:
-                MeasureValue:
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES MeasureValue
+            classes (list): the IES types to instantiate
+            value (str): the value of the measure as a literal
+            uom (UnitOfMeasure): the unit of measure of this value
+            measure (Measure): the IES measure this is a value for
+            literal_type (str): The XSD datatype for the measure value. Defaults to "string".
+        Returns:
+            MeasureValue:
         """
 
-        self._default_class(classes,MEASURE_VALUE)
+        self._default_class(classes, MEASURE_VALUE)
         if not value:
             raise Exception("MeasureValue must have a valid value")
-        super().__init__(tool=tool, representation_text=value, uri=uri, classes=classes,
-                        naming_scheme=None, literal_type=literal_type)
+        super().__init__(
+            tool=tool,
+            representation_text=value,
+            uri=uri,
+            classes=classes,
+            naming_scheme=None,
+            literal_type=literal_type,
+        )
         if uom is not None:
             self.tool.add_triple(self._uri, f"{IES_BASE}measureUnit", obj=uom._uri)
         if measure is None:
             logger.warning("MeasureValue created without a corresponding measure")
         else:
-            self.tool.add_triple(subject=measure._uri, predicate=f"{IES_BASE}hasValue",
-                                 obj=self._uri)
+            self.tool.add_triple(
+                subject=measure._uri, predicate=f"{IES_BASE}hasValue", obj=self._uri
+            )
 
 
 class Measure(ClassOfElement):
@@ -2716,18 +3281,24 @@ class Measure(ClassOfElement):
     """
 
     def __init__(
-            self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
-            value: str = None, uom: UnitOfMeasure | None = None, literal_type: str = "string"):
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+        value: str = None,
+        uom: UnitOfMeasure | None = None,
+        literal_type: str = "string",
+    ):
         """
-            Instantiate the IES Measure
+        Instantiate the IES Measure
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES Measure
-                classes (list): the IES types to instantiate
-                value (str): the value of the measure as a literal
-                uom (UnitOfMeasure): the unit of measure of the value applied to this measure
-                literal_type (str): The XSD datatype for the measure value. Defaults to "string".
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES Measure
+            classes (list): the IES types to instantiate
+            value (str): the value of the measure as a literal
+            uom (UnitOfMeasure): the unit of measure of the value applied to this measure
+            literal_type (str): The XSD datatype for the measure value. Defaults to "string".
         """
         self.measurements_map = {
             "Length": "ValueInMetres",
@@ -2736,24 +3307,33 @@ class Measure(ClassOfElement):
             "ElectricCurrent": "ValueInAmperes",
             "Temperature": "ValueInKelvin",
             "AmountOfSubstance": "ValueInMoles",
-            "LuminousIntensity": "ValueInCandela"
+            "LuminousIntensity": "ValueInCandela",
         }
 
-        self._default_class(classes,MEASURE)
+        self._default_class(classes, MEASURE)
         if len(classes) != 1:
             logger.warning("Measure must be just one class, using the first one")
         _class = classes[0]
 
         super().__init__(tool=tool, uri=uri, classes=classes)
         value = str(value)
-        value_class = (f"{IES_BASE}"
-                       f"{self.measurements_map.get(_class.replace(IES_BASE, ''), MEASURE_VALUE[len(IES_BASE):])}"
-                       )
+        value_class = (
+            f"{IES_BASE}"
+            f"{self.measurements_map.get(_class.replace(IES_BASE, ''), MEASURE_VALUE[len(IES_BASE):])}"
+        )
         if value_class != MEASURE_VALUE and uom is not None:
-            logger.warning("Standard measure: " + value_class + " do not require a unit of measure")
+            logger.warning(
+                "Standard measure: " + value_class + " do not require a unit of measure"
+            )
 
-        MeasureValue(tool=self.tool, value=value, uom=uom, measure=self,
-                     classes=[value_class], literal_type=literal_type)
+        MeasureValue(
+            tool=self.tool,
+            value=value,
+            uom=uom,
+            measure=self,
+            classes=[value_class],
+            literal_type=literal_type,
+        )
 
 
 class Identifier(Representation):
@@ -2762,25 +3342,36 @@ class Identifier(Representation):
     """
 
     def __init__(
-            self, tool: IESTool = IES_TOOL, id_text="", uri: str | None = None, classes: list[str] | None = None,
-            naming_scheme: NamingScheme = None, literal_type: str = "string"
+        self,
+        tool: IESTool = IES_TOOL,
+        id_text="",
+        uri: str | None = None,
+        classes: list[str] | None = None,
+        naming_scheme: NamingScheme = None,
+        literal_type: str = "string",
     ):
         """
-            Instantiate the IES Identifier
+        Instantiate the IES Identifier
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES Identifier
-                classes (list): the IES types to instantiate
-                naming_scheme (NamingScheme): the IES NamingScheme the Identifier belongs to
-                literal_type (str): The XSD datatype for the identifier value. Defaults to "string".
-            Returns:
-                Identifier:
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES Identifier
+            classes (list): the IES types to instantiate
+            naming_scheme (NamingScheme): the IES NamingScheme the Identifier belongs to
+            literal_type (str): The XSD datatype for the identifier value. Defaults to "string".
+        Returns:
+            Identifier:
         """
 
-        self._default_class(classes,IDENTIFIER)
-        super().__init__(tool=tool, uri=uri, classes=classes, representation_text=id_text,
-                        naming_scheme=naming_scheme, literal_type=literal_type)
+        self._default_class(classes, IDENTIFIER)
+        super().__init__(
+            tool=tool,
+            uri=uri,
+            classes=classes,
+            representation_text=id_text,
+            naming_scheme=naming_scheme,
+            literal_type=literal_type,
+        )
 
 
 class Name(Representation):
@@ -2788,27 +3379,37 @@ class Name(Representation):
     Python wrapper class for IES Name
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, name_text="", uri: str | None = None,
-                 classes: list[str] | None = None, naming_scheme: NamingScheme = None,
-                 literal_type: str = "string"):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        name_text="",
+        uri: str | None = None,
+        classes: list[str] | None = None,
+        naming_scheme: NamingScheme = None,
+        literal_type: str = "string",
+    ):
         """
-            Instantiate the IES Name
+        Instantiate the IES Name
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES Name
-                classes (list): the IES types to instantiate
-                naming_scheme (NamingScheme): the IES NamingScheme the Name belongs to
-                literal_type (str): The XSD datatype for the name value. Defaults to "string".
-            Returns:
-                Name:
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES Name
+            classes (list): the IES types to instantiate
+            naming_scheme (NamingScheme): the IES NamingScheme the Name belongs to
+            literal_type (str): The XSD datatype for the name value. Defaults to "string".
+        Returns:
+            Name:
         """
 
-        self._default_class(classes,NAME)
+        self._default_class(classes, NAME)
 
         super().__init__(
-            tool=tool, uri=uri, classes=classes, representation_text=name_text,
-            naming_scheme=naming_scheme, literal_type=literal_type
+            tool=tool,
+            uri=uri,
+            classes=classes,
+            representation_text=name_text,
+            naming_scheme=naming_scheme,
+            literal_type=literal_type,
         )
 
 
@@ -2817,20 +3418,25 @@ class NamingScheme(ClassOfClassOfElement):
     Python wrapper class for IES NamingScheme
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, owner: ResponsibleActor | None = None, uri: str | None = None,
-                 classes: list[str] | None = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        owner: ResponsibleActor | None = None,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+    ):
         """
-            Instantiate the IES NamingScheme
+        Instantiate the IES NamingScheme
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                owner (ResponsibleActor): The actor responsible for this naming scheme
-                uri (str): the URI of the IES NamingScheme
-                classes (list): the IES types to instantiate
-            Returns:
-                NamingScheme:
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            owner (ResponsibleActor): The actor responsible for this naming scheme
+            uri (str): the URI of the IES NamingScheme
+            classes (list): the IES types to instantiate
+        Returns:
+            NamingScheme:
         """
-        self._default_class(classes,NAMING_SCHEME)
+        self._default_class(classes, NAMING_SCHEME)
         super().__init__(tool=tool, uri=uri, classes=classes)
         if owner is not None:
             self.tool.add_triple(
@@ -2840,7 +3446,9 @@ class NamingScheme(ClassOfClassOfElement):
     def add_mastering_system(self, system: Entity):
         if system is not None:
             self.tool.add_triple(
-                subject=self._uri, predicate=f"{IES_BASE}schemeMasteredIn", obj=system._uri
+                subject=self._uri,
+                predicate=f"{IES_BASE}schemeMasteredIn",
+                obj=system._uri,
             )
 
 
@@ -2849,32 +3457,39 @@ class Event(Element):
     Python wrapper class for IES class Event
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
-                 start: str | None = None, end: str | None = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+        start: str | None = None,
+        end: str | None = None,
+    ):
         """
-            Instantiate the IES Event
+        Instantiate the IES Event
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES Event
-                classes (list): the IES types to instantiate
-                start (str): an ISO8601 datetime string that marks the start of the Event
-                end (str): an ISO8601 datetime string that marks the end of the Event
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES Event
+            classes (list): the IES types to instantiate
+            start (str): an ISO8601 datetime string that marks the start of the Event
+            end (str): an ISO8601 datetime string that marks the end of the Event
 
-            Returns:
-                Event:
+        Returns:
+            Event:
         """
 
-        self._default_class(classes,EVENT)
+        self._default_class(classes, EVENT)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
-    def add_participant(self,
-                        participating_entity: Entity | str,
-                        uri: str | None = None,
-                        participation_type: str | None = None,
-                        start: str | None = None,
-                        end: str | None = None
-                        ) -> EventParticipant:
+    def add_participant(
+        self,
+        participating_entity: Entity | str,
+        uri: str | None = None,
+        participation_type: str | None = None,
+        start: str | None = None,
+        end: str | None = None,
+    ) -> EventParticipant:
         """
         Adds a participant to the Event
 
@@ -2892,7 +3507,9 @@ class Event(Element):
             EventParticipant:
         """
 
-        pe_object = self._validate_referenced_object(participating_entity, Entity, "add_participant")
+        pe_object = self._validate_referenced_object(
+            participating_entity, Entity, "add_participant"
+        )
 
         if uri is None:
             uri = self.tool.generate_data_uri()
@@ -2900,10 +3517,14 @@ class Event(Element):
         if participation_type is None:
             participation_type = f"{IES_BASE}EventParticipant"
 
-        participant = EventParticipant(tool=self.tool, uri=uri, start=start, end=end, classes=[participation_type])
+        participant = EventParticipant(
+            tool=self.tool, uri=uri, start=start, end=end, classes=[participation_type]
+        )
 
         self.tool.add_triple(participant._uri, f"{IES_BASE}isParticipantIn", self._uri)
-        self.tool.add_triple(participant._uri, f"{IES_BASE}isParticipationOf", pe_object._uri)
+        self.tool.add_triple(
+            participant._uri, f"{IES_BASE}isParticipationOf", pe_object._uri
+        )
         return participant
 
 
@@ -2912,22 +3533,28 @@ class EventParticipant(State):
     Python wrapper class for IES EventParticipant
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
-                 start: str | None = None, end: str | None = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+        start: str | None = None,
+        end: str | None = None,
+    ):
         """
-            Instantiate the IES EventParticipant
+        Instantiate the IES EventParticipant
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES EventParticipant
-                classes (list): the IES types to instantiate (default is ies:EventParticipant)
-                start (str): an ISO8601 datetime string that marks the start of the EventParticipant
-                end (str): an ISO8601 datetime string that marks the end of the EventParticipant
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES EventParticipant
+            classes (list): the IES types to instantiate (default is ies:EventParticipant)
+            start (str): an ISO8601 datetime string that marks the start of the EventParticipant
+            end (str): an ISO8601 datetime string that marks the end of the EventParticipant
 
-            Returns:
-                EventParticipant:
+        Returns:
+            EventParticipant:
         """
-        self._default_class(classes,EVENT_PARTICIPANT)
+        self._default_class(classes, EVENT_PARTICIPANT)
         super().__init__(tool=tool, start=start, end=end, uri=uri, classes=classes)
 
 
@@ -2936,31 +3563,42 @@ class Communication(Event):
     Python wrapper class for IES Communication
     """
 
-    def __init__(self, tool: IESTool = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
-                 start: str | None = None, end: str | None = None,
-                 message_content: str | None = None):
+    def __init__(
+        self,
+        tool: IESTool = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+        start: str | None = None,
+        end: str | None = None,
+        message_content: str | None = None,
+    ):
         """
-            Instantiate the IES Communication
+        Instantiate the IES Communication
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES Communication
-                classes (list): the IES types to instantiate
-                start (str): an ISO8601 datetime string that marks the start of the Communication
-                end (str): an ISO8601 datetime string that marks the end of the Communication
-                message_content (str): the content of the communication as text
-            Returns:
-                Communication:
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES Communication
+            classes (list): the IES types to instantiate
+            start (str): an ISO8601 datetime string that marks the start of the Communication
+            end (str): an ISO8601 datetime string that marks the end of the Communication
+            message_content (str): the content of the communication as text
+        Returns:
+            Communication:
         """
 
-        self._default_class(classes,COMMUNICATION)
+        self._default_class(classes, COMMUNICATION)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         if message_content:
             self.add_literal(f"{IES_BASE}messageContent", message_content)
 
-    def create_party(self, uri: str | None = None, party_role: str | None = None, start: str | None = None,
-                     end: str | None = None) -> PartyInCommunication:
+    def create_party(
+        self,
+        uri: str | None = None,
+        party_role: str | None = None,
+        start: str | None = None,
+        end: str | None = None,
+    ) -> PartyInCommunication:
         """Creates a PartyInCommunication instance and relates it to the Communication instance
 
         Args:
@@ -2977,13 +3615,24 @@ class Communication(Event):
         if party_role not in self.tool.ontology.pic_subtypes:
             logger.warning(f"{party_role} is not a subtype of ies:PartyInCommunication")
 
-        party = PartyInCommunication(tool=self.tool, uri=uri, communication=self,
-                                     start=start, end=end, classes=[party_role])
+        party = PartyInCommunication(
+            tool=self.tool,
+            uri=uri,
+            communication=self,
+            start=start,
+            end=end,
+            classes=[party_role],
+        )
 
         return party
 
-    def add_party(self, uri: str | None = None, party_role: str | None = None, starts_in: str | None = None,
-                  ends_in: str | None = None) -> PartyInCommunication:
+    def add_party(
+        self,
+        uri: str | None = None,
+        party_role: str | None = None,
+        starts_in: str | None = None,
+        ends_in: str | None = None,
+    ) -> PartyInCommunication:
         """DEPRECATED - USE create_party().
 
         Args:
@@ -2996,7 +3645,9 @@ class Communication(Event):
             PartyInCommunication: the PartyInCommunication instance
         """
         logger.warning("add_party() is deprecated - please use create_party()")
-        return self.add_party(uri=uri, party_role=party_role, starts_in=starts_in, ends_in=ends_in)
+        return self.add_party(
+            uri=uri, party_role=party_role, starts_in=starts_in, ends_in=ends_in
+        )
 
 
 class PartyInCommunication(Event):
@@ -3004,30 +3655,38 @@ class PartyInCommunication(Event):
     Python wrapper class for IES PartyInCommunication
     """
 
-    def __init__(self, tool: IESTool | None = IES_TOOL, uri: str | None = None, classes: list[str] | None = None,
-                 communication: Event | None = None, start: str | None = None,
-                 end: str | None = None):
+    def __init__(
+        self,
+        tool: IESTool | None = IES_TOOL,
+        uri: str | None = None,
+        classes: list[str] | None = None,
+        communication: Event | None = None,
+        start: str | None = None,
+        end: str | None = None,
+    ):
         """
-            Instantiate the IES PartyInCommunication
+        Instantiate the IES PartyInCommunication
 
-            Args:
-                tool (IESTool): The IES Tool which holds the data you're working with
-                uri (str): the URI of the IES PartyInCommunication
-                classes (list): the IES types to instantiate (default is ies:PartyInCommunication)
-                communication (Communication): the IES Communication the party is in
-                start (str): an ISO8601 datetime string that marks the start of the PartyInCommunication
-                end (str): an ISO8601 datetime string that marks the end of the PartyInCommunication
-            Returns:
-                PartyInCommunication:
+        Args:
+            tool (IESTool): The IES Tool which holds the data you're working with
+            uri (str): the URI of the IES PartyInCommunication
+            classes (list): the IES types to instantiate (default is ies:PartyInCommunication)
+            communication (Communication): the IES Communication the party is in
+            start (str): an ISO8601 datetime string that marks the start of the PartyInCommunication
+            end (str): an ISO8601 datetime string that marks the end of the PartyInCommunication
+        Returns:
+            PartyInCommunication:
         """
 
-        self._default_class(classes,PARTY_IN_COMMUNICATION)
+        self._default_class(classes, PARTY_IN_COMMUNICATION)
 
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
         if communication is not None:
             communication.add_part(self)
 
-    def add_account(self, account: Account | str, uri: str | None = None) -> EventParticipant:
+    def add_account(
+        self, account: Account | str, uri: str | None = None
+    ) -> EventParticipant:
         """
         Adds an Account to the PartyInCommunication
 
@@ -3046,20 +3705,13 @@ class PartyInCommunication(Event):
         try:
 
             aic = EventParticipant(
-                tool=self.tool, uri=uri,
-                classes=[f"{IES_BASE}AccountInCommunication"]
+                tool=self.tool, uri=uri, classes=[f"{IES_BASE}AccountInCommunication"]
             )
 
-            self.tool.add_triple(
-                aic._uri,
-                f"{IES_BASE}isParticipantIn",
-                self._uri
-            )
+            self.tool.add_triple(aic._uri, f"{IES_BASE}isParticipantIn", self._uri)
 
             self.tool.add_triple(
-                aic._uri,
-                f"{IES_BASE}isParticipationOf",
-                account_object._uri
+                aic._uri, f"{IES_BASE}isParticipationOf", account_object._uri
             )
 
             return aic
@@ -3067,9 +3719,12 @@ class PartyInCommunication(Event):
         except AttributeError as e:
             logger.warning(
                 f"Exception occurred while trying to add account, no account will be added."
-                f" {repr(e)}")
+                f" {repr(e)}"
+            )
 
-    def add_device(self, device: Device | str, uri: str | None = None) -> EventParticipant:
+    def add_device(
+        self, device: Device | str, uri: str | None = None
+    ) -> EventParticipant:
         """
         Adds a Device to the PartyInCommunication
 
@@ -3085,18 +3740,12 @@ class PartyInCommunication(Event):
             uri = self.tool._mint_dependent_uri(self.uri, "DEVICE")
         try:
             dic = EventParticipant(
-                tool=self.tool, uri=uri,
-                classes=[f"{IES_BASE}DeviceInCommunication"]
+                tool=self.tool, uri=uri, classes=[f"{IES_BASE}DeviceInCommunication"]
             )
+            self.tool.add_triple(dic._uri, f"{IES_BASE}isParticipantIn", self._uri)
             self.tool.add_triple(
-                dic._uri,
-                f"{IES_BASE}isParticipantIn",
-                self._uri)
-            self.tool.add_triple(
-                dic._uri,
-                f"{IES_BASE}isParticipationOf",
-                device_object._uri)
-
+                dic._uri, f"{IES_BASE}isParticipationOf", device_object._uri
+            )
 
         except AttributeError as e:
             logger.warning(
@@ -3106,7 +3755,9 @@ class PartyInCommunication(Event):
 
         return dic
 
-    def add_person(self, person: Person | str, uri: str | None = None) -> EventParticipant:
+    def add_person(
+        self, person: Person | str, uri: str | None = None
+    ) -> EventParticipant:
         """
         Adds a Person to the PartyInCommunication
 
@@ -3122,17 +3773,12 @@ class PartyInCommunication(Event):
             uri = self.tool._mint_dependent_uri(self.uri, "PERSON")
         try:
             pic = EventParticipant(
-                tool=self.tool, uri=uri,
-                classes=[f"{IES_BASE}PersonInCommunication"]
+                tool=self.tool, uri=uri, classes=[f"{IES_BASE}PersonInCommunication"]
             )
+            self.tool.add_triple(pic._uri, f"{IES_BASE}isParticipantIn", self._uri)
             self.tool.add_triple(
-                pic._uri,
-                f"{IES_BASE}isParticipantIn",
-                self._uri)
-            self.tool.add_triple(
-                pic._uri,
-                f"{IES_BASE}isParticipationOf",
-                person_object._uri)
+                pic._uri, f"{IES_BASE}isParticipationOf", person_object._uri
+            )
             return pic
         except AttributeError as e:
             logger.warning(
