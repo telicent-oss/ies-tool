@@ -279,6 +279,7 @@ class IESTool:
 
         self.prefixes: dict[str, str] = {}
         self.add_prefix("ies:", IES_BASE)
+        self.add_prefix(":", default_data_namespace)
         self.default_data_namespace = default_data_namespace
 
         # Test that the default data stub generates valid URIs
