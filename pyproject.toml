@@ -19,7 +19,8 @@ dependencies = [
     "phonenumbers==8.13.35",
     "pycountry==24.6.1",
     "validators==0.28.1",
-    "iso4217parse==0.5.1"
+    "iso4217parse==0.5.1",
+    "shortuuid==1.0.13"
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
