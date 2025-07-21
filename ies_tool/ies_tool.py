@@ -143,6 +143,7 @@ class IESTool:
         server_dataset: str = "ds",
         default_security_label: str | None = None,
         additional_classes: dict = None,
+        prevent_duplicate_triples: bool = False,
     ):
         """
 
@@ -168,12 +169,17 @@ class IESTool:
             additional_classes (dict):
                 A dictionary of additional classes to add to the ontology. The key is the URI of the class,
                 and the value is a list of superclasses of the class (i.e. a list of URIs)
+            prevent_duplicate_triples (bool):
+                If set to True, IESTool will not allow duplicate triples to be added to the graph. The tool will
+                run faster with this set to False. Most triplestores will not allow duplicate triples anyway,
         """
 
         # Instances dict is used as a local cache for all instances created. It's a bit wasteful, but it does
         # allow quick access to IES Tool instances
         self.instances: dict = {}
         self.session_instance_count = 0
+
+        self.prevent_duplicate_triples = prevent_duplicate_triples
 
         # Initiate the storage plugins dictionary
         self.plug_in: IESPlugin | None = None
@@ -883,48 +889,50 @@ class IESTool:
         if security_label is None:
             security_label = ""
 
-        if self.__mode == "plugin":
-            self.plug_in.add_triple(
-                subject=subject,
-                predicate=predicate,
-                obj=obj,
-                is_literal=is_literal,
-                literal_type=literal_type,
-            )
-            return True
-        elif self.__mode == "sparql_server":
-            triple = self._prep_spo(subject, predicate, obj, is_literal, literal_type)
-            query = f"INSERT DATA {{{triple}}}"
-            self.run_sparql_update(query=query, security_label=security_label)
-        elif not self.in_graph(
+
+        if not self.prevent_duplicate_triples or not self.in_graph(
             subject=subject,
             predicate=predicate,
             obj=obj,
             is_literal=is_literal,
             literal_type=literal_type,
         ):
-            # See is someone has passed a rdflib type and fix it
-            subject = self._str(subject)
-            predicate = self._str(predicate)
-            obj = self._str(obj)
-
-            # Send out a warning if a non-IES predicate is used
-            if is_literal:
-                if predicate not in self.ontology.datatype_properties:
-                    logger.warning(f"non-IES datatype property used: {predicate}")
+            if self.__mode == "plugin":
+                self.plug_in.add_triple(
+                    subject=subject,
+                    predicate=predicate,
+                    obj=obj,
+                    is_literal=is_literal,
+                    literal_type=literal_type,
+                )
+                return True
+            elif self.__mode == "sparql_server":
+                triple = self._prep_spo(subject, predicate, obj, is_literal, literal_type)
+                query = f"INSERT DATA {{{triple}}}"
+                self.run_sparql_update(query=query, security_label=security_label)
             else:
-                if predicate not in self.ontology.object_properties:
-                    logger.warning(f"non-IES object property used: {predicate}")
+                # See is someone has passed a rdflib type and fix it
+                subject = self._str(subject)
+                predicate = self._str(predicate)
+                obj = self._str(obj)
 
-            if is_literal:
-                try:
-                    lt = getattr(XSD, literal_type)
-                except AttributeError:
-                    lt = XSD.string
-                obj = Literal(obj, datatype=lt)
-            else:
-                obj = URIRef(obj)
-            self.graph.add((URIRef(subject), URIRef(predicate), obj))
+                # Send out a warning if a non-IES predicate is used
+                if is_literal:
+                    if predicate not in self.ontology.datatype_properties:
+                        logger.warning(f"non-IES datatype property used: {predicate}")
+                else:
+                    if predicate not in self.ontology.object_properties:
+                        logger.warning(f"non-IES object property used: {predicate}")
+
+                if is_literal:
+                    try:
+                        lt = getattr(XSD, literal_type)
+                    except AttributeError:
+                        lt = XSD.string
+                    obj = Literal(obj, datatype=lt)
+                else:
+                    obj = URIRef(obj)
+                self.graph.add((URIRef(subject), URIRef(predicate), obj))
 
     def add_literal_property(
         self, subject: str, predicate: str, obj: str, literal_type: str = "string"
