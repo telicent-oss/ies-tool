@@ -774,7 +774,7 @@ class IESTool:
             if is_literal:
                 return (URIRef(subject), URIRef(predicate), Literal(obj)) in self.graph
             else:
-                return (URIRef(subject), URIRef(predicate), Literal(obj)) in self.graph
+                return (URIRef(subject), URIRef(predicate), URIRef(obj)) in self.graph
 
     def generate_data_uri(self, context: str | None = None) -> str:
         """
