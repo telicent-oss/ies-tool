@@ -26,7 +26,7 @@ class IESPlugin:
     def clear_triples(self):
         raise NotImplementedError
 
-    def get_rdf(self, format: str = None) -> str:
+    def get_rdf(self, rdf_format: str = None) -> str:
         raise NotImplementedError
 
     def save_rdf(self,filename,rdf_format = None):
