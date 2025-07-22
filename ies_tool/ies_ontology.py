@@ -7,6 +7,8 @@ import logging
 from rdflib import Graph, URIRef
 from rdflib.plugins.sparql.results.jsonresults import JSONResultSerializer
 
+from ies_tool.ies_constants import IES_BASE
+
 __license__ = """
 Copyright TELICENT LTD
 
@@ -24,8 +26,6 @@ limitations under the License.
 """
 
 logger = logging.getLogger()
-
-IES_BASE = "http://ies.data.gov.uk/ontology/ies4#"
 
 
 class Ontology:
