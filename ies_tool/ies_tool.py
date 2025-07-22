@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import io
-import json
 import logging
 import os
 import pathlib
@@ -11,7 +9,6 @@ from typing import TypeVar
 import iso4217parse
 import phonenumbers
 import pycountry
-import requests
 import shortuuid
 import validators
 import validators.uri
@@ -129,8 +126,8 @@ class IESTool:
     Instances of the IESTool class hold an in-memory copy of the IES ontology in a
     [rdflib](https://github.com/RDFLib/rdflib) graph which can be accessed through self.ontology.graph
 
-    IESTool can work with in-memory data (e.g. with rdflib) or can connect to a SPARQL compliant triplestore and
-    manipulate data in that dataset.
+    IESTool can work with in-memory data (e.g. with rdflib) or can run with a plugin that implements the IESPlugin
+    interface.
     """
 
     def __init__(
@@ -139,9 +136,6 @@ class IESTool:
         mode: str = "rdflib",
         plug_in: IESPlugin | None = None,
         validate: bool = False,
-        server_host: str = "http://localhost:3030/",
-        server_dataset: str = "ds",
-        default_security_label: str | None = None,
         additional_classes: dict = None,
         prevent_duplicate_triples: bool = False,
     ):
@@ -152,7 +146,6 @@ class IESTool:
             mode (str):
                 The mode that the tool should run in. Should be one of:
                     - rdflib (default) - slow, but includes a lot of RDF checking. Ideal for dev and testing
-                    - sparql_server - connects to a remote triplestore. Use with care !
                     - plugin - you can develop your own storage engine and plug it in
             plug_in (IESPlugin):
                 if the mode param is "plugin", IES Tool will expect you to provide a compliant storage plug_in
@@ -160,12 +153,6 @@ class IESTool:
             validate (bool):
                 if in rdflib mode and if validate is true, IES Tool will check the data you create against the IES
                 SHACL patterns
-            server_host (str):
-                For use in sparql_server mode, the host URI of the triplestore
-            server_dataset (str):
-                For use in sparql_server mode, the name of the triplestore dataset you want to work on
-            default_security_label (str):
-                For use in sparql_server mode, the default ABAC security label to apply to data being created
             additional_classes (dict):
                 A dictionary of additional classes to add to the ontology. The key is the URI of the class,
                 and the value is a list of superclasses of the class (i.e. a list of URIs)
@@ -240,7 +227,7 @@ class IESTool:
         self.ontology = Ontology(ont_file, additional_classes=additional_classes)
 
         self.__mode = mode
-        if mode not in ["rdflib", "sparql_server"]:
+        if mode not in ["rdflib"]:
             self._register_plugin(mode, plug_in)
 
         if self.__mode == "plugin":
@@ -263,20 +250,7 @@ class IESTool:
             logger.info(
                 "IES Tool set to validate all messages. This might get a bit slow"
             )
-        elif mode == "sparql_server":
-            self.server_host = server_host
-            self.server_dataset = server_dataset
-            self.default_security_label = default_security_label or ""
-            try:
-                query = "SELECT * WHERE { ?s ?p ?o } LIMIT 2"
-                get_uri = (
-                    self.server_host + self.server_dataset + "/query?query=" + query
-                )
-                requests.get(get_uri)
-            except ConnectionError as e:
-                raise RuntimeError(
-                    f"Could not connect to SPARQL endpoint at {self.server_host}"
-                ) from e
+
 
         logger.debug("initialising data graph")
 
@@ -295,8 +269,8 @@ class IESTool:
         for k, v in DEFAULT_PREFIXES.items():
             self.add_prefix(k, v)
 
-        if self.__mode != "sparql_server":
-            self.clear_graph()
+
+        self.clear_graph()
 
         self.ies_namespace = IES_BASE
         self.iso8601_namespace = "http://iso.org/iso8601#"
@@ -485,8 +459,6 @@ class IESTool:
             raise RuntimeError("No plugin provided")
         elif plugin_name == "rdflib":
             raise RuntimeError("'rdflib' is a reserved name")
-        elif plugin_name == "sparql_server":
-            raise RuntimeError("'sparql_server' is a reserved name")
         else:
             self.plug_in = plugin
             self.plug_in.set_classes(self.ontology.classes)
@@ -514,8 +486,6 @@ class IESTool:
 
         if self.__mode == "plugin":
             self.plug_in.clear_triples()
-        elif self.__mode == "sparql_server":
-            self.run_sparql_update("DELETE {?s ?p ?o .} WHERE {?s ?p ?o .}")
         else:
             if self.graph is not None:
                 del self.graph
@@ -527,78 +497,6 @@ class IESTool:
         self.session_instance_count = 0
         self.instances = {}
         return self.session_uuid_str
-
-    def run_sparql_update(self, query: str, security_label: str | None = None):
-        """
-        Executes a SPARQL update on a remote sparql server or rdflib - DOES NOT WORK ON plugins (yet)
-
-        Args:
-            query (str): The SPARQL query
-            security_label (str): Security labels to apply to the data being created (this only applies
-            if using Telicent CORE)
-        """
-
-        if self.__mode == "sparql_server":
-            if security_label is None:
-                security_label = self.default_security_label
-            post_uri = f"{self.server_host}{self.server_dataset}/update"
-            headers = {
-                "Accept": "*/*",
-                "Security-Label": security_label,
-                "Content-Type": "application/sparql-update",
-            }
-            requests.post(
-                post_uri, headers=headers, data=f"{self.format_prefixes()}{query}"
-            )
-        elif self.__mode == "rdflib":
-            self.graph.update(f"{self.format_prefixes()}{query}")
-        else:
-            raise RuntimeError(
-                f"Cannot issue SPARQL Update unless using rdflib or remote sparql. You are using {self.__mode}"
-            )
-
-    def make_results_list_from_query(self, query: str, sparql_var_name: str) -> list:
-        """
-        Pulls out individual variable from each row returned from sparql query. It's a bit niche, I know.
-
-        Args:
-            query (str): The query
-            sparql_var_name (str): The SPARQL var name
-        """
-
-        result_object = self.run_sparql_query(query)
-        return_set = set()
-        if (
-            "results" in result_object.keys()
-            and "bindings" in result_object["results"].keys()
-        ):
-            for binding in result_object["results"]["bindings"]:
-                return_set.add(binding[sparql_var_name]["value"])
-        return list(return_set)
-
-    def run_sparql_query(self, query: str) -> dict:
-        """
-        Runs a SPARQL query on the data - DOES NOT WORK ON plugins (yet)
-
-        Args:
-            query (str): The query to run
-        """
-
-        if self.__mode == "sparql_server":
-            get_uri = f"{self.server_host}{self.server_dataset}/query"
-            response = requests.get(
-                get_uri, params={"query": f"{self.format_prefixes()}{query}"}
-            )
-            return response.json()
-        elif self.__mode == "rdflib":
-            self.graph.query(f"{self.format_prefixes()}{query}")
-            with io.StringIO() as f:
-                return json.loads(f.getvalue())
-        else:
-
-            raise RuntimeError(
-                f"Cannot issue SPARQL Query unless using rdflib or remote sparql. You are using {self.__mode}"
-            )
 
     @staticmethod
     def _str(_input: str | Graph) -> str | Graph:
@@ -628,47 +526,6 @@ class IESTool:
                     f"Cannot create a triple where one place is of type {str(_input)}"
                 ) from e
 
-    @staticmethod
-    def _prep_object(obj: str, is_literal: bool, literal_type: str) -> str:
-        """
-        Checks the type of object place in an RDF triple and formats it for use in a SPARQL query
-
-        Args:
-            obj (str) - the RDF object (third position in an RDF triple)
-            is_literal (bool) - set to true if passing a literal object
-            literal_type (str) - an XML schema datatype
-
-        Returns:
-            str: _description_
-        """
-
-        if is_literal:
-            o = f'"{obj}"'
-            if literal_type:
-                o = f"{o}^^{literal_type}"
-        else:
-            o = f"<{obj}>"
-        return o
-
-    def _prep_spo(
-        self,
-        subject: str,
-        predicate: str,
-        obj: str,
-        is_literal: bool = True,
-        literal_type: str | None = None,
-    ) -> str:
-        """
-        Formats an RDF triple, so it can be used in a SPARQL query or update
-
-        Args:
-            subject - the first position of the triple
-            predicate - the second position of the triple
-            obj - the third position of the triple
-            is_literal - set to true if the third position is a literal
-            literal_type - if the third position is a literal, set its XML datatype
-        """
-        return f"<{subject}> <{predicate}> {self._prep_object(obj, is_literal, literal_type)}"
 
     def switch_mode(self, mode: str):
         """
@@ -699,9 +556,7 @@ class IESTool:
             "triples": "",
             "validation_errors": "",
         }
-        if self.__mode == "sparql_server":
-            logger.warning("Export RDF not supported in sparql server mode")
-        elif self.__mode == "plugin":
+        if self.__mode == "plugin":
             if rdf_format not in self.plug_in.supported_rdf_serialisations:
                 logger.warning(
                     f"Current plugin only supports {str(self.plug_in.supported_rdf_serialisations)}"
@@ -774,8 +629,6 @@ class IESTool:
 
         if self.__mode == "plugin":
             return self.plug_in.in_graph(subject, predicate, obj, is_literal=is_literal)
-        elif self.__mode == "sparql_server":
-            f"ASK {{ <> <>  {self._prep_object(obj, is_literal, literal_type)}}}"
         else:
             if is_literal:
                 return (URIRef(subject), URIRef(predicate), Literal(obj)) in self.graph
@@ -818,12 +671,7 @@ class IESTool:
 
         if self.__mode == "plugin" and not self.plug_in.deletion_supported:
             logger.warning("Triple deletion not currently supported in plugin")
-        else:
-            update = (
-                f"DELETE DATA {{{self._prep_spo(subject, predicate, obj, is_literal)}}}"
-            )
-            self.run_sparql_update(update)
-        return True
+
 
     def add_triple(
         self,
@@ -872,10 +720,6 @@ class IESTool:
                     literal_type=literal_type,
                 )
                 return True
-            elif self.__mode == "sparql_server":
-                triple = self._prep_spo(subject, predicate, obj, is_literal, literal_type)
-                query = f"INSERT DATA {{{triple}}}"
-                self.run_sparql_update(query=query, security_label=security_label)
             else:
                 # See is someone has passed a rdflib type and fix it
                 subject = self._str(subject)

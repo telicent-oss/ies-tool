@@ -41,7 +41,7 @@ class IESPlugin:
     def query_sp(self, subject: str, predicate: str) -> list:
         raise NotImplementedError
 
-    def in_graph(self, subject: str, predicate: str, obj: str, is_literal: bool) -> bool:
+    def in_graph(self, subject: str, predicate: str, obj: str, is_literal: bool, literal_type: str = None) -> bool:
         raise NotImplementedError
 
     def add_triple(self, subject: str, predicate: str, obj: str, is_literal: bool, literal_type: str):
