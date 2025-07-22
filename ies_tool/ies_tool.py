@@ -110,7 +110,7 @@ DEFAULT_PREFIXES = {
     "rfc5322:": "https://ietf.org/rfc5322#",
     "ieee802:": "https://www.ieee802.org#",
     "ies:": IES_BASE,
-    ":": "http://example.com/rdf/testdata#"
+    ":": "http://example.com/rdf/testdata#",
 }
 
 
@@ -251,7 +251,6 @@ class IESTool:
                 "IES Tool set to validate all messages. This might get a bit slow"
             )
 
-
         logger.debug("initialising data graph")
 
         # Note that both plugin and rdflib datasets are initialised to enable quick changeover
@@ -268,7 +267,6 @@ class IESTool:
         # Establish a set of useful prefixes
         for k, v in DEFAULT_PREFIXES.items():
             self.add_prefix(k, v)
-
 
         self.clear_graph()
 
@@ -526,7 +524,6 @@ class IESTool:
                     f"Cannot create a triple where one place is of type {str(_input)}"
                 ) from e
 
-
     def switch_mode(self, mode: str):
         """
         Switches between rdflib and plugin modes - note this also clears the graph.
@@ -672,7 +669,6 @@ class IESTool:
         if self.__mode == "plugin" and not self.plug_in.deletion_supported:
             logger.warning("Triple deletion not currently supported in plugin")
 
-
     def add_triple(
         self,
         subject: str,
@@ -702,7 +698,6 @@ class IESTool:
 
         if security_label is None:
             security_label = ""
-
 
         if not self.prevent_duplicate_triples or not self.in_graph(
             subject=subject,

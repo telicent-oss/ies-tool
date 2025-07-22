@@ -21,12 +21,13 @@ limitations under the License.
 class SPARQLEndpointPlugin:
 
     def __init__(
-            self,
-            default_data_namespace: str = "https://telicent.io/testdata#",
-            server_host: str = "http://localhost:3030/",
-            server_dataset: str = "ds",
-            ser_user: str = "",
-            server_password: str = ""):
+        self,
+        default_data_namespace: str = "https://telicent.io/testdata#",
+        server_host: str = "http://localhost:3030/",
+        server_dataset: str = "ds",
+        ser_user: str = "",
+        server_password: str = "",
+    ):
         self.default_data_namespace: str = default_data_namespace
         self.server_host: str = server_host
         self.server_dataset: str = server_dataset
@@ -35,9 +36,7 @@ class SPARQLEndpointPlugin:
         self._supported_rdf_serialisations = []
         try:
             query = "SELECT * WHERE { ?s ?p ?o } LIMIT 2"
-            get_uri = (
-                self.server_host + self.server_dataset + "/query?query=" + query
-            )
+            get_uri = self.server_host + self.server_dataset + "/query?query=" + query
             requests.get(get_uri)
         except ConnectionError as e:
             raise RuntimeError(
@@ -53,16 +52,14 @@ class SPARQLEndpointPlugin:
             security_label (str): Security labels to apply to the data being created (this only applies
             if using Telicent CORE)
         """
-        #This really needs updating to use the SPARQLWrapper library and Telicent CORE labels
+        # This really needs updating to use the SPARQLWrapper library and Telicent CORE labels
 
         post_uri = f"{self.server_host}{self.server_dataset}/update"
         headers = {
             "Accept": "*/*",
             "Content-Type": "application/sparql-update",
         }
-        requests.post(
-            post_uri, headers=headers, data=query
-        )
+        requests.post(post_uri, headers=headers, data=query)
 
     def _make_results_list_from_query(self, query: str, sparql_var_name: str) -> list:
         """
@@ -92,9 +89,7 @@ class SPARQLEndpointPlugin:
         """
 
         get_uri = f"{self.server_host}{self.server_dataset}/query"
-        response = requests.get(
-            get_uri, params={"query": query}
-        )
+        response = requests.get(get_uri, params={"query": query})
         return response.json()
 
     @staticmethod
@@ -152,7 +147,7 @@ class SPARQLEndpointPlugin:
         """Clears the current graph of all triples. Creates a new UUID for the session and resets the instance count.
         (as well as adding the default data namespace as a prefi into rdflib).
         """
-        if hasattr(self,"graph") and self.graph is not None:
+        if hasattr(self, "graph") and self.graph is not None:
             del self.graph
         self.session_instance_count = 0
         self.uuid: str = shortuuid.uuid()
@@ -162,17 +157,31 @@ class SPARQLEndpointPlugin:
     def get_rdf(self, rdf_format: str = None) -> str:
         raise NotImplementedError
 
-    def save_rdf(self,filename,rdf_format = None):
+    def save_rdf(self, filename, rdf_format=None):
         raise NotImplementedError
 
     def query_sp(self, subject: str, predicate: str) -> list:
         raise NotImplementedError
 
-    def in_graph(self, subject: str, predicate: str, obj: str, is_literal: bool, literal_type: str = None) -> bool:
+    def in_graph(
+        self,
+        subject: str,
+        predicate: str,
+        obj: str,
+        is_literal: bool,
+        literal_type: str = None,
+    ) -> bool:
         # f"ASK {{ <> <>  {self._prep_object(obj, is_literal, literal_type)}}}"
         raise NotImplementedError
 
-    def add_triple(self, subject: str, predicate: str, obj: str, is_literal: bool, literal_type: str):
+    def add_triple(
+        self,
+        subject: str,
+        predicate: str,
+        obj: str,
+        is_literal: bool,
+        literal_type: str,
+    ):
         triple = self._prep_spo(subject, predicate, obj, is_literal, literal_type)
         query = f"INSERT DATA {{{triple}}}"
         self._run_sparql_update(query=query)
@@ -186,10 +195,10 @@ class SPARQLEndpointPlugin:
     def get_triple_count(self) -> int:
         raise NotImplementedError
 
-    def can_suppport_prefixes(self) -> bool :
+    def can_suppport_prefixes(self) -> bool:
         return False
 
-    def add_prefix(self, prefix: str, uri: str) :
+    def add_prefix(self, prefix: str, uri: str):
         raise NotImplementedError
 
     def get_namespace_uri(self, prefix: str) -> str:

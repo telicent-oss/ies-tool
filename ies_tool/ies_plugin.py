@@ -35,16 +35,30 @@ class IESPlugin:
     def get_rdf(self, rdf_format: str = None) -> str:
         raise NotImplementedError
 
-    def save_rdf(self,filename,rdf_format = None):
+    def save_rdf(self, filename, rdf_format=None):
         raise NotImplementedError
 
     def query_sp(self, subject: str, predicate: str) -> list:
         raise NotImplementedError
 
-    def in_graph(self, subject: str, predicate: str, obj: str, is_literal: bool, literal_type: str = None) -> bool:
+    def in_graph(
+        self,
+        subject: str,
+        predicate: str,
+        obj: str,
+        is_literal: bool,
+        literal_type: str = None,
+    ) -> bool:
         raise NotImplementedError
 
-    def add_triple(self, subject: str, predicate: str, obj: str, is_literal: bool, literal_type: str):
+    def add_triple(
+        self,
+        subject: str,
+        predicate: str,
+        obj: str,
+        is_literal: bool,
+        literal_type: str,
+    ):
         raise NotImplementedError
 
     def can_validate(self) -> bool:
@@ -56,10 +70,10 @@ class IESPlugin:
     def get_triple_count(self) -> int:
         raise NotImplementedError
 
-    def can_suppport_prefixes(self) -> bool :
+    def can_suppport_prefixes(self) -> bool:
         raise NotImplementedError
 
-    def add_prefix(self, prefix: str, uri: str) :
+    def add_prefix(self, prefix: str, uri: str):
         raise NotImplementedError
 
     def get_namespace_uri(self, prefix: str) -> str:

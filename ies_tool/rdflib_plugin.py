@@ -27,7 +27,15 @@ class RdfLibPlugin:
         Args:
             default_data_namespace (_type_, optional): _description_. Defaults to "https://telicent.io/testdata#".
         """
-        self._supported_rdf_serialisations = ["turtle", "xml", "n3", "json-ld", "nt", "ttl", "ntriples"]
+        self._supported_rdf_serialisations = [
+            "turtle",
+            "xml",
+            "n3",
+            "json-ld",
+            "nt",
+            "ttl",
+            "ntriples",
+        ]
         self._default_data_namespace = default_data_namespace
         self.classes = set()
         self.properties = set()
@@ -66,7 +74,7 @@ class RdfLibPlugin:
         """Clears the current graph of all triples. Creates a new UUID for the session and resets the instance count.
         (as well as adding the default data namespace as a prefi into rdflib).
         """
-        if hasattr(self,"graph") and self.graph is not None:
+        if hasattr(self, "graph") and self.graph is not None:
             del self.graph
         self.graph = Graph()
         self.namespace_manager = NamespaceManager(self.graph)
@@ -86,7 +94,7 @@ class RdfLibPlugin:
         """
         return self.graph.serialize(format=rdf_format)
 
-    def save_rdf(self,filename,rdf_format = None):
+    def save_rdf(self, filename, rdf_format=None):
         """Saves the current graph to a file in the specified RDF format.
 
         Args:
@@ -112,7 +120,14 @@ class RdfLibPlugin:
             del s, p
         return objs
 
-    def in_graph(self, subject: str, predicate: str, obj: str, is_literal: bool, literal_type: str = None) -> bool:
+    def in_graph(
+        self,
+        subject: str,
+        predicate: str,
+        obj: str,
+        is_literal: bool,
+        literal_type: str = None,
+    ) -> bool:
         """
         Checks to see if we already have a triple in the current graph
 
@@ -131,7 +146,14 @@ class RdfLibPlugin:
         else:
             return (URIRef(subject), URIRef(predicate), URIRef(obj)) in self.graph
 
-    def add_triple(self, subject: str, predicate: str, obj: str, is_literal: bool, literal_type: str = None):
+    def add_triple(
+        self,
+        subject: str,
+        predicate: str,
+        obj: str,
+        is_literal: bool,
+        literal_type: str = None,
+    ):
         """Adds a triple to the current graph if it does not already exist.
 
         Args:
@@ -153,11 +175,12 @@ class RdfLibPlugin:
                 if literal_type is None or literal_type == "":
                     rl_obj = Literal(obj)
                 else:
-                    if literal_type == "string": #catching legacy IES_TOOL literal type
+                    if (
+                        literal_type == "string"
+                    ):  # catching legacy IES_TOOL literal type
                         rl_obj = Literal(obj, datatype=XSD.string)
                     else:
                         rl_obj = Literal(obj, datatype=URIRef(literal_type))
-
 
             else:
                 rl_obj = URIRef(obj)
@@ -187,7 +210,7 @@ class RdfLibPlugin:
         """
         return len(self.graph)
 
-    def can_suppport_prefixes(self) -> bool :
+    def can_suppport_prefixes(self) -> bool:
         """Indicates if the plugin can support prefixes in the RDF graph.
 
         Returns:
@@ -195,7 +218,7 @@ class RdfLibPlugin:
         """
         return True
 
-    def add_prefix(self, prefix: str, uri: str) :
+    def add_prefix(self, prefix: str, uri: str):
         """Adds a prefix to the namespace manager for the graph.
 
         Args:
@@ -214,7 +237,9 @@ class RdfLibPlugin:
         Returns:
             Namespace: The namespace associated with the prefix.
         """
-        return self.namespace_manager.store.namespace(prefix.replace(":", "")).toPython()
+        return self.namespace_manager.store.namespace(
+            prefix.replace(":", "")
+        ).toPython()
 
     @property
     def default_data_namespace(self):
