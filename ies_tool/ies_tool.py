@@ -509,7 +509,7 @@ class IESTool:
         than constantly initiating new IESTool objects
 
         Returns:
-            uuid.UUID: The session uuid.
+            short uuid string: The session uuid.
         """
 
         if self.__mode == "plugin":
@@ -789,6 +789,8 @@ class IESTool:
         Args:
             context (str): an additional string to insert into the URI to provide human-readable context
         """
+        if self.__mode == "plugin":
+            return self.plug_in.generate_data_uri(context=context)
         if context is None:
             context = ""
         uri = f"{self.default_data_namespace}{self.session_uuid_str}{context}_{self.session_instance_count}"

@@ -17,6 +17,12 @@ limitations under the License.
 
 class IESPlugin:
 
+    def __init__(self, default_data_namespace: str = "https://telicent.io/testdata#"):
+        self.default_data_namespace: str = default_data_namespace
+
+    def generate_data_uri(self, context: str | None = None) -> str:
+        raise NotImplementedError
+
     def set_classes(self, classes: set):
         raise NotImplementedError
 
@@ -30,9 +36,6 @@ class IESPlugin:
         raise NotImplementedError
 
     def save_rdf(self,filename,rdf_format = None):
-        raise NotImplementedError
-
-    def get_reporting(self) -> str:
         raise NotImplementedError
 
     def query_sp(self, subject: str, predicate: str) -> list:
@@ -57,6 +60,17 @@ class IESPlugin:
         raise NotImplementedError
 
     def add_prefix(self, prefix: str, uri: str) :
+        raise NotImplementedError
+
+    def get_namespace_uri(self, prefix: str) -> str:
+        raise NotImplementedError
+
+    @property
+    def default_data_namespace(self):
+        raise NotImplementedError
+
+    @default_data_namespace.setter
+    def default_data_namespace(self, value: str):
         raise NotImplementedError
 
     @property
