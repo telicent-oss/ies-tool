@@ -269,7 +269,7 @@ class IESTool:
             ns = Namespace(uri)
             self.graph.bind(prefix.replace(":", ""), ns)
         elif self.__mode == "plugin":
-            if self.plug_in.can_suppport_prefixes():
+            if self.plug_in.can_support_prefixes():
                 self.plug_in.add_prefix(prefix, uri)
             else:
                 logger.warning(
