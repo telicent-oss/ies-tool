@@ -7,6 +7,8 @@ import logging
 from rdflib import Graph, URIRef
 from rdflib.plugins.sparql.results.jsonresults import JSONResultSerializer
 
+from ies_tool.ies_constants import IES_BASE
+
 __license__ = """
 Copyright TELICENT LTD
 
@@ -25,12 +27,11 @@ limitations under the License.
 
 logger = logging.getLogger()
 
-IES_BASE = "http://ies.data.gov.uk/ontology/ies4#"
-
 
 class Ontology:
-    def __init__(self, filename: str | None = "./ies4-3.ttl", additional_classes: dict = None):
-
+    def __init__(
+        self, filename: str | None = "./ies4-3.ttl", additional_classes: dict = None
+    ):
         """
         IES Tools stores a copy of the IES ontology as an RDFlib graph.
         It also caches properties and classes into simple Python lists
@@ -52,7 +53,6 @@ class Ontology:
         else:
             self.__cache_classes()
 
-
     def __cache_classes(self):
         self.classes = set()
         self.properties = set()
@@ -62,32 +62,56 @@ class Ontology:
         # Now create some caches of IES and related stuff we can use to warn the user
         # if they stray off the straight and narrow
         self.classes = self.make_results_set_from_query(
-            "SELECT ?c WHERE {?c a <http://www.w3.org/2000/01/rdf-schema#Class>}", "c")
+            "SELECT ?c WHERE {?c a <http://www.w3.org/2000/01/rdf-schema#Class>}", "c"
+        )
         self.properties = self.make_results_set_from_query(
-            "SELECT ?p WHERE {?p a <http://www.w3.org/1999/02/22-rdf-syntax-ns#Property>}", "p")
+            "SELECT ?p WHERE {?p a <http://www.w3.org/1999/02/22-rdf-syntax-ns#Property>}",
+            "p",
+        )
         self.datatype_properties = self.make_results_set_from_query(
-            "SELECT ?p WHERE {?p a <http://www.w3.org/2002/07/owl#DatatypeProperty>}", "p")
+            "SELECT ?p WHERE {?p a <http://www.w3.org/2002/07/owl#DatatypeProperty>}",
+            "p",
+        )
         self.object_properties = self.make_results_set_from_query(
-            "SELECT ?p WHERE {?p a <http://www.w3.org/2002/07/owl#ObjectProperty>}", "p")
+            "SELECT ?p WHERE {?p a <http://www.w3.org/2002/07/owl#ObjectProperty>}", "p"
+        )
 
         self.__person_subtypes = self.make_results_set_from_query(
-            "SELECT ?p WHERE {?p <http://www.w3.org/2000/01/rdf-schema#subClassOf>* <" + self.ies_class(
-                "Person") + ">}", "p")
+            "SELECT ?p WHERE {?p <http://www.w3.org/2000/01/rdf-schema#subClassOf>* <"
+            + self.ies_class("Person")
+            + ">}",
+            "p",
+        )
         self.__organisation_subtypes = self.make_results_set_from_query(
-            "SELECT ?p WHERE {?p <http://www.w3.org/2000/01/rdf-schema#subClassOf>* <" + self.ies_class(
-                "Organisation") + ">}", "p")
+            "SELECT ?p WHERE {?p <http://www.w3.org/2000/01/rdf-schema#subClassOf>* <"
+            + self.ies_class("Organisation")
+            + ">}",
+            "p",
+        )
         self.__event_subtypes = self.make_results_set_from_query(
-            "SELECT ?e WHERE {?e <http://www.w3.org/2000/01/rdf-schema#subClassOf>* <" + self.ies_class(
-                "Event") + ">}", "e")
+            "SELECT ?e WHERE {?e <http://www.w3.org/2000/01/rdf-schema#subClassOf>* <"
+            + self.ies_class("Event")
+            + ">}",
+            "e",
+        )
         self.__communication_subtypes = self.make_results_set_from_query(
-            "SELECT ?e WHERE {?e <http://www.w3.org/2000/01/rdf-schema#subClassOf>* <" + self.ies_class(
-                "Communication") + ">}", "e")
+            "SELECT ?e WHERE {?e <http://www.w3.org/2000/01/rdf-schema#subClassOf>* <"
+            + self.ies_class("Communication")
+            + ">}",
+            "e",
+        )
         self.geopoint_subtypes = self.make_results_set_from_query(
-            "SELECT ?e WHERE {?e <http://www.w3.org/2000/01/rdf-schema#subClassOf>* <" + self.ies_class(
-                "GeoPoint") + ">}", "e")
+            "SELECT ?e WHERE {?e <http://www.w3.org/2000/01/rdf-schema#subClassOf>* <"
+            + self.ies_class("GeoPoint")
+            + ">}",
+            "e",
+        )
         self.pic_subtypes = self.make_results_set_from_query(
-            "SELECT ?e WHERE {?e <http://www.w3.org/2000/01/rdf-schema#subClassOf>* <" + self.ies_class(
-                "PartyInCommunication") + ">}", "e")
+            "SELECT ?e WHERE {?e <http://www.w3.org/2000/01/rdf-schema#subClassOf>* <"
+            + self.ies_class("PartyInCommunication")
+            + ">}",
+            "e",
+        )
 
         self.classes.add("http://www.w3.org/2000/01/rdf-schema#Class")
         self.classes.add("http://www.w3.org/2000/01/rdf-schema#Property")
@@ -144,29 +168,48 @@ class Ontology:
             for cls, superclasses in additional_classes.items():
                 if superclasses is not None and len(superclasses) > 0:
                     for superclass in superclasses:
-                        self.graph.add((URIRef(cls),
-                                       URIRef("http://www.w3.org/2000/01/rdf-schema#subClassOf"),
-                                       URIRef(superclass)))
+                        self.graph.add(
+                            (
+                                URIRef(cls),
+                                URIRef(
+                                    "http://www.w3.org/2000/01/rdf-schema#subClassOf"
+                                ),
+                                URIRef(superclass),
+                            )
+                        )
                 else:
-                    self.graph.add((cls, "http://www.w3.org/2000/01/rdf-schema#subClassOf", "http://www.w3.org/2000/01/rdf-schema#Class"))
+                    self.graph.add(
+                        (
+                            cls,
+                            "http://www.w3.org/2000/01/rdf-schema#subClassOf",
+                            "http://www.w3.org/2000/01/rdf-schema#Class",
+                        )
+                    )
         self.__cache_classes()
 
     # pulls out individual variable from each row returned from sparql query. This is a bit niche, I know.
     def make_results_set_from_query(self, query: str, sparql_var_name: str):
         result_object = self.__run_query(query)
         return_set = set()
-        if "results" in result_object.keys() and "bindings" in result_object["results"].keys():
-            for binding in result_object["results"]['bindings']:
-                return_set.add(binding[sparql_var_name]['value'])
+        if (
+            "results" in result_object.keys()
+            and "bindings" in result_object["results"].keys()
+        ):
+            for binding in result_object["results"]["bindings"]:
+                return_set.add(binding[sparql_var_name]["value"])
         return return_set
 
         # pulls out individual variable from each row returned from sparql query. It's a bit niche, I know.
+
     def make_results_dict_from_query(self, query: str, sparql_var_name: str):
         result_object = self.__run_query(query)
         return_dict = {}
-        if "results" in result_object.keys() and "bindings" in result_object["results"].keys():
-            for binding in result_object["results"]['bindings']:
-                return_dict[binding[sparql_var_name]['value']] = {}
+        if (
+            "results" in result_object.keys()
+            and "bindings" in result_object["results"].keys()
+        ):
+            for binding in result_object["results"]["bindings"]:
+                return_dict[binding[sparql_var_name]["value"]] = {}
         return return_dict
 
     # Returns the full IES URI for a provided short name of an IES class

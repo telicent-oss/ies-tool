@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import io
-import json
 import logging
 import os
 import pathlib
@@ -11,7 +9,6 @@ from typing import TypeVar
 import iso4217parse
 import phonenumbers
 import pycountry
-import requests
 import shortuuid
 import validators
 import validators.uri
@@ -19,7 +16,8 @@ from geohash_tools import encode
 from pyshacl import validate as pyshacl_validate
 from rdflib import XSD, Graph, Literal, Namespace, URIRef
 
-from ies_tool.ies_ontology import IES_BASE, Ontology
+import ies_tool.ies_constants as ies_constants
+from ies_tool.ies_ontology import Ontology
 from ies_tool.ies_plugin import IESPlugin
 from ies_tool.utils import validate_datetime_string
 
@@ -47,75 +45,6 @@ IES_TOOL = None
 
 RdfsClassType = TypeVar("RdfsClassType", bound="RdfsClass")
 
-RDFS = "http://www.w3.org/2000/01/rdf-schema#"
-RDFS_RESOURCE = "http://www.w3.org/2000/01/rdf-schema#Resource"
-RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
-RDFS_CLASS = "http://www.w3.org/2000/01/rdf-schema#Class"
-
-TELICENT_PRIMARY_NAME = "http://telicent.io/ontology/primaryName"
-
-THING = f"{IES_BASE}Thing"
-ELEMENT = f"{IES_BASE}Element"
-CLASS_OF_ELEMENT = f"{IES_BASE}ClassOfElement"
-CLASS_OF_CLASS_OF_ELEMENT = f"{IES_BASE}ClassOfClassOfElement"
-PARTICULAR_PERIOD = f"{IES_BASE}ParticularPeriod"
-ACCOUNT = f"{IES_BASE}Account"
-ACCOUNT_HOLDER = f"{IES_BASE}AccountHolder"
-ACCOUNT_STATE = f"{IES_BASE}AccountState"
-AMOUNT_OF_MONEY = f"{IES_BASE}AmountOfMoney"
-ASSET = f"{IES_BASE}Asset"
-ASSET_STATE = f"{IES_BASE}AssetState"
-COMMUNICATIONS_ACCOUNT = f"{IES_BASE}CommunicationsAccount"
-COMMUNICATIONS_ACCOUNT_STATE = f"{IES_BASE}CommunicationsAccountState"
-HOLDS_ACCOUNT = f"{IES_BASE}holdsAccount"
-PROVIDES_ACCOUNT = f"{IES_BASE}providesAccount"
-STATE = f"{IES_BASE}State"
-BOUNDING_STATE = f"{IES_BASE}BoundingState"
-BIRTH_STATE = f"{IES_BASE}BirthState"
-DEATH_STATE = f"{IES_BASE}DeathState"
-UNIT_OF_MEASURE = f"{IES_BASE}UnitOfMeasure"
-MEASURE_VALUE = f"{IES_BASE}MeasureValue"
-MEASURE = f"{IES_BASE}Measure"
-REPRESENTATION = f"{IES_BASE}Representation"
-IDENTIFIER = f"{IES_BASE}Identifier"
-NAME = f"{IES_BASE}Name"
-NAMING_SCHEME = f"{IES_BASE}NamingScheme"
-ENTITY = f"{IES_BASE}Entity"
-DEVICE_STATE = f"{IES_BASE}DeviceState"
-DEVICE = f"{IES_BASE}Device"
-LOCATION = f"{IES_BASE}Location"
-LOCATION_STATE = f"{IES_BASE}#LocationState"
-COUNTRY = f"{IES_BASE}Country"
-GEOPOINT = f"{IES_BASE}GeoPoint"
-RESPONSIBLE_ACTOR = f"{IES_BASE}ResponsibleActor"
-POST = f"{IES_BASE}Post"
-PERSON = f"{IES_BASE}Person"
-ORGANISATION = f"{IES_BASE}Organisation"
-ORGANISATION_NAME = f"{IES_BASE}OrganisationName"
-EVENT = f"{IES_BASE}Event"
-EVENT_PARTICIPANT = f"{IES_BASE}EventParticipant"
-COMMUNICATION = f"{IES_BASE}Communication"
-PARTY_IN_COMMUNICATION = f"{IES_BASE}PartyInCommunication"
-WORK_OF_DOCUMENTATION = f"{IES_BASE}WorkOfDocumentation"
-
-DEFAULT_PREFIXES = {
-    "xsd:": "http://www.w3.org/2001/XMLSchema#",
-    "dc:": "http://purl.org/dc/elements/1.1/",
-    "rdf:": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-    "rdfs:": "http://www.w3.org/2000/01/rdf-schema#",
-    "owl:": "http://www.w3.org/2002/07/owl#",
-    "iso8601:": "http://iso.org/iso8601#",
-    "iso3166c:": "http://iso.org/iso3166/country#",
-    "iso4217:": "http://iso.org/iso4217#",
-    "tont:": "http://telicent.io/ontology/",
-    "e164:": "https://www.itu.int/e164#",
-    "IMSI:": "https://www.itu.int/e212#",
-    "rfc5322:": "https://ietf.org/rfc5322#",
-    "ieee802:": "https://www.ieee802.org#",
-    "ies:": IES_BASE,
-    ":": "http://example.com/rdf/testdata#"
-}
-
 
 class IESTool:
     """
@@ -129,8 +58,8 @@ class IESTool:
     Instances of the IESTool class hold an in-memory copy of the IES ontology in a
     [rdflib](https://github.com/RDFLib/rdflib) graph which can be accessed through self.ontology.graph
 
-    IESTool can work with in-memory data (e.g. with rdflib) or can connect to a SPARQL compliant triplestore and
-    manipulate data in that dataset.
+    IESTool can work with in-memory data (e.g. with rdflib) or can run with a plugin that implements the IESPlugin
+    interface.
     """
 
     def __init__(
@@ -139,10 +68,8 @@ class IESTool:
         mode: str = "rdflib",
         plug_in: IESPlugin | None = None,
         validate: bool = False,
-        server_host: str = "http://localhost:3030/",
-        server_dataset: str = "ds",
-        default_security_label: str | None = None,
         additional_classes: dict = None,
+        prevent_duplicate_triples: bool = False,
     ):
         """
 
@@ -151,7 +78,6 @@ class IESTool:
             mode (str):
                 The mode that the tool should run in. Should be one of:
                     - rdflib (default) - slow, but includes a lot of RDF checking. Ideal for dev and testing
-                    - sparql_server - connects to a remote triplestore. Use with care !
                     - plugin - you can develop your own storage engine and plug it in
             plug_in (IESPlugin):
                 if the mode param is "plugin", IES Tool will expect you to provide a compliant storage plug_in
@@ -159,21 +85,20 @@ class IESTool:
             validate (bool):
                 if in rdflib mode and if validate is true, IES Tool will check the data you create against the IES
                 SHACL patterns
-            server_host (str):
-                For use in sparql_server mode, the host URI of the triplestore
-            server_dataset (str):
-                For use in sparql_server mode, the name of the triplestore dataset you want to work on
-            default_security_label (str):
-                For use in sparql_server mode, the default ABAC security label to apply to data being created
             additional_classes (dict):
                 A dictionary of additional classes to add to the ontology. The key is the URI of the class,
                 and the value is a list of superclasses of the class (i.e. a list of URIs)
+            prevent_duplicate_triples (bool):
+                If set to True, IESTool will not allow duplicate triples to be added to the graph. The tool will
+                run faster with this set to False. Most triplestores will not allow duplicate triples anyway,
         """
 
         # Instances dict is used as a local cache for all instances created. It's a bit wasteful, but it does
         # allow quick access to IES Tool instances
         self.instances: dict = {}
         self.session_instance_count = 0
+
+        self.prevent_duplicate_triples = prevent_duplicate_triples
 
         # Initiate the storage plugins dictionary
         self.plug_in: IESPlugin | None = None
@@ -234,7 +159,7 @@ class IESTool:
         self.ontology = Ontology(ont_file, additional_classes=additional_classes)
 
         self.__mode = mode
-        if mode not in ["rdflib", "sparql_server"]:
+        if mode not in ["rdflib"]:
             self._register_plugin(mode, plug_in)
 
         if self.__mode == "plugin":
@@ -257,20 +182,6 @@ class IESTool:
             logger.info(
                 "IES Tool set to validate all messages. This might get a bit slow"
             )
-        elif mode == "sparql_server":
-            self.server_host = server_host
-            self.server_dataset = server_dataset
-            self.default_security_label = default_security_label or ""
-            try:
-                query = "SELECT * WHERE { ?s ?p ?o } LIMIT 2"
-                get_uri = (
-                    self.server_host + self.server_dataset + "/query?query=" + query
-                )
-                requests.get(get_uri)
-            except ConnectionError as e:
-                raise RuntimeError(
-                    f"Could not connect to SPARQL endpoint at {self.server_host}"
-                ) from e
 
         logger.debug("initialising data graph")
 
@@ -278,7 +189,7 @@ class IESTool:
         self.graph = Graph()
 
         self.prefixes: dict[str, str] = {}
-        self.add_prefix("ies:", IES_BASE)
+        self.add_prefix("ies:", ies_constants.IES_BASE)
         self.add_prefix(":", default_data_namespace)
         self.default_data_namespace = default_data_namespace
 
@@ -286,13 +197,12 @@ class IESTool:
 
         self.check_valid_uri_production()
         # Establish a set of useful prefixes
-        for k, v in DEFAULT_PREFIXES.items():
+        for k, v in ies_constants.DEFAULT_PREFIXES.items():
             self.add_prefix(k, v)
 
-        if self.__mode != "sparql_server":
-            self.clear_graph()
+        self.clear_graph()
 
-        self.ies_namespace = IES_BASE
+        self.ies_namespace = ies_constants.IES_BASE
         self.iso8601_namespace = "http://iso.org/iso8601#"
         self.rdf_type = f"{self.prefixes['rdf:']}type"
         self.rdfs_resource = f"{self.prefixes['rdfs:']}Resource"
@@ -359,7 +269,7 @@ class IESTool:
             ns = Namespace(uri)
             self.graph.bind(prefix.replace(":", ""), ns)
         elif self.__mode == "plugin":
-            if self.plug_in.can_suppport_prefixes():
+            if self.plug_in.can_support_prefixes():
                 self.plug_in.add_prefix(prefix, uri)
             else:
                 logger.warning(
@@ -410,9 +320,9 @@ class IESTool:
         uri = ""
         # first check to see if this is an RDFS class instead of an IES one, then a quick text fix to get the URI
         if "Rdfs" in cls.__name__:
-            uri = cls.__name__.replace("Rdfs", RDFS)
+            uri = cls.__name__.replace("Rdfs", ies_constants.RDFS)
         else:
-            uri = IES_BASE + cls.__name__
+            uri = ies_constants.IES_BASE + cls.__name__
         # get the RDFS subclasses of this class
         ies_subs = self.ontology.make_results_set_from_query(
             "SELECT ?p WHERE {?p <http://www.w3.org/2000/01/rdf-schema#subClassOf>* <"
@@ -479,8 +389,6 @@ class IESTool:
             raise RuntimeError("No plugin provided")
         elif plugin_name == "rdflib":
             raise RuntimeError("'rdflib' is a reserved name")
-        elif plugin_name == "sparql_server":
-            raise RuntimeError("'sparql_server' is a reserved name")
         else:
             self.plug_in = plugin
             self.plug_in.set_classes(self.ontology.classes)
@@ -503,13 +411,11 @@ class IESTool:
         than constantly initiating new IESTool objects
 
         Returns:
-            uuid.UUID: The session uuid.
+            short uuid string: The session uuid.
         """
 
         if self.__mode == "plugin":
             self.plug_in.clear_triples()
-        elif self.__mode == "sparql_server":
-            self.run_sparql_update("DELETE {?s ?p ?o .} WHERE {?s ?p ?o .}")
         else:
             if self.graph is not None:
                 del self.graph
@@ -521,78 +427,6 @@ class IESTool:
         self.session_instance_count = 0
         self.instances = {}
         return self.session_uuid_str
-
-    def run_sparql_update(self, query: str, security_label: str | None = None):
-        """
-        Executes a SPARQL update on a remote sparql server or rdflib - DOES NOT WORK ON plugins (yet)
-
-        Args:
-            query (str): The SPARQL query
-            security_label (str): Security labels to apply to the data being created (this only applies
-            if using Telicent CORE)
-        """
-
-        if self.__mode == "sparql_server":
-            if security_label is None:
-                security_label = self.default_security_label
-            post_uri = f"{self.server_host}{self.server_dataset}/update"
-            headers = {
-                "Accept": "*/*",
-                "Security-Label": security_label,
-                "Content-Type": "application/sparql-update",
-            }
-            requests.post(
-                post_uri, headers=headers, data=f"{self.format_prefixes()}{query}"
-            )
-        elif self.__mode == "rdflib":
-            self.graph.update(f"{self.format_prefixes()}{query}")
-        else:
-            raise RuntimeError(
-                f"Cannot issue SPARQL Update unless using rdflib or remote sparql. You are using {self.__mode}"
-            )
-
-    def make_results_list_from_query(self, query: str, sparql_var_name: str) -> list:
-        """
-        Pulls out individual variable from each row returned from sparql query. It's a bit niche, I know.
-
-        Args:
-            query (str): The query
-            sparql_var_name (str): The SPARQL var name
-        """
-
-        result_object = self.run_sparql_query(query)
-        return_set = set()
-        if (
-            "results" in result_object.keys()
-            and "bindings" in result_object["results"].keys()
-        ):
-            for binding in result_object["results"]["bindings"]:
-                return_set.add(binding[sparql_var_name]["value"])
-        return list(return_set)
-
-    def run_sparql_query(self, query: str) -> dict:
-        """
-        Runs a SPARQL query on the data - DOES NOT WORK ON plugins (yet)
-
-        Args:
-            query (str): The query to run
-        """
-
-        if self.__mode == "sparql_server":
-            get_uri = f"{self.server_host}{self.server_dataset}/query"
-            response = requests.get(
-                get_uri, params={"query": f"{self.format_prefixes()}{query}"}
-            )
-            return response.json()
-        elif self.__mode == "rdflib":
-            self.graph.query(f"{self.format_prefixes()}{query}")
-            with io.StringIO() as f:
-                return json.loads(f.getvalue())
-        else:
-
-            raise RuntimeError(
-                f"Cannot issue SPARQL Query unless using rdflib or remote sparql. You are using {self.__mode}"
-            )
 
     @staticmethod
     def _str(_input: str | Graph) -> str | Graph:
@@ -621,48 +455,6 @@ class IESTool:
                 raise RuntimeError(
                     f"Cannot create a triple where one place is of type {str(_input)}"
                 ) from e
-
-    @staticmethod
-    def _prep_object(obj: str, is_literal: bool, literal_type: str) -> str:
-        """
-        Checks the type of object place in an RDF triple and formats it for use in a SPARQL query
-
-        Args:
-            obj (str) - the RDF object (third position in an RDF triple)
-            is_literal (bool) - set to true if passing a literal object
-            literal_type (str) - an XML schema datatype
-
-        Returns:
-            str: _description_
-        """
-
-        if is_literal:
-            o = f'"{obj}"'
-            if literal_type:
-                o = f"{o}^^{literal_type}"
-        else:
-            o = f"<{obj}>"
-        return o
-
-    def _prep_spo(
-        self,
-        subject: str,
-        predicate: str,
-        obj: str,
-        is_literal: bool = True,
-        literal_type: str | None = None,
-    ) -> str:
-        """
-        Formats an RDF triple, so it can be used in a SPARQL query or update
-
-        Args:
-            subject - the first position of the triple
-            predicate - the second position of the triple
-            obj - the third position of the triple
-            is_literal - set to true if the third position is a literal
-            literal_type - if the third position is a literal, set its XML datatype
-        """
-        return f"<{subject}> <{predicate}> {self._prep_object(obj, is_literal, literal_type)}"
 
     def switch_mode(self, mode: str):
         """
@@ -693,9 +485,7 @@ class IESTool:
             "triples": "",
             "validation_errors": "",
         }
-        if self.__mode == "sparql_server":
-            logger.warning("Export RDF not supported in sparql server mode")
-        elif self.__mode == "plugin":
+        if self.__mode == "plugin":
             if rdf_format not in self.plug_in.supported_rdf_serialisations:
                 logger.warning(
                     f"Current plugin only supports {str(self.plug_in.supported_rdf_serialisations)}"
@@ -768,13 +558,11 @@ class IESTool:
 
         if self.__mode == "plugin":
             return self.plug_in.in_graph(subject, predicate, obj, is_literal=is_literal)
-        elif self.__mode == "sparql_server":
-            f"ASK {{ <> <>  {self._prep_object(obj, is_literal, literal_type)}}}"
         else:
             if is_literal:
                 return (URIRef(subject), URIRef(predicate), Literal(obj)) in self.graph
             else:
-                return (URIRef(subject), URIRef(predicate), Literal(obj)) in self.graph
+                return (URIRef(subject), URIRef(predicate), URIRef(obj)) in self.graph
 
     def generate_data_uri(self, context: str | None = None) -> str:
         """
@@ -783,6 +571,8 @@ class IESTool:
         Args:
             context (str): an additional string to insert into the URI to provide human-readable context
         """
+        if self.__mode == "plugin":
+            return self.plug_in.generate_data_uri(context=context)
         if context is None:
             context = ""
         uri = f"{self.default_data_namespace}{self.session_uuid_str}{context}_{self.session_instance_count}"
@@ -810,48 +600,6 @@ class IESTool:
 
         if self.__mode == "plugin" and not self.plug_in.deletion_supported:
             logger.warning("Triple deletion not currently supported in plugin")
-        else:
-            update = (
-                f"DELETE DATA {{{self._prep_spo(subject, predicate, obj, is_literal)}}}"
-            )
-            self.run_sparql_update(update)
-        return True
-
-    def add_to_graph(
-        self,
-        subject: str,
-        predicate: str,
-        obj: str,
-        is_literal: bool = False,
-        literal_type: str = "string",
-        security_label: str | None = None,
-    ) -> bool:
-        """DEPRECATED - use add_triple()
-
-        Args:
-            subject (str): _description_
-            predicate (str): _description_
-            obj (str): _description_
-            is_literal (bool, optional): _description_. Defaults to False.
-            literal_type (str, optional): _description_. Defaults to "string".
-            security_label (str, optional): _description_. Defaults to "".
-
-        Returns:
-            bool: _description_
-        """
-        warnings.warn(
-            "add_to_graph() is deprecated - please use add_triple()",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.add_triple(
-            subject=subject,
-            predicate=predicate,
-            obj=obj,
-            is_literal=is_literal,
-            literal_type=literal_type,
-            security_label=security_label,
-        )
 
     def add_triple(
         self,
@@ -883,48 +631,45 @@ class IESTool:
         if security_label is None:
             security_label = ""
 
-        if self.__mode == "plugin":
-            self.plug_in.add_triple(
-                subject=subject,
-                predicate=predicate,
-                obj=obj,
-                is_literal=is_literal,
-                literal_type=literal_type,
-            )
-            return True
-        elif self.__mode == "sparql_server":
-            triple = self._prep_spo(subject, predicate, obj, is_literal, literal_type)
-            query = f"INSERT DATA {{{triple}}}"
-            self.run_sparql_update(query=query, security_label=security_label)
-        elif not self.in_graph(
+        if not self.prevent_duplicate_triples or not self.in_graph(
             subject=subject,
             predicate=predicate,
             obj=obj,
             is_literal=is_literal,
             literal_type=literal_type,
         ):
-            # See is someone has passed a rdflib type and fix it
-            subject = self._str(subject)
-            predicate = self._str(predicate)
-            obj = self._str(obj)
-
-            # Send out a warning if a non-IES predicate is used
-            if is_literal:
-                if predicate not in self.ontology.datatype_properties:
-                    logger.warning(f"non-IES datatype property used: {predicate}")
+            if self.__mode == "plugin":
+                self.plug_in.add_triple(
+                    subject=subject,
+                    predicate=predicate,
+                    obj=obj,
+                    is_literal=is_literal,
+                    literal_type=literal_type,
+                )
+                return True
             else:
-                if predicate not in self.ontology.object_properties:
-                    logger.warning(f"non-IES object property used: {predicate}")
+                # See is someone has passed a rdflib type and fix it
+                subject = self._str(subject)
+                predicate = self._str(predicate)
+                obj = self._str(obj)
 
-            if is_literal:
-                try:
-                    lt = getattr(XSD, literal_type)
-                except AttributeError:
-                    lt = XSD.string
-                obj = Literal(obj, datatype=lt)
-            else:
-                obj = URIRef(obj)
-            self.graph.add((URIRef(subject), URIRef(predicate), obj))
+                # Send out a warning if a non-IES predicate is used
+                if is_literal:
+                    if predicate not in self.ontology.datatype_properties:
+                        logger.warning(f"non-IES datatype property used: {predicate}")
+                else:
+                    if predicate not in self.ontology.object_properties:
+                        logger.warning(f"non-IES object property used: {predicate}")
+
+                if is_literal:
+                    try:
+                        lt = getattr(XSD, literal_type)
+                    except AttributeError:
+                        lt = XSD.string
+                    obj = Literal(obj, datatype=lt)
+                else:
+                    obj = URIRef(obj)
+                self.graph.add((URIRef(subject), URIRef(predicate), obj))
 
     def add_literal_property(
         self, subject: str, predicate: str, obj: str, literal_type: str = "string"
@@ -964,7 +709,7 @@ class IESTool:
             instance_uri_context = ""
 
         if not classes:
-            classes = [RDFS_RESOURCE]
+            classes = [ies_constants.RDFS_RESOURCE]
 
         if not isinstance(classes, list):
             raise RuntimeError(
@@ -987,229 +732,6 @@ class IESTool:
             cls_str = f"{cls_str}{cls_name}"
 
         return base_class(uri=uri, tool=self, classes=classes)
-
-    def create_event(
-        self,
-        uri: str | None = None,
-        classes: list | None = None,
-        event_start: str | None = None,
-        event_end: str | None = None,
-    ) -> Event:
-        """
-        DEPRECATED - use Event() to instantiate an IES Event.
-
-        Args:
-            uri (str): The URI for the event
-            classes (list): a list of IES classes that it will be a member of
-            event_start (str): The start of the event as an ISO8601 string (no spaces - use a T)
-            event_end (str): The end of the event as an ISO8601 string (no spaces - use a T)
-
-        Returns:
-            Event: The created Event wrapped as an IES Event class
-        """
-        warnings.warn(
-            "IESTool.create_event is deprecated - please initiate Event Python class directly",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        if classes is None:
-            classes = [EVENT]
-
-        return Event(
-            tool=self, start=event_start, end=event_end, uri=uri, classes=classes
-        )
-
-    def create_person(
-        self,
-        uri: str | None = None,
-        classes: list | None = None,
-        given_name: str | None = None,
-        surname: str | None = None,
-        dob: str | None = None,
-        pob: Location | None = None,
-        dod: str | None = None,
-        pod: Location | None = None,
-    ) -> Person:
-        """
-        DEPRECATED - use Person() to instantiate an IES Person
-
-        Args:
-            given_name (str): first name of the person
-            surname (str): surname of the person
-            dob (str): date of birth of the person (ISO8601 string, no spaces, use T)
-            pob (Location): place of birth of the person a Python Location object
-            classes (list): the IES types to instantiate  - default is Person - shouldn't need to change this
-            uri (str): the URI of the Person instance - if unset, one will be created.
-            dod (str): date of death of the person (ISO8601 string, no spaces, use T)
-            pod (Location): place of death of the person a Python Location object
-
-        Returns:
-            Person: a Python Person object that wraps the IES Person data
-        """
-
-        warnings.warn(
-            "IESTool.create_person is deprecated - please initiate Person Python class directly",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        if classes is None:
-            classes = [PERSON]
-
-        person = Person(
-            tool=self,
-            surname=surname,
-            given_name=given_name,
-            start=dob,
-            place_of_birth=pob,
-            uri=uri,
-            end=dod,
-            place_of_death=pod,
-            classes=classes,
-        )
-
-        return person
-
-    def create_measure(
-        self,
-        uri: str | None = None,
-        classes: list | None = None,
-        value: str | None = None,
-        uom: UnitOfMeasure | None = None,
-    ) -> Measure:
-        """
-        DEPRECATED - Use Measure() to instantiate a measure.
-
-        Args:
-            uri (str): the URI of the Measure instance
-            classes (list):the IES types to instantiate  - default is Measure
-            value (Str): the value of the measure
-            uom (UnitOfMeasure): the unit of measure
-
-        Returns:
-            Measure - the instance created wrapped as a Python object
-        """
-        warnings.warn(
-            "IESTool.create_measure is deprecated - please initiate Measure Python class directly",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        if classes is None:
-            classes = [MEASURE]
-
-        return Measure(tool=self, value=value, uom=uom, uri=uri, classes=classes)
-
-    def create_communication(
-        self,
-        uri: str | None = None,
-        classes: list | None = None,
-        starts_in: str | None = None,
-        ends_in: str | None = None,
-        message_content: str | None = None,
-    ) -> Communication:
-        """
-        DEPRECATED - Use Communication() to Instantiate an IES Communication class
-
-        Args:
-            uri (str): the URI of the Communication instance
-            classes (list): the IES types to instantiate  - default is Communication
-            starts_in (str): An ISO8601 string (no spaces, use "T" and Zulu only) representing when the
-            communication began
-            ends_in (str): An ISO8601 string (no spaces, use "T" and Zulu only) representing when the
-            communication began
-            message_content (str): Optional string showing the content of the communication
-
-        Returns:
-            Communication - instance wrapped as a Python Communication object
-        """
-        logger.warning(
-            "IESTool.create_communication deprecated - please initiate Communication Python class directly"
-        )
-
-        if classes is None:
-            classes = [COMMUNICATION]
-
-        communication = Communication(
-            tool=self,
-            uri=uri,
-            classes=classes,
-            start=starts_in,
-            end=ends_in,
-            message_content=message_content,
-        )
-        return communication
-
-    def create_geopoint(
-        self,
-        uri: str | None = None,
-        classes: list | None = None,
-        lat: float | None = None,
-        lon: float | None = None,
-        precision: int | None = 6,
-        literal_type: str = "decimal",
-    ) -> GeoPoint:
-        """
-        DEPRECATED - use GeoPoint() to create an instance of the IES GeoPoint class.
-
-        Args:
-            uri (str): the URI of the GeoPoint instance
-            classes (list): the IES types to instantiate  - default is GeoPoint
-            lat (float): the latitude of the geopoint
-            lon (float): the longitude of the geopoint
-            precision (int): the precision of the lat lon in decimal places and hence also the produced geohash
-
-        Returns:
-            GeoPoint - instance wrapped as a Python GeoPoint object
-        """
-        warnings.warn(
-            "IESTool.create_geopoint is deprecated - please initiate GeoPoint Python class directly",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        if classes is None:
-            classes = [GEOPOINT]
-
-        for _class in classes:
-            if _class not in self.ontology.geopoint_subtypes:
-                logger.warning(f"{_class} is not a subtype of ies:GeoPoint")
-        return GeoPoint(
-            tool=self,
-            uri=uri,
-            lat=lat,
-            lon=lon,
-            precision=precision,
-            classes=classes,
-            literal_type=literal_type,
-        )
-
-    def create_organisation(
-        self,
-        uri: str | None = None,
-        classes: list | None = None,
-        name: str | None = None,
-    ) -> Organisation:
-        """
-        DEPRECATED - use Organisation() to create an instance of the IES Organisation class.
-
-        Args:
-            uri (str): the URI of the Organisation instance
-            classes (list): the IES types to instantiate  - default is Organisation
-            name (str): The name of the Organisation
-
-        Returns:
-            Organisation:
-        """
-        warnings.warn(
-            "IESTool.create_organisation is deprecated - please initiate Organisation Python class directly",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        if classes is None:
-            classes = [ORGANISATION]
-        return Organisation(tool=self, name=name, uri=uri, classes=classes)
 
 
 class Unique(type):
@@ -1270,7 +792,7 @@ class RdfsResource(metaclass=Unique):
             RdfsResource:
         """
 
-        self._default_class(classes, RDFS_RESOURCE)
+        self._default_class(classes, ies_constants.RDFS_RESOURCE)
 
         if tool is None:
             self._tool = IES_TOOL
@@ -1282,7 +804,9 @@ class RdfsResource(metaclass=Unique):
             self._uri = uri
         if self._classes is not None:
             for cls in self._classes:
-                self.tool.add_triple(subject=self._uri, predicate=RDF_TYPE, obj=cls)
+                self.tool.add_triple(
+                    subject=self._uri, predicate=ies_constants.RDF_TYPE, obj=cls
+                )
 
         self.tool.instances[self._uri] = self
 
@@ -1327,7 +851,7 @@ class RdfsResource(metaclass=Unique):
         Args:
             class_uri (_type_): the rdfs:Class to reference
         """
-        self.tool.add_triple(self.uri, predicate=RDF_TYPE, obj=class_uri)
+        self.tool.add_triple(self.uri, predicate=ies_constants.RDF_TYPE, obj=class_uri)
 
     def add_literal(
         self, predicate: str, literal: str, literal_type: str = "string"
@@ -1368,7 +892,7 @@ class RdfsResource(metaclass=Unique):
         Args:
             name (_type_): The text string of the name
         """
-        self.add_literal(predicate=TELICENT_PRIMARY_NAME, literal=name)
+        self.add_literal(predicate=ies_constants.TELICENT_PRIMARY_NAME, literal=name)
 
     def add_related_object(self, predicate: str, related_object) -> bool:
         """Adds a predicate to relate this node to another via a specified predicate
@@ -1451,7 +975,7 @@ class RdfsClass(RdfsResource):
         Returns:
             RdfsClass:
         """
-        self._default_class(classes, RDFS_CLASS)
+        self._default_class(classes, ies_constants.RDFS_CLASS)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
     def instantiate(self, uri=None) -> RdfsResource:
@@ -1474,7 +998,9 @@ class RdfsClass(RdfsResource):
         Returns:
             bool:
         """
-        return self.tool.add_triple(sub_class, f"{RDFS}subClassOf", self.uri)
+        return self.tool.add_triple(
+            sub_class, f"{ies_constants.RDFS}subClassOf", self.uri
+        )
 
 
 class Thing(RdfsResource):
@@ -1500,14 +1026,14 @@ class Thing(RdfsResource):
             Thing:
         """
 
-        self._default_class(classes, THING)
+        self._default_class(classes, ies_constants.THING)
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
     def add_representation(
         self,
         representation_text: str,
-        representation_class: str | None = REPRESENTATION,
+        representation_class: str | None = ies_constants.REPRESENTATION,
         uri: str | None = None,
         rep_rel_type: str | None = None,
         naming_scheme=None,
@@ -1527,7 +1053,7 @@ class Thing(RdfsResource):
             Representation: _description_
         """
         if not rep_rel_type:
-            rep_rel_type = f"{IES_BASE}isRepresentedAs"
+            rep_rel_type = f"{ies_constants.IES_BASE}isRepresentedAs"
         representation = Representation(
             tool=self.tool,
             representation_text=representation_text,
@@ -1563,10 +1089,10 @@ class Thing(RdfsResource):
             Name:
         """
         if name_rel_type is None:
-            name_rel_type = f"{IES_BASE}hasName"
+            name_rel_type = f"{ies_constants.IES_BASE}hasName"
 
         if name_class is None:
-            name_class = NAME
+            name_class = ies_constants.NAME
 
         representation = Name(
             tool=self.tool,
@@ -1605,10 +1131,10 @@ class Thing(RdfsResource):
             Identifier:
         """
         if id_rel_type is None:
-            id_rel_type = f"{IES_BASE}isIdentifiedBy"
+            id_rel_type = f"{ies_constants.IES_BASE}isIdentifiedBy"
 
         if id_class is None:
-            id_class = IDENTIFIER
+            id_class = ies_constants.IDENTIFIER
 
         representation = Identifier(
             tool=self.tool,
@@ -1649,10 +1175,10 @@ class Element(Thing):
         Returns:
             Element:
         """
-        self._default_class(classes, ELEMENT)
+        self._default_class(classes, ies_constants.ELEMENT)
 
         super().__init__(tool=tool, uri=uri, classes=classes)
-        self._default_state_type = STATE
+        self._default_state_type = ies_constants.STATE
 
         if start:
             self.starts_in(start)
@@ -1671,7 +1197,7 @@ class Element(Thing):
         """
         part_object = self._validate_referenced_object(part, Element, "add_part")
         if part_rel_type is None:
-            part_rel_type = f"{IES_BASE}isPartOf"
+            part_rel_type = f"{ies_constants.IES_BASE}isPartOf"
         self.tool.add_triple(part_object.uri, part_rel_type, self._uri)
         return part_object
 
@@ -1706,7 +1232,7 @@ class Element(Thing):
         )
 
         if not state_rel:
-            state_rel = f"{IES_BASE}isStateOf"
+            state_rel = f"{ies_constants.IES_BASE}isStateOf"
 
         self.tool.add_triple(subject=state._uri, predicate=state_rel, obj=self._uri)
 
@@ -1749,7 +1275,9 @@ class Element(Thing):
             location, Location, "in_location"
         )
         self.tool.add_triple(
-            subject=self.uri, predicate=f"{IES_BASE}inLocation", obj=location_object.uri
+            subject=self.uri,
+            predicate=f"{ies_constants.IES_BASE}inLocation",
+            obj=location_object.uri,
         )
         return location_object
 
@@ -1765,7 +1293,9 @@ class Element(Thing):
             ParticularPeriod:
         """
         pp_instance = ParticularPeriod(tool=self.tool, time_string=time_string)
-        self.tool.add_triple(self._uri, f"{IES_BASE}inPeriod", pp_instance._uri)
+        self.tool.add_triple(
+            self._uri, f"{ies_constants.IES_BASE}inPeriod", pp_instance._uri
+        )
         return pp_instance
 
     @validate_datetime_string
@@ -1788,11 +1318,13 @@ class Element(Thing):
         """
 
         if bounding_state_class is None:
-            bounding_state_class = f"{IES_BASE}BoundingState"
+            bounding_state_class = f"{ies_constants.IES_BASE}BoundingState"
 
         bs = BoundingState(tool=self.tool, classes=[bounding_state_class], uri=uri)
         self.tool.add_triple(
-            subject=bs._uri, predicate=f"{IES_BASE}isStartOf", obj=self._uri
+            subject=bs._uri,
+            predicate=f"{ies_constants.IES_BASE}isStartOf",
+            obj=self._uri,
         )
         if time_string:
             bs.put_in_period(time_string=time_string)
@@ -1816,11 +1348,11 @@ class Element(Thing):
             BoundingState: _description_
         """
         if bounding_state_class is None:
-            bounding_state_class = BOUNDING_STATE
+            bounding_state_class = ies_constants.BOUNDING_STATE
 
         bs = BoundingState(tool=self.tool, classes=[bounding_state_class], uri=uri)
         self.tool.add_triple(
-            subject=bs._uri, predicate=f"{IES_BASE}isEndOf", obj=self._uri
+            subject=bs._uri, predicate=f"{ies_constants.IES_BASE}isEndOf", obj=self._uri
         )
         if time_string:
             bs.put_in_period(time_string=time_string)
@@ -1854,7 +1386,7 @@ class Element(Thing):
         )
         self.tool.add_triple(
             subject=self._uri,
-            predicate=f"{IES_BASE}hasCharacteristic",
+            predicate=f"{ies_constants.IES_BASE}hasCharacteristic",
             obj=measure._uri,
         )
 
@@ -1884,7 +1416,7 @@ class Entity(Element):
         Returns:
             Entity:
         """
-        self._default_class(classes, ENTITY)
+        self._default_class(classes, ies_constants.ENTITY)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
 
@@ -1913,7 +1445,7 @@ class State(Element):
         Returns:
             State:
         """
-        self._default_class(classes, STATE)
+        self._default_class(classes, ies_constants.STATE)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
 
@@ -1943,7 +1475,7 @@ class DeviceState(State):
         Returns:
             DeviceState:
         """
-        self._default_class(classes, DEVICE_STATE)
+        self._default_class(classes, ies_constants.DEVICE_STATE)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
     def add_imsi(self, imsi: str) -> Identifier:
@@ -1960,7 +1492,9 @@ class DeviceState(State):
         uri = (
             f"{self.tool.prefixes['IMSI:']}{imsi.replace(' ', '').replace('IMSI:', '')}"
         )
-        return self.add_identifier(imsi, id_class=f"{IES_BASE}IMSI", uri=uri)
+        return self.add_identifier(
+            imsi, id_class=f"{ies_constants.IES_BASE}IMSI", uri=uri
+        )
 
     def add_mac_address(self, mac_address: str) -> Identifier:
         """
@@ -1977,7 +1511,7 @@ class DeviceState(State):
             ":", ""
         )
         return self.add_identifier(
-            mac_address, id_class=f"{IES_BASE}MACAddress", uri=uri
+            mac_address, id_class=f"{ies_constants.IES_BASE}MACAddress", uri=uri
         )
 
     def add_ip_address(self, ip_address: str) -> Identifier:
@@ -1991,11 +1525,11 @@ class DeviceState(State):
             Identifier:
         """
         if validators.ipv4(ip_address):
-            cls = f"{IES_BASE}IPv4Address"
+            cls = f"{ies_constants.IES_BASE}IPv4Address"
         elif validators.ipv6(ip_address):
-            cls = f"{IES_BASE}IPv6Address"
+            cls = f"{ies_constants.IES_BASE}IPv6Address"
         else:
-            cls = f"{IES_BASE}IPAddress"
+            cls = f"{ies_constants.IES_BASE}IPAddress"
         return self.add_identifier(ip_address, id_class=cls)
 
     def add_callsign(self, callsign: str) -> Identifier:
@@ -2008,7 +1542,9 @@ class DeviceState(State):
         Returns:
             Identifier:
         """
-        return self.add_identifier(callsign, id_class=f"{IES_BASE}Callsign")
+        return self.add_identifier(
+            callsign, id_class=f"{ies_constants.IES_BASE}Callsign"
+        )
 
 
 class Asset(Entity):
@@ -2037,10 +1573,10 @@ class Asset(Entity):
         Returns:
             Device:
         """
-        self._default_class(classes, ASSET)
+        self._default_class(classes, ies_constants.ASSET)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
-        self._default_state_type = ASSET_STATE
+        self._default_state_type = ies_constants.ASSET_STATE
 
 
 class AmountOfMoney(Asset):
@@ -2069,7 +1605,7 @@ class AmountOfMoney(Asset):
         Returns:
             AmountOfMoney:
         """
-        self._default_class(classes, AMOUNT_OF_MONEY)
+        self._default_class(classes, ies_constants.AMOUNT_OF_MONEY)
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
@@ -2084,7 +1620,9 @@ class AmountOfMoney(Asset):
         currency_object = self.tool._get_instance(currency_uri)
         if currency_object is None:
             currency_object = ClassOfElement(
-                tool=self.tool, uri=currency_uri, classes=[IES_BASE + "Currency"]
+                tool=self.tool,
+                uri=currency_uri,
+                classes=[ies_constants.IES_BASE + "Currency"],
             )
             currency_object.add_identifier(
                 iso_4217_currency_code_alpha3, uri=currency_uri + "_ISO4217_alpha3"
@@ -2092,16 +1630,18 @@ class AmountOfMoney(Asset):
             if currency:
                 currency_object.add_name(currency.name, uri=currency_uri + "_NAME")
 
-        self.tool.add_triple(self.uri, f"{IES_BASE}currencyDenomination", currency_uri)
+        self.tool.add_triple(
+            self.uri, f"{ies_constants.IES_BASE}currencyDenomination", currency_uri
+        )
         self.tool.add_triple(
             self.uri,
-            f"{IES_BASE}currencyAmount",
+            f"{ies_constants.IES_BASE}currencyAmount",
             str(amount),
             is_literal=True,
             literal_type="decimal",
         )
 
-        self._default_state_type = ASSET_STATE
+        self._default_state_type = ies_constants.ASSET_STATE
 
 
 class Device(Asset, DeviceState):
@@ -2130,10 +1670,10 @@ class Device(Asset, DeviceState):
         Returns:
             Device:
         """
-        self._default_class(classes, DEVICE)
+        self._default_class(classes, ies_constants.DEVICE)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
-        self._default_state_type = DEVICE_STATE
+        self._default_state_type = ies_constants.DEVICE_STATE
 
 
 class Account(Entity):
@@ -2162,10 +1702,10 @@ class Account(Entity):
         Returns:
             Account:
         """
-        self._default_class(classes, ACCOUNT)
+        self._default_class(classes, ies_constants.ACCOUNT)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
-        self._default_state_type = ACCOUNT_STATE
+        self._default_state_type = ies_constants.ACCOUNT_STATE
 
     def add_account_number(self, account_number: str) -> Identifier:
         """
@@ -2181,7 +1721,7 @@ class Account(Entity):
         return self.add_identifier(
             identifier=account_number,
             uri=id_uri_acc_no,
-            id_class=f"{IES_BASE}AccountNumber",
+            id_class=f"{ies_constants.IES_BASE}AccountNumber",
         )
 
     def add_account_holder(
@@ -2207,9 +1747,9 @@ class Account(Entity):
             holder, ResponsibleActor, "add_account_holder"
         )
         holder_state = holder_object.create_state(
-            state_type=ACCOUNT_HOLDER, uri=state_uri, start=start, end=end
+            state_type=ies_constants.ACCOUNT_HOLDER, uri=state_uri, start=start, end=end
         )
-        self.tool.add_triple(holder_state.uri, HOLDS_ACCOUNT, self.uri)
+        self.tool.add_triple(holder_state.uri, ies_constants.HOLDS_ACCOUNT, self.uri)
         return holder_state
 
     def add_account_provider(self, provider) -> bool:
@@ -2225,7 +1765,9 @@ class Account(Entity):
         provider_object = self._validate_referenced_object(
             provider, ResponsibleActor, "add_account_provider"
         )
-        return self.tool.add_triple(provider_object.uri, PROVIDES_ACCOUNT, self.uri)
+        return self.tool.add_triple(
+            provider_object.uri, ies_constants.PROVIDES_ACCOUNT, self.uri
+        )
 
     def add_registered_telephone_number(
         self, telephone_number: str, start: str | None = None, end: str | None = None
@@ -2259,11 +1801,11 @@ class Account(Entity):
             self.tool,
             id_text=normalised,
             uri=ph_uri,
-            classes=[f"{IES_BASE}TelephoneNumber"],
+            classes=[f"{ies_constants.IES_BASE}TelephoneNumber"],
         )
         self.tool.add_triple(
             subject=state.uri,
-            predicate=f"{IES_BASE}hasRegisteredCommsID",
+            predicate=f"{ies_constants.IES_BASE}hasRegisteredCommsID",
             obj=tel_no.uri,
         )
         return tel_no
@@ -2294,11 +1836,11 @@ class Account(Entity):
             self.tool,
             id_text=email_address,
             uri=em_uri,
-            classes=[f"{IES_BASE}EmailAddress"],
+            classes=[f"{ies_constants.IES_BASE}EmailAddress"],
         )
         self.tool.add_triple(
             subject=state.uri,
-            predicate=f"{IES_BASE}hasRegisteredCommsID",
+            predicate=f"{ies_constants.IES_BASE}hasRegisteredCommsID",
             obj=email_obj.uri,
         )
         return email_obj
@@ -2330,10 +1872,10 @@ class CommunicationsAccount(Account):
         Returns:
             CommunicationsAccount:
         """
-        self._default_class(classes, COMMUNICATIONS_ACCOUNT)
+        self._default_class(classes, ies_constants.COMMUNICATIONS_ACCOUNT)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
-        self._default_state_type = COMMUNICATIONS_ACCOUNT_STATE
+        self._default_state_type = ies_constants.COMMUNICATIONS_ACCOUNT_STATE
 
 
 class Location(Entity):
@@ -2362,10 +1904,10 @@ class Location(Entity):
         Returns:
             Location:
         """
-        self._default_class(classes, LOCATION)
+        self._default_class(classes, ies_constants.LOCATION)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
-        self._default_state_type = LOCATION_STATE
+        self._default_state_type = ies_constants.LOCATION_STATE
 
 
 class Country(Location):
@@ -2396,7 +1938,7 @@ class Country(Location):
 
         uri = f"http://iso.org/iso3166/country#{country_alpha_3_code}"
 
-        self._default_class(classes, COUNTRY)
+        self._default_class(classes, ies_constants.COUNTRY)
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
@@ -2422,7 +1964,7 @@ class Country(Location):
 
         self.add_identifier(
             country_alpha_3_code,
-            id_class=IES_BASE + "ISO3166_1Alpha_3",
+            id_class=ies_constants.IES_BASE + "ISO3166_1Alpha_3",
             uri=uri + "_ISO3166_1Alpha_3",
         )
         if country_name:
@@ -2439,7 +1981,9 @@ class Country(Location):
             Name:
         """
         name_uri = self.tool._mint_dependent_uri(self.uri, "NAME")
-        return self.add_name(name, name_class=IES_BASE + "PlaceName", uri=name_uri)
+        return self.add_name(
+            name, name_class=ies_constants.IES_BASE + "PlaceName", uri=name_uri
+        )
 
 
 class GeoPoint(Location):
@@ -2470,7 +2014,7 @@ class GeoPoint(Location):
         Returns:
             GeoPoint:
         """
-        self._default_class(classes, GEOPOINT)
+        self._default_class(classes, ies_constants.GEOPOINT)
 
         uri = "http://geohash.org/" + str(
             encode(float(lat), float(lon), precision=precision)
@@ -2483,14 +2027,14 @@ class GeoPoint(Location):
         self.add_identifier(
             identifier=str(lat),
             uri=lat_uri,
-            id_class=f"{IES_BASE}Latitude",
+            id_class=f"{ies_constants.IES_BASE}Latitude",
             literal_type=literal_type,
         )
 
         self.add_identifier(
             identifier=str(lon),
             uri=lon_uri,
-            id_class=f"{IES_BASE}Longitude",
+            id_class=f"{ies_constants.IES_BASE}Longitude",
             literal_type=literal_type,
         )
 
@@ -2521,10 +2065,10 @@ class ResponsibleActor(Entity):
         Returns:
             ResponsibleActor:
         """
-        self._default_class(classes, RESPONSIBLE_ACTOR)
+        self._default_class(classes, ies_constants.RESPONSIBLE_ACTOR)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
-        self._default_state_type = f"{IES_BASE}ResponsibleActorState"
+        self._default_state_type = f"{ies_constants.IES_BASE}ResponsibleActorState"
 
     def works_for(
         self,
@@ -2549,7 +2093,7 @@ class ResponsibleActor(Entity):
         state = self.create_state(start=start, end=end)
         self.tool.add_triple(
             subject=state._uri,
-            predicate=f"{IES_BASE}worksFor",
+            predicate=f"{ies_constants.IES_BASE}worksFor",
             obj=employer_object._uri,
         )
         return state
@@ -2570,7 +2114,7 @@ class ResponsibleActor(Entity):
         """
         post_object = self._validate_referenced_object(post, Post, "in_post")
         in_post = self.create_state(
-            state_type=f"{IES_BASE}InPost", start=start, end=end
+            state_type=f"{ies_constants.IES_BASE}InPost", start=start, end=end
         )
         post_object.add_part(in_post)
         return in_post
@@ -2596,7 +2140,9 @@ class ResponsibleActor(Entity):
             accessed_item, Entity, "has_access_to"
         )
         access = self.create_state(start=start, end=end)
-        self.tool.add_triple(access.uri, f"{IES_BASE}hasAccessTo", accessed_object.uri)
+        self.tool.add_triple(
+            access.uri, f"{ies_constants.IES_BASE}hasAccessTo", accessed_object.uri
+        )
         return access
 
     def in_possession_of(
@@ -2621,7 +2167,7 @@ class ResponsibleActor(Entity):
         )
         access = self.create_state(start=start, end=end)
         self.tool.add_triple(
-            access.uri, f"{IES_BASE}inPossessionOf", accessed_object.uri
+            access.uri, f"{ies_constants.IES_BASE}inPossessionOf", accessed_object.uri
         )
         return access
 
@@ -2646,7 +2192,9 @@ class ResponsibleActor(Entity):
             accessed_item, Entity, "user_of"
         )
         access = self.create_state(start=start, end=end)
-        self.tool.add_triple(access.uri, f"{IES_BASE}userOf", accessed_object.uri)
+        self.tool.add_triple(
+            access.uri, f"{ies_constants.IES_BASE}userOf", accessed_object.uri
+        )
         return access
 
     def owns(
@@ -2665,7 +2213,9 @@ class ResponsibleActor(Entity):
         """
         owned_object = self._validate_referenced_object(owned_item, Asset, "owns")
         owned = self.create_state(start=start, end=end)
-        self.tool.add_triple(owned.uri, f"{IES_BASE}owns", owned_object.uri)
+        self.tool.add_triple(
+            owned.uri, f"{ies_constants.IES_BASE}owns", owned_object.uri
+        )
         return owned
 
 
@@ -2695,7 +2245,7 @@ class Post(ResponsibleActor):
         Returns:
             Post:
         """
-        self._default_class(classes, POST)
+        self._default_class(classes, ies_constants.POST)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         if start is not None:
@@ -2742,7 +2292,7 @@ class Person(ResponsibleActor):
         Returns:
             Person:
         """
-        self._default_class(classes, PERSON)
+        self._default_class(classes, ies_constants.PERSON)
 
         super().__init__(tool=tool, uri=uri, classes=classes, start=None, end=None)
 
@@ -2756,7 +2306,7 @@ class Person(ResponsibleActor):
                 raise Exception("end and date_of_death cannot both be set for Person")
             end = date_of_death
 
-        self._default_state_type = f"{IES_BASE}PersonState"
+        self._default_state_type = f"{ies_constants.IES_BASE}PersonState"
 
         if given_name:
             self.add_given_name(given_name=given_name)
@@ -2792,7 +2342,9 @@ class Person(ResponsibleActor):
         """
         name_uri_firstname = self.tool._mint_dependent_uri(self.uri, "GIVENNAME")
         return self.add_name(
-            given_name, uri=name_uri_firstname, name_class=f"{IES_BASE}GivenName"
+            given_name,
+            uri=name_uri_firstname,
+            name_class=f"{ies_constants.IES_BASE}GivenName",
         )
 
     def add_surname(self, surname: str) -> Name:
@@ -2807,7 +2359,7 @@ class Person(ResponsibleActor):
         """
         name_uri_surname = self.tool._mint_dependent_uri(self.uri, "SURNAME")
         return self.add_name(
-            surname, uri=name_uri_surname, name_class=f"{IES_BASE}Surname"
+            surname, uri=name_uri_surname, name_class=f"{ies_constants.IES_BASE}Surname"
         )
 
     def add_birth(
@@ -2826,14 +2378,16 @@ class Person(ResponsibleActor):
         birth_uri = self.tool._mint_dependent_uri(self.uri, "BIRTH")
         birth = self.starts_in(
             time_string=date_of_birth,
-            bounding_state_class=f"{IES_BASE}BirthState",
+            bounding_state_class=f"{ies_constants.IES_BASE}BirthState",
             uri=birth_uri,
         )
         if place_of_birth:
             pob_object = self._validate_referenced_object(
                 place_of_birth, Location, "add_birth"
             )
-            self.tool.add_triple(birth._uri, f"{IES_BASE}inLocation", pob_object._uri)
+            self.tool.add_triple(
+                birth._uri, f"{ies_constants.IES_BASE}inLocation", pob_object._uri
+            )
         return birth
 
     def add_death(
@@ -2852,13 +2406,17 @@ class Person(ResponsibleActor):
 
         uri = self.tool._mint_dependent_uri(self.uri, "DEATH")
         death = self.ends_in(
-            date_of_death, bounding_state_class=f"{IES_BASE}DeathState", uri=uri
+            date_of_death,
+            bounding_state_class=f"{ies_constants.IES_BASE}DeathState",
+            uri=uri,
         )
         if place_of_death:
             pod_object = self._validate_referenced_object(
                 place_of_death, Location, "add_death"
             )
-            self.tool.add_triple(death._uri, f"{IES_BASE}inLocation", pod_object._uri)
+            self.tool.add_triple(
+                death._uri, f"{ies_constants.IES_BASE}inLocation", pod_object._uri
+            )
 
         return death
 
@@ -2890,13 +2448,13 @@ class Organisation(ResponsibleActor):
         Returns:
             Organisation:
         """
-        self._default_class(classes, ORGANISATION)
+        self._default_class(classes, ies_constants.ORGANISATION)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
-        self._default_state_type = f"{IES_BASE}OrganisationState"
+        self._default_state_type = f"{ies_constants.IES_BASE}OrganisationState"
 
         if name:
-            self.add_name(name, name_class=ORGANISATION_NAME)
+            self.add_name(name, name_class=ies_constants.ORGANISATION_NAME)
 
     def create_post(
         self,
@@ -2948,7 +2506,7 @@ class ClassOfElement(RdfsClass, Thing):
         Returns:
             ClassOfElement:
         """
-        self._default_class(classes, CLASS_OF_ELEMENT)
+        self._default_class(classes, ies_constants.CLASS_OF_ELEMENT)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
     def add_measure(
@@ -2972,7 +2530,7 @@ class ClassOfElement(RdfsClass, Thing):
         )
         self.tool.add_triple(
             subject=self._uri,
-            predicate=f"{IES_BASE}allHaveCharacteristic",
+            predicate=f"{ies_constants.IES_BASE}allHaveCharacteristic",
             obj=measure._uri,
         )
 
@@ -2999,7 +2557,7 @@ class ClassOfClassOfElement(RdfsClass, Thing):
         Returns:
             ClassOfClassOfElement:
         """
-        self._default_class(classes, CLASS_OF_CLASS_OF_ELEMENT)
+        self._default_class(classes, ies_constants.CLASS_OF_CLASS_OF_ELEMENT)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
 
@@ -3024,7 +2582,7 @@ class ParticularPeriod(Element):
         Returns:
             ParticularPeriod:
         """
-        self._default_class(classes, PARTICULAR_PERIOD)
+        self._default_class(classes, ies_constants.PARTICULAR_PERIOD)
         if not time_string:
             raise Exception("No time_string provided for ParticularPeriod")
 
@@ -3037,7 +2595,7 @@ class ParticularPeriod(Element):
         super().__init__(tool=tool, uri=uri, classes=classes)
 
         self.add_literal(
-            predicate=f"{IES_BASE}iso8601PeriodRepresentation",
+            predicate=f"{ies_constants.IES_BASE}iso8601PeriodRepresentation",
             literal=str(iso8601_time_string_punctuated),
         )
 
@@ -3065,7 +2623,7 @@ class BoundingState(State):
             BoundingState:
         """
 
-        self._default_class(classes, BOUNDING_STATE)
+        self._default_class(classes, ies_constants.BOUNDING_STATE)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
 
@@ -3092,7 +2650,7 @@ class BirthState(BoundingState):
             BirthState:
         """
 
-        self._default_class(classes, BIRTH_STATE)
+        self._default_class(classes, ies_constants.BIRTH_STATE)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
 
@@ -3119,7 +2677,7 @@ class DeathState(BoundingState):
             DeathState:
         """
 
-        self._default_class(classes, DEATH_STATE)
+        self._default_class(classes, ies_constants.DEATH_STATE)
         super().__init__(tool=tool, uri=uri, classes=classes)
 
 
@@ -3146,7 +2704,7 @@ class UnitOfMeasure(ClassOfClassOfElement):
             UnitOfMeasure:
         """
 
-        self._default_class(classes, UNIT_OF_MEASURE)
+        self._default_class(classes, ies_constants.UNIT_OF_MEASURE)
         super().__init__(tool=tool, classes=classes, uri=uri)
 
 
@@ -3178,14 +2736,14 @@ class Representation(ClassOfElement):
             Representation:
         """
 
-        self._default_class(classes, REPRESENTATION)
+        self._default_class(classes, ies_constants.REPRESENTATION)
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
         if representation_text:
             self.tool.add_triple(
                 subject=self._uri,
-                predicate=f"{IES_BASE}representationValue",
+                predicate=f"{ies_constants.IES_BASE}representationValue",
                 obj=representation_text,
                 is_literal=True,
                 literal_type=literal_type,
@@ -3193,7 +2751,7 @@ class Representation(ClassOfElement):
         if naming_scheme:
             self.tool.add_triple(
                 subject=self._uri,
-                predicate=f"{IES_BASE}inScheme",
+                predicate=f"{ies_constants.IES_BASE}inScheme",
                 obj=naming_scheme.uri,
             )
 
@@ -3221,7 +2779,7 @@ class WorkOfDocumentation(Representation):
             WorkOfDocumentation:
         """
 
-        self._default_class(classes, WORK_OF_DOCUMENTATION)
+        self._default_class(classes, ies_constants.WORK_OF_DOCUMENTATION)
 
         super().__init__(tool=tool, uri=uri, classes=classes)
 
@@ -3256,7 +2814,7 @@ class MeasureValue(Representation):
             MeasureValue:
         """
 
-        self._default_class(classes, MEASURE_VALUE)
+        self._default_class(classes, ies_constants.MEASURE_VALUE)
         if not value:
             raise Exception("MeasureValue must have a valid value")
         super().__init__(
@@ -3268,12 +2826,16 @@ class MeasureValue(Representation):
             literal_type=literal_type,
         )
         if uom is not None:
-            self.tool.add_triple(self._uri, f"{IES_BASE}measureUnit", obj=uom._uri)
+            self.tool.add_triple(
+                self._uri, f"{ies_constants.IES_BASE}measureUnit", obj=uom._uri
+            )
         if measure is None:
             logger.warning("MeasureValue created without a corresponding measure")
         else:
             self.tool.add_triple(
-                subject=measure._uri, predicate=f"{IES_BASE}hasValue", obj=self._uri
+                subject=measure._uri,
+                predicate=f"{ies_constants.IES_BASE}hasValue",
+                obj=self._uri,
             )
 
 
@@ -3312,7 +2874,7 @@ class Measure(ClassOfElement):
             "LuminousIntensity": "ValueInCandela",
         }
 
-        self._default_class(classes, MEASURE)
+        self._default_class(classes, ies_constants.MEASURE)
         if len(classes) != 1:
             logger.warning("Measure must be just one class, using the first one")
         _class = classes[0]
@@ -3320,10 +2882,11 @@ class Measure(ClassOfElement):
         super().__init__(tool=tool, uri=uri, classes=classes)
         value = str(value)
         value_class = (
-            f"{IES_BASE}"
-            f"{self.measurements_map.get(_class.replace(IES_BASE, ''), MEASURE_VALUE[len(IES_BASE):])}"
+            f"{ies_constants.IES_BASE}"
+            f"""{self.measurements_map.get(_class.replace(ies_constants.IES_BASE, ''),
+                                         ies_constants.MEASURE_VALUE[len(ies_constants.IES_BASE):])}"""
         )
-        if value_class != MEASURE_VALUE and uom is not None:
+        if value_class != ies_constants.MEASURE_VALUE and uom is not None:
             logger.warning(
                 "Standard measure: " + value_class + " do not require a unit of measure"
             )
@@ -3365,7 +2928,7 @@ class Identifier(Representation):
             Identifier:
         """
 
-        self._default_class(classes, IDENTIFIER)
+        self._default_class(classes, ies_constants.IDENTIFIER)
         super().__init__(
             tool=tool,
             uri=uri,
@@ -3403,7 +2966,7 @@ class Name(Representation):
             Name:
         """
 
-        self._default_class(classes, NAME)
+        self._default_class(classes, ies_constants.NAME)
 
         super().__init__(
             tool=tool,
@@ -3438,18 +3001,20 @@ class NamingScheme(ClassOfClassOfElement):
         Returns:
             NamingScheme:
         """
-        self._default_class(classes, NAMING_SCHEME)
+        self._default_class(classes, ies_constants.NAMING_SCHEME)
         super().__init__(tool=tool, uri=uri, classes=classes)
         if owner is not None:
             self.tool.add_triple(
-                subject=self._uri, predicate=f"{IES_BASE}schemeOwner", obj=owner._uri
+                subject=self._uri,
+                predicate=f"{ies_constants.IES_BASE}schemeOwner",
+                obj=owner._uri,
             )
 
     def add_mastering_system(self, system: Entity):
         if system is not None:
             self.tool.add_triple(
                 subject=self._uri,
-                predicate=f"{IES_BASE}schemeMasteredIn",
+                predicate=f"{ies_constants.IES_BASE}schemeMasteredIn",
                 obj=system._uri,
             )
 
@@ -3481,7 +3046,7 @@ class Event(Element):
             Event:
         """
 
-        self._default_class(classes, EVENT)
+        self._default_class(classes, ies_constants.EVENT)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
     def add_participant(
@@ -3517,15 +3082,19 @@ class Event(Element):
             uri = self.tool.generate_data_uri()
 
         if participation_type is None:
-            participation_type = f"{IES_BASE}EventParticipant"
+            participation_type = f"{ies_constants.IES_BASE}EventParticipant"
 
         participant = EventParticipant(
             tool=self.tool, uri=uri, start=start, end=end, classes=[participation_type]
         )
 
-        self.tool.add_triple(participant._uri, f"{IES_BASE}isParticipantIn", self._uri)
         self.tool.add_triple(
-            participant._uri, f"{IES_BASE}isParticipationOf", pe_object._uri
+            participant._uri, f"{ies_constants.IES_BASE}isParticipantIn", self._uri
+        )
+        self.tool.add_triple(
+            participant._uri,
+            f"{ies_constants.IES_BASE}isParticipationOf",
+            pe_object._uri,
         )
         return participant
 
@@ -3556,7 +3125,7 @@ class EventParticipant(State):
         Returns:
             EventParticipant:
         """
-        self._default_class(classes, EVENT_PARTICIPANT)
+        self._default_class(classes, ies_constants.EVENT_PARTICIPANT)
         super().__init__(tool=tool, start=start, end=end, uri=uri, classes=classes)
 
 
@@ -3588,11 +3157,11 @@ class Communication(Event):
             Communication:
         """
 
-        self._default_class(classes, COMMUNICATION)
+        self._default_class(classes, ies_constants.COMMUNICATION)
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
 
         if message_content:
-            self.add_literal(f"{IES_BASE}messageContent", message_content)
+            self.add_literal(f"{ies_constants.IES_BASE}messageContent", message_content)
 
     def create_party(
         self,
@@ -3612,7 +3181,7 @@ class Communication(Event):
         Returns:
             PartyInCommunication: the PartyInCommunication instance
         """
-        party_role = party_role or f"{IES_BASE}PartyInCommunication"
+        party_role = party_role or f"{ies_constants.IES_BASE}PartyInCommunication"
 
         if party_role not in self.tool.ontology.pic_subtypes:
             logger.warning(f"{party_role} is not a subtype of ies:PartyInCommunication")
@@ -3680,7 +3249,7 @@ class PartyInCommunication(Event):
             PartyInCommunication:
         """
 
-        self._default_class(classes, PARTY_IN_COMMUNICATION)
+        self._default_class(classes, ies_constants.PARTY_IN_COMMUNICATION)
 
         super().__init__(tool=tool, uri=uri, classes=classes, start=start, end=end)
         if communication is not None:
@@ -3707,13 +3276,19 @@ class PartyInCommunication(Event):
         try:
 
             aic = EventParticipant(
-                tool=self.tool, uri=uri, classes=[f"{IES_BASE}AccountInCommunication"]
+                tool=self.tool,
+                uri=uri,
+                classes=[f"{ies_constants.IES_BASE}AccountInCommunication"],
             )
 
-            self.tool.add_triple(aic._uri, f"{IES_BASE}isParticipantIn", self._uri)
+            self.tool.add_triple(
+                aic._uri, f"{ies_constants.IES_BASE}isParticipantIn", self._uri
+            )
 
             self.tool.add_triple(
-                aic._uri, f"{IES_BASE}isParticipationOf", account_object._uri
+                aic._uri,
+                f"{ies_constants.IES_BASE}isParticipationOf",
+                account_object._uri,
             )
 
             return aic
@@ -3742,11 +3317,17 @@ class PartyInCommunication(Event):
             uri = self.tool._mint_dependent_uri(self.uri, "DEVICE")
         try:
             dic = EventParticipant(
-                tool=self.tool, uri=uri, classes=[f"{IES_BASE}DeviceInCommunication"]
+                tool=self.tool,
+                uri=uri,
+                classes=[f"{ies_constants.IES_BASE}DeviceInCommunication"],
             )
-            self.tool.add_triple(dic._uri, f"{IES_BASE}isParticipantIn", self._uri)
             self.tool.add_triple(
-                dic._uri, f"{IES_BASE}isParticipationOf", device_object._uri
+                dic._uri, f"{ies_constants.IES_BASE}isParticipantIn", self._uri
+            )
+            self.tool.add_triple(
+                dic._uri,
+                f"{ies_constants.IES_BASE}isParticipationOf",
+                device_object._uri,
             )
 
         except AttributeError as e:
@@ -3775,11 +3356,17 @@ class PartyInCommunication(Event):
             uri = self.tool._mint_dependent_uri(self.uri, "PERSON")
         try:
             pic = EventParticipant(
-                tool=self.tool, uri=uri, classes=[f"{IES_BASE}PersonInCommunication"]
+                tool=self.tool,
+                uri=uri,
+                classes=[f"{ies_constants.IES_BASE}PersonInCommunication"],
             )
-            self.tool.add_triple(pic._uri, f"{IES_BASE}isParticipantIn", self._uri)
             self.tool.add_triple(
-                pic._uri, f"{IES_BASE}isParticipationOf", person_object._uri
+                pic._uri, f"{ies_constants.IES_BASE}isParticipantIn", self._uri
+            )
+            self.tool.add_triple(
+                pic._uri,
+                f"{ies_constants.IES_BASE}isParticipationOf",
+                person_object._uri,
             )
             return pic
         except AttributeError as e:

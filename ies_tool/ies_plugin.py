@@ -17,6 +17,12 @@ limitations under the License.
 
 class IESPlugin:
 
+    def __init__(self, default_data_namespace: str = "https://telicent.io/testdata#"):
+        self.default_data_namespace: str = default_data_namespace
+
+    def generate_data_uri(self, context: str | None = None) -> str:
+        raise NotImplementedError
+
     def set_classes(self, classes: set):
         raise NotImplementedError
 
@@ -26,22 +32,33 @@ class IESPlugin:
     def clear_triples(self):
         raise NotImplementedError
 
-    def get_rdf(self, format: str = None) -> str:
+    def get_rdf(self, rdf_format: str = None) -> str:
         raise NotImplementedError
 
-    def save_rdf(self,filename,rdf_format = None):
-        raise NotImplementedError
-
-    def get_reporting(self) -> str:
+    def save_rdf(self, filename, rdf_format=None):
         raise NotImplementedError
 
     def query_sp(self, subject: str, predicate: str) -> list:
         raise NotImplementedError
 
-    def in_graph(self, subject: str, predicate: str, obj: str, is_literal: bool) -> bool:
+    def in_graph(
+        self,
+        subject: str,
+        predicate: str,
+        obj: str,
+        is_literal: bool,
+        literal_type: str = None,
+    ) -> bool:
         raise NotImplementedError
 
-    def add_triple(self, subject: str, predicate: str, obj: str, is_literal: bool, literal_type: str):
+    def add_triple(
+        self,
+        subject: str,
+        predicate: str,
+        obj: str,
+        is_literal: bool,
+        literal_type: str,
+    ):
         raise NotImplementedError
 
     def can_validate(self) -> bool:
@@ -53,10 +70,21 @@ class IESPlugin:
     def get_triple_count(self) -> int:
         raise NotImplementedError
 
-    def can_suppport_prefixes(self) -> bool :
+    def can_suppport_prefixes(self) -> bool:
         raise NotImplementedError
 
-    def add_prefix(self, prefix: str, uri: str) :
+    def add_prefix(self, prefix: str, uri: str):
+        raise NotImplementedError
+
+    def get_namespace_uri(self, prefix: str) -> str:
+        raise NotImplementedError
+
+    @property
+    def default_data_namespace(self):
+        raise NotImplementedError
+
+    @default_data_namespace.setter
+    def default_data_namespace(self, value: str):
         raise NotImplementedError
 
     @property

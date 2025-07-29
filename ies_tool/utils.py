@@ -11,33 +11,39 @@ def validate_datetime_string(func):
     Args:
         func (Callable): Function that receives a datetime or date string.
     """
+
     def wrapper(self, time_string, *args, **kwargs):
         try:
             # Check for explicit timezone (not allowed)
-            if '+' in time_string:
-                raise ValueError("Explicit timezone specifications are not allowed - use Z for UTC")
+            if "+" in time_string:
+                raise ValueError(
+                    "Explicit timezone specifications are not allowed - use Z for UTC"
+                )
 
             time_string = time_string.replace(" ", "T").rstrip("Z")
             #  Handle time formats
-            if 'T' in time_string:
+            if "T" in time_string:
                 dt.datetime.fromisoformat(time_string)
             else:
                 # Try different date formats (no time component)
                 if len(time_string) == 4:  # YYYY
-                    dt.datetime.strptime(time_string, '%Y')
+                    dt.datetime.strptime(time_string, "%Y")
                 elif len(time_string) == 7:  # YYYY-MM
-                    dt.datetime.strptime(time_string, '%Y-%m')
+                    dt.datetime.strptime(time_string, "%Y-%m")
                 else:  # YYYY-MM-DD
                     dt.date.fromisoformat(time_string)
         except ValueError as exc:
             # Using the logger from the class instance 'self'
-            if hasattr(self, 'logger'):
-                self.logger.error(f'invalid ISO8601 datetime string: {time_string}')
-            raise RuntimeError(f'invalid ISO8601 datetime string: {time_string}') from exc
+            if hasattr(self, "logger"):
+                self.logger.error(f"invalid ISO8601 datetime string: {time_string}")
+            raise RuntimeError(
+                f"invalid ISO8601 datetime string: {time_string}"
+            ) from exc
         return func(self, time_string, *args, **kwargs)
+
     return wrapper
 
 
 def log_warning(message, category, filename, lineno, file=None, line=None):
     log = logging.getLogger("py.warnings")
-    log.warning('%s:%s: %s:%s', filename, lineno, category.__name__, message)
+    log.warning("%s:%s: %s:%s", filename, lineno, category.__name__, message)
