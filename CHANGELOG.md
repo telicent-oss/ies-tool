@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.0.0](https://github.com/telicent-oss/ies-tool/compare/v1.1.0...v2.0.0) (2025-07-29)
+
+
+### ⚠ BREAKING CHANGES
+
+* Moved to short_uuid format to save space in messages ([#45](https://github.com/telicent-oss/ies-tool/issues/45))
+
+### Features
+
+* Basic stuff around prefix management in plug-ins ([#42](https://github.com/telicent-oss/ies-tool/issues/42)) ([9edf271](https://github.com/telicent-oss/ies-tool/commit/9edf271ff586e6cb443a550ef1801f40ffa71f32))
+* Plugin restructure ([#46](https://github.com/telicent-oss/ies-tool/issues/46)) ([0ffd1cc](https://github.com/telicent-oss/ies-tool/commit/0ffd1cce5544743c6cc522bd00c6147e785ec7dd))
+
+
+### Bug Fixes
+
+* remove print statements in event participant code ([#44](https://github.com/telicent-oss/ies-tool/issues/44)) ([51065d5](https://github.com/telicent-oss/ies-tool/commit/51065d506e2c7edc5d758c1c3908f23386a69591))
+
+
+### Performance improvements
+
+* Moved to short_uuid format to save space in messages ([#45](https://github.com/telicent-oss/ies-tool/issues/45)) ([732a1ac](https://github.com/telicent-oss/ies-tool/commit/732a1ac9dea3fec93dabae1e009a9e01b6b5bbe1))
+
 ## [1.1.0](https://github.com/telicent-oss/ies-tool/compare/v1.0.5...v1.1.0) (2025-06-30)
 
 
