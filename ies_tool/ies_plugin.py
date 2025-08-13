@@ -70,7 +70,7 @@ class IESPlugin:
     def get_triple_count(self) -> int:
         raise NotImplementedError
 
-    def can_suppport_prefixes(self) -> bool:
+    def can_support_prefixes(self) -> bool :
         raise NotImplementedError
 
     def add_prefix(self, prefix: str, uri: str):
