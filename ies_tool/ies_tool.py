@@ -493,7 +493,7 @@ class IESTool:
                 )
             ret_dict["triples"] = self.plug_in.get_rdf(rdf_format=rdf_format)
             if self.plug_in.can_validate():
-                ret_dict["validation_errors"] = self.plug_in.get_warnings().join("\n")
+                ret_dict["validation_errors"] = "\n".join(self.plug_in.get_warnings())
             if clear:
                 self.clear_graph()
         else:
