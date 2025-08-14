@@ -271,10 +271,6 @@ class IESTool:
         elif self.__mode == "plugin":
             if self.plug_in.can_support_prefixes():
                 self.plug_in.add_prefix(prefix, uri)
-            else:
-                logger.warning(
-                    "Current plugin does not support prefixes, so this will be ignored"
-                )
 
     def _mint_dependent_uri(self, parent_uri: str, postfix: str) -> str:
         new_uri = f"{parent_uri}_{postfix}_001"
@@ -416,6 +412,10 @@ class IESTool:
 
         if self.__mode == "plugin":
             self.plug_in.clear_triples()
+            if not self.plug_in.can_support_prefixes():
+                logger.warning(
+                    "Current plugin does not support prefixes, so this will be ignored"
+                )
         else:
             if self.graph is not None:
                 del self.graph
