@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.0.1](https://github.com/telicent-oss/ies-tool/compare/v2.0.0...v2.0.1) (2026-02-10)
+
+
+### Bug Fixes
+
+* only warn once ([#49](https://github.com/telicent-oss/ies-tool/issues/49)) ([893cb49](https://github.com/telicent-oss/ies-tool/commit/893cb49b9e2bb7a96e293cfe8e3dfd25be214d83))
+* update iso4217parse dependency ([#50](https://github.com/telicent-oss/ies-tool/issues/50)) ([ab8b1e2](https://github.com/telicent-oss/ies-tool/commit/ab8b1e24a4861d08b8a208b566940d78a09e3a31))
+
 ## [2.0.0](https://github.com/telicent-oss/ies-tool/compare/v1.1.0...v2.0.0) (2025-07-29)
 
 
