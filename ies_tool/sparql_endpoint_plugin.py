@@ -28,7 +28,7 @@ class SPARQLEndpointPlugin:
         ser_user: str = "",
         server_password: str = "",
     ):
-        self.default_data_namespace: str = default_data_namespace
+        self._default_data_namespace: str = default_data_namespace
         self.server_host: str = server_host
         self.server_dataset: str = server_dataset
         self.ser_user: str = ser_user

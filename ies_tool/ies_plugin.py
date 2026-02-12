@@ -18,7 +18,7 @@ limitations under the License.
 class IESPlugin:
 
     def __init__(self, default_data_namespace: str = "https://telicent.io/testdata#"):
-        self.default_data_namespace: str = default_data_namespace
+        self._default_data_namespace: str = default_data_namespace
 
     def generate_data_uri(self, context: str | None = None) -> str:
         raise NotImplementedError
