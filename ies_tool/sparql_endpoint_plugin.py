@@ -206,11 +206,11 @@ class SPARQLEndpointPlugin:
 
     @property
     def default_data_namespace(self):
-        raise NotImplementedError
+        return self._default_data_namespace
 
     @default_data_namespace.setter
     def default_data_namespace(self, value: str):
-        raise NotImplementedError
+        self._default_data_namespace = value
 
     @property
     def supported_rdf_serialisations(self) -> list:
