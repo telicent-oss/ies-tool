@@ -64,7 +64,7 @@ class IESTool:
 
     def __init__(
         self,
-        default_data_namespace: str = "http://example.com/rdf/testdata#",
+        default_data_namespace: str = ies_constants.DEFAULT_DATA_NAMESPACE,
         mode: str = "rdflib",
         plug_in: IESPlugin | None = None,
         validate: bool = False,

@@ -1,3 +1,5 @@
+import ies_tool.ies_constants as ies_constants
+
 __license__ = """
 Copyright TELICENT LTD
 
@@ -16,9 +18,16 @@ limitations under the License.
 
 
 class IESPlugin:
+    """
+    Abstract base class for IES storage plugins.
 
-    def __init__(self, default_data_namespace: str = "https://telicent.io/testdata#"):
-        self.default_data_namespace: str = default_data_namespace
+    Subclasses of such must implement all abstract methods and properties, including
+    proper initialization of default_data_namespace to avoid conflicts with
+    the property getter/setter pattern.
+    """
+
+    def __init__(self, default_data_namespace: str = ies_constants.DEFAULT_DATA_NAMESPACE):
+        _ = default_data_namespace  # Parameter kept for interface consistency
 
     def generate_data_uri(self, context: str | None = None) -> str:
         raise NotImplementedError

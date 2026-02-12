@@ -4,6 +4,7 @@ RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 RDFS_CLASS = "http://www.w3.org/2000/01/rdf-schema#Class"
 
 IES_BASE = "http://ies.data.gov.uk/ontology/ies4#"
+DEFAULT_DATA_NAMESPACE = "http://example.com/rdf/testdata#"
 
 TELICENT_PRIMARY_NAME = "http://telicent.io/ontology/primaryName"
 
