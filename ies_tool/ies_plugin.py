@@ -1,3 +1,5 @@
+import ies_tool.ies_constants as ies_constants
+
 __license__ = """
 Copyright TELICENT LTD
 
@@ -24,7 +26,7 @@ class IESPlugin:
     the property getter/setter pattern.
     """
 
-    def __init__(self, default_data_namespace: str = "https://telicent.io/testdata#"):
+    def __init__(self, default_data_namespace: str = ies_constants.DEFAULT_DATA_NAMESPACE):
         _ = default_data_namespace  # Parameter kept for interface consistency
 
     def generate_data_uri(self, context: str | None = None) -> str:

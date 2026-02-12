@@ -1,6 +1,8 @@
 import requests
 import shortuuid
 
+import ies_tool.ies_constants as ies_constants
+
 __license__ = """
 Copyright TELICENT LTD
 
@@ -22,7 +24,7 @@ class SPARQLEndpointPlugin:
 
     def __init__(
         self,
-        default_data_namespace: str = "https://telicent.io/testdata#",
+        default_data_namespace: str = ies_constants.DEFAULT_DATA_NAMESPACE,
         server_host: str = "http://localhost:3030/",
         server_dataset: str = "ds",
         ser_user: str = "",
