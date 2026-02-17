@@ -212,7 +212,9 @@ class IESTool:
         # Update the plugin's namespace to match IESTool's resolved namespace
         # This must happen before clear_graph() which uses the plugin's namespace
         if self.__mode == "plugin" and self.plug_in is not None:
-            self.plug_in.default_data_namespace = default_data_namespace
+            # Only set if the plugin supports the default_data_namespace property
+            if hasattr(self.plug_in, 'default_data_namespace'):
+                self.plug_in.default_data_namespace = default_data_namespace
 
         # Test that the default data stub generates valid URIs
 

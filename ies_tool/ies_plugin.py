@@ -27,7 +27,7 @@ class IESPlugin:
     """
 
     def __init__(self, default_data_namespace: str = ies_constants.DEFAULT_DATA_NAMESPACE):
-        _ = default_data_namespace  # Parameter kept for interface consistency
+        self._default_data_namespace = default_data_namespace
 
     def generate_data_uri(self, context: str | None = None) -> str:
         raise NotImplementedError
@@ -90,11 +90,11 @@ class IESPlugin:
 
     @property
     def default_data_namespace(self):
-        raise NotImplementedError
+        return self._default_data_namespace
 
     @default_data_namespace.setter
     def default_data_namespace(self, value: str):
-        raise NotImplementedError
+        self._default_data_namespace = value
 
     @property
     def supported_rdf_serialisations(self) -> list:

@@ -2,6 +2,7 @@ import unittest
 
 import ies_tool.ies_constants as ies_constants
 import ies_tool.ies_tool as ies
+from ies_tool.ies_plugin import IESPlugin
 from ies_tool.rdflib_plugin import RdfLibPlugin
 
 
@@ -77,7 +78,24 @@ class TestDefaultDataNamespace(unittest.TestCase):
             "IESTool should use custom namespace provided by user"
         )
 
-    def test_iestool_namespace_set_with_plugin(self):
+    def test_generated_uris_use_configured_namespace(self):
+        """
+        Generated URIs use the configured default_data_namespace.
+        """
+        custom_namespace = "http://myorg.example.com/data#"
+        tool = ies.IESTool(default_data_namespace=custom_namespace)
+
+        # Create a person
+        person = ies.Person(tool=tool, given_name="Bob", surname="Smith")
+
+        # Verify the person's URI starts with the custom namespace
+        self.assertTrue(
+            person.uri.startswith(custom_namespace),
+            f"Generated URI should start with {custom_namespace}, but got {person.uri}"
+        )
+
+
+    def test_iestool_namespace_set_with_rdflib_plugin(self):
         """
         When a custom namespace is provided during initialisation alongside
         custom plugin, it should override the default value.
@@ -92,7 +110,7 @@ class TestDefaultDataNamespace(unittest.TestCase):
             "IESTool should use the user-provided namespace, not the default"
         )
 
-    def test_iestool_namespace_set_with_one_set_in_plugin(self):
+    def test_iestool_namespace_set_with_one_set_in_rdflib_plugin(self):
         """
         When a custom namespace is provided when init a custom plugin and
         one not set on init IESTool, then the one set in the plugin shall
@@ -108,7 +126,7 @@ class TestDefaultDataNamespace(unittest.TestCase):
             "RdfLibPlugin should use the user-provided namespace, not the default"
         )
 
-    def test_iestool_namespace_overrides_one_set_in_plugin(self):
+    def test_iestool_namespace_overrides_one_set_in_rdflib_plugin(self):
         """
         When a custom namespace is provided in both the init of RdfLibPlugin
         and IESTool, the IESTool one prevails.
@@ -153,21 +171,32 @@ class TestDefaultDataNamespace(unittest.TestCase):
             "RdfLibPlugin should return the namespace via property getter"
         )
 
-
-    def test_generated_uris_use_configured_namespace(self):
+    def test_ies_plugin_inherits_namespace_support(self):
         """
-        Generated URIs use the configured default_data_namespace.
+        Verify that a minimal plugin inheriting from IESPlugin gets
+        default_data_namespace support without implementing it explicitly.
         """
-        custom_namespace = "http://myorg.example.com/data#"
-        tool = ies.IESTool(default_data_namespace=custom_namespace)
+        class MinimalPlugin(IESPlugin):
+            """A minimal plugin that only inherits from IESPlugin."""
+            pass
 
-        # Create a person
-        person = ies.Person(tool=tool, given_name="Bob", surname="Smith")
+        custom_namespace = "http://minimal.plugin.test/data#"
+        plugin = MinimalPlugin(default_data_namespace=custom_namespace)
 
-        # Verify the person's URI starts with the custom namespace
-        self.assertTrue(
-            person.uri.startswith(custom_namespace),
-            f"Generated URI should start with {custom_namespace}, but got {person.uri}"
+        # Getter should work
+        self.assertEqual(
+            plugin.default_data_namespace,
+            custom_namespace,
+            "Base IESPlugin should provide working default_data_namespace getter"
+        )
+
+        # Setter should work
+        new_namespace = "http://updated.minimal.test/data#"
+        plugin.default_data_namespace = new_namespace
+        self.assertEqual(
+            plugin.default_data_namespace,
+            new_namespace,
+            "Base IESPlugin should provide working default_data_namespace setter"
         )
 
 
