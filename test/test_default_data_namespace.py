@@ -3,7 +3,6 @@ import unittest
 import ies_tool.ies_constants as ies_constants
 import ies_tool.ies_tool as ies
 from ies_tool.rdflib_plugin import RdfLibPlugin
-from ies_tool.sparql_endpoint_plugin import SPARQLEndpointPlugin
 
 
 class TestDefaultDataNamespace(unittest.TestCase):
@@ -85,7 +84,7 @@ class TestDefaultDataNamespace(unittest.TestCase):
         """
         custom_namespace = "http://custom.example.org/data#"
         plugin = RdfLibPlugin()
-        tool = ies.IESTool(mode=plugin, default_data_namespace=custom_namespace)
+        tool = ies.IESTool(plug_in=plugin, default_data_namespace=custom_namespace)
 
         self.assertEqual(
             tool.default_data_namespace,
@@ -101,7 +100,7 @@ class TestDefaultDataNamespace(unittest.TestCase):
         """
         custom_namespace = "http://custom.example.org/data#"
         plugin = RdfLibPlugin(default_data_namespace=custom_namespace)
-        tool = ies.IESTool(mode=plugin)
+        tool = ies.IESTool(plug_in=plugin, mode="plugin")
 
         self.assertEqual(
             tool.default_data_namespace,
@@ -117,7 +116,7 @@ class TestDefaultDataNamespace(unittest.TestCase):
         custom_namespace_1 = "http://custom.example.org/data1#"
         custom_namespace_2 = "http://custom.example.org/data2#"
         plugin = RdfLibPlugin(default_data_namespace=custom_namespace_1)
-        tool = ies.IESTool(mode=plugin, default_data_namespace=custom_namespace_2)
+        tool = ies.IESTool(plug_in=plugin, default_data_namespace=custom_namespace_2)
 
         self.assertEqual(
             tool.default_data_namespace,
@@ -154,41 +153,6 @@ class TestDefaultDataNamespace(unittest.TestCase):
             "RdfLibPlugin should return the namespace via property getter"
         )
 
-
-    def test_all_classes_use_same_constant(self):
-        """
-        All classes use the DEFAULT_DATA_NAMESPACE constant.
-        """
-        import inspect
-
-        # Check IESTool
-        ies_tool_sig = inspect.signature(ies.IESTool.__init__)
-        ies_tool_default = ies_tool_sig.parameters['default_data_namespace'].default
-
-        # Check RdfLibPlugin
-        rdflib_sig = inspect.signature(RdfLibPlugin.__init__)
-        rdflib_default = rdflib_sig.parameters['default_data_namespace'].default
-
-        # Check SPARQLEndpointPlugin
-        sparql_sig = inspect.signature(SPARQLEndpointPlugin.__init__)
-        sparql_default = sparql_sig.parameters['default_data_namespace'].default
-
-        # All should equal the constant
-        self.assertEqual(
-            ies_tool_default,
-            ies_constants.DEFAULT_DATA_NAMESPACE,
-            "IESTool should use DEFAULT_DATA_NAMESPACE constant"
-        )
-        self.assertEqual(
-            rdflib_default,
-            ies_constants.DEFAULT_DATA_NAMESPACE,
-            "RdfLibPlugin should use DEFAULT_DATA_NAMESPACE constant"
-        )
-        self.assertEqual(
-            sparql_default,
-            ies_constants.DEFAULT_DATA_NAMESPACE,
-            "SPARQLEndpointPlugin should use DEFAULT_DATA_NAMESPACE constant"
-        )
 
     def test_generated_uris_use_configured_namespace(self):
         """

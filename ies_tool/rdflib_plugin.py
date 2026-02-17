@@ -212,7 +212,7 @@ class RdfLibPlugin:
         """
         return len(self.graph)
 
-    def can_suppport_prefixes(self) -> bool:
+    def can_support_prefixes(self) -> bool:
         """Indicates if the plugin can support prefixes in the RDF graph.
 
         Returns:
@@ -227,7 +227,7 @@ class RdfLibPlugin:
             prefix (str): _description_
             uri (str): _description_
         """
-        self.namespace_manager.bind(prefix.replace(":", ""), Namespace(uri))
+        self.namespace_manager.bind(prefix.replace(":", ""), Namespace(uri), replace=True)
 
     def get_namespace_uri(self, prefix: str) -> str:
         """
