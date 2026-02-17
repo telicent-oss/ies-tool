@@ -64,7 +64,7 @@ class IESTool:
 
     def __init__(
         self,
-        default_data_namespace: str = "http://example.com/rdf/testdata#",
+        default_data_namespace: str | None = None,
         mode: str = "rdflib",
         plug_in: IESPlugin | None = None,
         validate: bool = False,
@@ -158,9 +158,26 @@ class IESTool:
 
         self.ontology = Ontology(ont_file, additional_classes=additional_classes)
 
+        # Auto-detect plugin mode if a plugin is provided
+        if plug_in is not None and mode == "rdflib":
+            mode = "plugin"
+
         self.__mode = mode
         if mode not in ["rdflib"]:
             self._register_plugin(mode, plug_in)
+
+        # Resolve the effective default_data_namespace:
+        # 1. If explicitly provided to IESTool, use it
+        # 2. If a plugin is provided and supports default_data_namespace, use the plugin's
+        # 3. Otherwise, use the constant default
+        if default_data_namespace is not None:
+            effective_namespace = default_data_namespace
+        elif (self.__mode == "plugin" and self.plug_in is not None
+              and hasattr(self.plug_in, 'default_data_namespace')):
+            effective_namespace = self.plug_in.default_data_namespace
+        else:
+            effective_namespace = ies_constants.DEFAULT_DATA_NAMESPACE
+        default_data_namespace = effective_namespace
 
         if self.__mode == "plugin":
             logger.info("Using a user-defined storage plugin")
@@ -193,12 +210,21 @@ class IESTool:
         self.add_prefix(":", default_data_namespace)
         self.default_data_namespace = default_data_namespace
 
+        # Update the plugin's namespace to match IESTool's resolved namespace
+        # This must happen before clear_graph() which uses the plugin's namespace
+        if self.__mode == "plugin" and self.plug_in is not None:
+            # Only set if the plugin supports the default_data_namespace property
+            if hasattr(self.plug_in, 'default_data_namespace'):
+                self.plug_in.default_data_namespace = default_data_namespace
+
         # Test that the default data stub generates valid URIs
 
         self.check_valid_uri_production()
         # Establish a set of useful prefixes
         for k, v in ies_constants.DEFAULT_PREFIXES.items():
-            self.add_prefix(k, v)
+            # Skip ":" since it was already set above with the resolved default_data_namespace
+            if k != ":":
+                self.add_prefix(k, v)
 
         self.clear_graph()
 

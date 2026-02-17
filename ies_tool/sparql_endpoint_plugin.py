@@ -1,6 +1,8 @@
 import requests
 import shortuuid
 
+import ies_tool.ies_constants as ies_constants
+
 __license__ = """
 Copyright TELICENT LTD
 
@@ -22,13 +24,13 @@ class SPARQLEndpointPlugin:
 
     def __init__(
         self,
-        default_data_namespace: str = "https://telicent.io/testdata#",
+        default_data_namespace: str = ies_constants.DEFAULT_DATA_NAMESPACE,
         server_host: str = "http://localhost:3030/",
         server_dataset: str = "ds",
         ser_user: str = "",
         server_password: str = "",
     ):
-        self.default_data_namespace: str = default_data_namespace
+        self._default_data_namespace: str = default_data_namespace
         self.server_host: str = server_host
         self.server_dataset: str = server_dataset
         self.ser_user: str = ser_user
@@ -195,7 +197,7 @@ class SPARQLEndpointPlugin:
     def get_triple_count(self) -> int:
         raise NotImplementedError
 
-    def can_suppport_prefixes(self) -> bool:
+    def can_support_prefixes(self) -> bool:
         return False
 
     def add_prefix(self, prefix: str, uri: str):
@@ -206,11 +208,11 @@ class SPARQLEndpointPlugin:
 
     @property
     def default_data_namespace(self):
-        raise NotImplementedError
+        return self._default_data_namespace
 
     @default_data_namespace.setter
     def default_data_namespace(self, value: str):
-        raise NotImplementedError
+        self._default_data_namespace = value
 
     @property
     def supported_rdf_serialisations(self) -> list:
