@@ -64,7 +64,7 @@ class IESTool:
 
     def __init__(
         self,
-        default_data_namespace: str | None = None,
+        default_data_namespace: str | None = None, # actual default URI resolved later
         mode: str = "rdflib",
         plug_in: IESPlugin | None = None,
         validate: bool = False,

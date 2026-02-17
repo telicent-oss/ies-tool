@@ -20,10 +20,6 @@ limitations under the License.
 class IESPlugin:
     """
     Abstract base class for IES storage plugins.
-
-    Subclasses of such must implement all abstract methods and properties, including
-    proper initialization of default_data_namespace to avoid conflicts with
-    the property getter/setter pattern.
     """
 
     def __init__(self, default_data_namespace: str = ies_constants.DEFAULT_DATA_NAMESPACE):
