@@ -168,11 +168,12 @@ class IESTool:
 
         # Resolve the effective default_data_namespace:
         # 1. If explicitly provided to IESTool, use it
-        # 2. If a plugin is provided and has a non-default namespace, use the plugin's
+        # 2. If a plugin is provided and supports default_data_namespace, use the plugin's
         # 3. Otherwise, use the constant default
         if default_data_namespace is not None:
             effective_namespace = default_data_namespace
-        elif self.__mode == "plugin" and self.plug_in is not None:
+        elif (self.__mode == "plugin" and self.plug_in is not None
+              and hasattr(self.plug_in, 'default_data_namespace')):
             effective_namespace = self.plug_in.default_data_namespace
         else:
             effective_namespace = ies_constants.DEFAULT_DATA_NAMESPACE
