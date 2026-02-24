@@ -1,3 +1,5 @@
+import ies_tool.ies_constants as ies_constants
+
 __license__ = """
 Copyright TELICENT LTD
 
@@ -16,9 +18,12 @@ limitations under the License.
 
 
 class IESPlugin:
+    """
+    Abstract base class for IES storage plugins.
+    """
 
-    def __init__(self, default_data_namespace: str = "https://telicent.io/testdata#"):
-        self.default_data_namespace: str = default_data_namespace
+    def __init__(self, default_data_namespace: str = ies_constants.DEFAULT_DATA_NAMESPACE):
+        self._default_data_namespace = default_data_namespace
 
     def generate_data_uri(self, context: str | None = None) -> str:
         raise NotImplementedError
@@ -81,11 +86,11 @@ class IESPlugin:
 
     @property
     def default_data_namespace(self):
-        raise NotImplementedError
+        return self._default_data_namespace
 
     @default_data_namespace.setter
     def default_data_namespace(self, value: str):
-        raise NotImplementedError
+        self._default_data_namespace = value
 
     @property
     def supported_rdf_serialisations(self) -> list:

@@ -166,3 +166,4 @@ cython_debug/
 # OS-X proof
 .DS_Store
 .vscode
+/*.ttl
