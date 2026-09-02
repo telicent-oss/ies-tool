@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.0.1](https://github.com/telicent-oss/ies-tool/compare/v3.0.0...v3.0.1) (2026-09-02)
+
+
+### Bug Fixes
+
+* add_triple() behaviour made equal between rdflib and plugin mode ([#56](https://github.com/telicent-oss/ies-tool/issues/56)) ([ea8ca26](https://github.com/telicent-oss/ies-tool/commit/ea8ca26c8bcf052c51b6d6f1f5193dc30d5f83b6))
+* typo in LOCATION_STATE constant (inc. constants tests) ([#55](https://github.com/telicent-oss/ies-tool/issues/55)) ([f5bafe0](https://github.com/telicent-oss/ies-tool/commit/f5bafe0b7c412b2992e6cc4baf32332ac2f9773d))
+
 ## [3.0.0](https://github.com/telicent-oss/ies-tool/compare/v2.0.1...v3.0.0) (2026-02-24)
 
 
