@@ -38,7 +38,7 @@ class TestConstantUris(unittest.TestCase):
     """Guard against malformed URI constants such as a stray extra '#'.
 
     Regression test for LOCATION_STATE, which was defined as
-    f"{IES_BASE}#LocationState" — because IES_BASE already ends in '#', this
+    f"{IES_BASE}#LocationState" — because IES_BASE already ends in '#', it
     produced the double-hash URI "http://ies.data.gov.uk/ontology/ies4##LocationState".
     """
 
