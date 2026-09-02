@@ -657,6 +657,11 @@ class IESTool:
         if security_label is None:
             security_label = ""
 
+        # See if someone has passed a rdflib type or a wrapper object and fix it
+        subject = self._str(subject)
+        predicate = self._str(predicate)
+        obj = self._str(obj)
+
         if not self.prevent_duplicate_triples or not self.in_graph(
             subject=subject,
             predicate=predicate,
@@ -674,11 +679,6 @@ class IESTool:
                 )
                 return True
             else:
-                # See is someone has passed a rdflib type and fix it
-                subject = self._str(subject)
-                predicate = self._str(predicate)
-                obj = self._str(obj)
-
                 # Send out a warning if a non-IES predicate is used
                 if is_literal:
                     if predicate not in self.ontology.datatype_properties:
