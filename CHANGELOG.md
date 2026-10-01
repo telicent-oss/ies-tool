@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.0.2](https://github.com/telicent-oss/ies-tool/compare/v3.0.1...v3.0.2) (2026-10-01)
+
+
+### Bug Fixes
+
+* remove person data file example ([#63](https://github.com/telicent-oss/ies-tool/issues/63)) ([0fc55d8](https://github.com/telicent-oss/ies-tool/commit/0fc55d8ee0966ef20c8659af0173497fa8b781d7))
+
+
+### Miscellaneous
+
+* update pycountry ([#61](https://github.com/telicent-oss/ies-tool/issues/61)) ([0b2b2c4](https://github.com/telicent-oss/ies-tool/commit/0b2b2c489a9c6a8618788f52e4eed41d4142ff7d))
+
 ## [3.0.1](https://github.com/telicent-oss/ies-tool/compare/v3.0.0...v3.0.1) (2026-09-02)
 
 
