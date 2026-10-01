@@ -17,7 +17,7 @@ dependencies = [
     "requests==2.32.4",
     "rdflib==6.3.2",
     "phonenumbers==8.13.35",
-    "pycountry==24.6.1",
+    "pycountry==26.2.16",
     "validators==0.28.1",
     "iso4217parse==0.6.2",
     "shortuuid==1.0.13"
