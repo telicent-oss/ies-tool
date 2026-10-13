@@ -15,7 +15,7 @@ dependencies = [
     "python-geohash==0.8.5",
     "pyshacl==0.25.0",
     "requests==2.33.0",
-    "rdflib==6.3.2",
+    "rdflib>=6.0,<8.0",
     "phonenumbers==8.13.35",
     "pycountry==26.2.16",
     "validators==0.28.1",
