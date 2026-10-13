@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.3](https://github.com/telicent-oss/ies-tool/compare/v3.0.2...v3.0.3) (2026-10-13)
+
+
+### Miscellaneous
+
+* allow a wider range of rdflib dependency versions ([#64](https://github.com/telicent-oss/ies-tool/issues/64)) ([f347f26](https://github.com/telicent-oss/ies-tool/commit/f347f26488e8afd217205bd1ac5963ab0c43e4c1))
+
 ## [3.0.2](https://github.com/telicent-oss/ies-tool/compare/v3.0.1...v3.0.2) (2026-10-01)
 
 
